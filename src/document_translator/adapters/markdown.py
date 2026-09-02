@@ -19,8 +19,10 @@ _HTML_TAG_RE = re.compile(r"</?[A-Za-z][^>]*>|<!--[\s\S]*?-->")
 _INLINE_CODE_RE = re.compile(r"(?<!\\)(`+)(.+?)(?<!`)\1")
 _IMAGE_RE = re.compile(r"!\[([^\]]*)\]\(([^)]*)\)")
 _LINK_RE = re.compile(r"(?<!\!)\[([^\]]+)\]\(([^)]*)\)")
+_URL_RE = re.compile(r"https?://[^\s<>()]+")
 _FENCE_RE = re.compile(r"^\s{0,3}(`{3,}|~{3,})(.*)$")
 _FRONT_MATTER_MARKERS = {"---", "..."}
+_TABLE_ALIGNMENT_CELL_RE = re.compile(r"^:?-{3,}:?$")
 
 
 @dataclass(frozen=True)
@@ -36,11 +38,109 @@ class MarkdownRewriteResult:
     replaced_unit_ids: tuple[str, ...]
 
 
-def _protected_tokens(text: str) -> list[str]:
-    matches = list(_PLACEHOLDER_RE.finditer(text))
-    matches.extend(_HTML_TAG_RE.finditer(text))
-    matches.extend(re.finditer(r"\\.", text))
-    return list(dict.fromkeys(match.group(0) for match in sorted(matches, key=lambda item: item.start())))
+@dataclass(frozen=True)
+class _ProtectedText:
+    text: str
+    tokens: tuple[str, ...]
+    replacements: tuple[tuple[str, str], ...]
+
+
+def _next_token(source: str, counter: int) -> tuple[str, int]:
+    while True:
+        token = f"⟦MD_{counter:04d}⟧"
+        counter += 1
+        if token not in source:
+            return token, counter
+
+
+def _protect_inline(source: str) -> _ProtectedText:
+    """Replace non-translatable inline syntax with deterministic placeholders."""
+    output: list[str] = []
+    tokens: list[str] = []
+    replacements: list[tuple[str, str]] = []
+    counter = 1
+    position = 0
+    marker_ranges: dict[int, int] = {}
+    marker_matches = list(re.finditer(r"\*{1,3}|_{1,3}|~~", source))
+    marker_types = {match.group(0)[0] for match in marker_matches}
+    for marker_type in marker_types:
+        matches = [match for match in marker_matches if match.group(0)[0] == marker_type]
+        if len(matches) < 2:
+            continue
+        for match in matches:
+            if marker_type == "_":
+                before = source[match.start() - 1] if match.start() else ""
+                after = source[match.end()] if match.end() < len(source) else ""
+                if before.isalnum() and after.isalnum():
+                    continue
+            marker_ranges[match.start()] = match.end()
+
+    def protect(value: str) -> None:
+        nonlocal counter
+        token, counter = _next_token(source, counter)
+        output.append(token)
+        tokens.append(token)
+        replacements.append((token, value))
+
+    while position < len(source):
+        placeholder = _PLACEHOLDER_RE.match(source, position)
+        if placeholder:
+            value = placeholder.group(0)
+            output.append(value)
+            if value not in tokens:
+                tokens.append(value)
+            position = placeholder.end()
+            continue
+
+        inline_code = _INLINE_CODE_RE.match(source, position)
+        if inline_code:
+            protect(inline_code.group(0))
+            position = inline_code.end()
+            continue
+
+        image = _IMAGE_RE.match(source, position)
+        if image:
+            protect("![")
+            output.append(image.group(1))
+            protect(f"]({image.group(2)})")
+            position = image.end()
+            continue
+
+        link = _LINK_RE.match(source, position)
+        if link:
+            protect("[")
+            output.append(link.group(1))
+            protect(f"]({link.group(2)})")
+            position = link.end()
+            continue
+
+        html = _HTML_TAG_RE.match(source, position)
+        if html:
+            protect(html.group(0))
+            position = html.end()
+            continue
+
+        url = _URL_RE.match(source, position)
+        if url:
+            protect(url.group(0))
+            position = url.end()
+            continue
+
+        if source[position] == "\\" and position + 1 < len(source):
+            protect(source[position:position + 2])
+            position += 2
+            continue
+
+        if position in marker_ranges:
+            end = marker_ranges[position]
+            protect(source[position:end])
+            position = end
+            continue
+
+        output.append(source[position])
+        position += 1
+
+    return _ProtectedText("".join(output), tuple(tokens), tuple(replacements))
 
 
 def _trimmed_span(text: str, start: int, end: int) -> tuple[int, int] | None:
@@ -53,42 +153,91 @@ def _trimmed_span(text: str, start: int, end: int) -> tuple[int, int] | None:
     return start, end
 
 
-def _editable_spans(content: str, base: int) -> list[tuple[int, int]]:
-    protected_ranges: list[tuple[int, int]] = []
-    for pattern in (_INLINE_CODE_RE, _IMAGE_RE, _LINK_RE):
-        protected_ranges.extend((match.start(), match.end()) for match in pattern.finditer(content))
-    protected_ranges.sort()
-    spans: list[tuple[int, int]] = []
-    cursor = 0
-    for start, end in protected_ranges:
-        if start < cursor:
+def _table_delimiters(line: str) -> list[int]:
+    delimiters: list[int] = []
+    code_ticks = 0
+    link_depth = 0
+    html = False
+    position = 0
+    while position < len(line):
+        char = line[position]
+        if char == "\\":
+            position += 2
             continue
-        if pattern_is_link := _IMAGE_RE.fullmatch(content[start:end]):
-            alt_start = start + 2
-            alt_end = alt_start + len(pattern_is_link.group(1))
-            if _trimmed_span(content, alt_start, alt_end):
-                spans.append((base + alt_start, base + alt_end))
-        elif link_match := _LINK_RE.fullmatch(content[start:end]):
-            label_start = start + 1
-            label_end = label_start + len(link_match.group(1))
-            if _trimmed_span(content, label_start, label_end):
-                spans.append((base + label_start, base + label_end))
-        if start > cursor:
-            trimmed = _trimmed_span(content, cursor, start)
-            if trimmed:
-                spans.append((base + trimmed[0], base + trimmed[1]))
-        cursor = end
-    if cursor < len(content):
-        trimmed = _trimmed_span(content, cursor, len(content))
-        if trimmed:
-            spans.append((base + trimmed[0], base + trimmed[1]))
-    return sorted(spans)
+        if char == "`":
+            end = position
+            while end < len(line) and line[end] == "`":
+                end += 1
+            run = end - position
+            code_ticks = 0 if code_ticks == run else run if code_ticks == 0 else code_ticks
+            position = end
+            continue
+        if code_ticks:
+            position += 1
+            continue
+        if char == "<":
+            html = True
+        elif char == ">" and html:
+            html = False
+        elif not html and char == "]" and position + 1 < len(line) and line[position + 1] == "(":
+            link_depth = 1
+            position += 2
+            continue
+        elif link_depth and char == "(":
+            link_depth += 1
+        elif link_depth and char == ")":
+            link_depth -= 1
+        elif char == "|" and not html and not link_depth:
+            delimiters.append(position)
+        position += 1
+    return delimiters
+
+
+def _table_cells(line: str, line_start: int, *, require_natural: bool = True) -> list[tuple[int, int]]:
+    delimiters = _table_delimiters(line)
+    if not delimiters:
+        return []
+    boundaries = [-1, *delimiters, len(line)]
+    spans: list[tuple[int, int]] = []
+    for left, right in zip(boundaries, boundaries[1:]):
+        start, end = left + 1, right
+        while start < end and line[start].isspace():
+            start += 1
+        while end > start and line[end - 1].isspace():
+            end -= 1
+        if start < end and (not require_natural or any(char.isalnum() for char in line[start:end])):
+            spans.append((line_start + start, line_start + end))
+    return spans
+
+
+def _is_alignment_row(line: str) -> bool:
+    cells = _table_cells(line, 0, require_natural=False)
+    return bool(cells) and all(_TABLE_ALIGNMENT_CELL_RE.fullmatch(line[start:end]) for start, end in cells)
+
+
+def _table_line_sets(lines: Sequence[str]) -> tuple[set[int], set[int]]:
+    table_lines: set[int] = set()
+    alignment_lines: set[int] = set()
+    bare_lines = [line.rstrip("\r\n") for line in lines]
+    for index in range(1, len(bare_lines)):
+        if not _is_alignment_row(bare_lines[index]) or not _table_delimiters(bare_lines[index - 1]):
+            continue
+        table_lines.add(index)
+        table_lines.add(index + 1)
+        alignment_lines.add(index + 1)
+        following = index + 1
+        while following < len(bare_lines) and _table_delimiters(bare_lines[following]):
+            table_lines.add(following + 1)
+            following += 1
+    return table_lines, alignment_lines
 
 
 def _line_content_span(line: str, line_start: int) -> tuple[int, int] | None:
     match = re.match(r"^\s*(?:#{1,6}\s+|(?:[-+*]|\d+[.)])\s+|>\s*)", line)
     start = match.end() if match else 0
     end = len(line.rstrip("\r\n"))
+    while end > start and line[end - 1] in " \t":
+        end -= 1
     return (line_start + start, line_start + end) if start < end else None
 
 
@@ -102,15 +251,14 @@ def extract_translation_units(
     units: list[TranslationUnit] = []
     offset = 0
     in_front_matter = False
-    front_matter_seen = False
     fence: tuple[str, int] | None = None
     lines = text.splitlines(keepends=True)
+    table_lines, alignment_lines = _table_line_sets(lines)
     for line_number, line in enumerate(lines, start=1):
         bare = line.rstrip("\r\n")
         stripped = bare.strip()
         if line_number == 1 and stripped == "---":
             in_front_matter = True
-            front_matter_seen = True
             offset += len(line)
             continue
         if in_front_matter:
@@ -128,21 +276,28 @@ def extract_translation_units(
             fence = (fence_match.group(1)[0], len(fence_match.group(1)))
             offset += len(line)
             continue
-        content_span = _line_content_span(line, offset)
-        if content_span:
-            content_start, content_end = content_span
-            content = text[content_start:content_end]
-            for start, end in _editable_spans(content, content_start):
+        if line_number in alignment_lines:
+            offset += len(line)
+            continue
+        if line_number in table_lines:
+            spans = _table_cells(bare, offset)
+        else:
+            content_span = _line_content_span(line, offset)
+            spans = [content_span] if content_span else []
+        for start, end in spans:
+                protected = _protect_inline(text[start:end])
+                natural_text = _PLACEHOLDER_RE.sub("", protected.text)
+                if not any(char.isalnum() for char in natural_text):
+                    continue
                 location = DocumentLocation(
                     part="markdown",
                     object_id=f"line:{line_number}:span:{start - offset}:{end - offset}",
                     node_ids=[f"line:{line_number}", f"span:{start}:{end}"],
                 )
-                source = text[start:end]
                 data = dict(
                     document_hash=document_hash, format=DocumentFormat.MD, location=location,
                     source_language=source_language, target_language=target_language,
-                    source_text=source, protected_tokens=_protected_tokens(source),
+                    source_text=protected.text, protected_tokens=list(protected.tokens),
                     style_signature="", context_before="", context_after="",
                 )
                 data["id"] = generate_unit_id(**data)
@@ -174,7 +329,8 @@ def rewrite_markdown(
             continue
         start = line_offsets[line_number - 1] + start_in_line
         end = line_offsets[line_number - 1] + end_in_line
-        if text[start:end] != unit.source_text:
+        protected = _protect_inline(text[start:end])
+        if protected.text != unit.source_text or list(protected.tokens) != unit.protected_tokens:
             errors.append(f"{unit.id}: SOURCE_SPAN_MISMATCH")
             continue
         if unit.id not in translations:
@@ -196,6 +352,8 @@ def rewrite_markdown(
         if item_errors:
             errors.extend(f"{unit.id}: {error}" for error in item_errors)
             continue
+        for token, original in protected.replacements:
+            candidate_text = candidate_text.replace(token, original)
         if (start, end) in seen_spans:
             errors.append(f"{unit.id}: DUPLICATE_LOCATION")
             continue
