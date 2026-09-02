@@ -1,17 +1,13 @@
 # document-translator
 
-阶段 1 最小项目骨架。当前仅包含项目配置、独立 Python 环境依赖和启动冒烟测试，暂不实现翻译业务功能。
+## 阶段 1A
 
-## 开发
+当前已实现：
 
-使用 `D:\Program Files\Python\python.exe` 创建项目内 `.venv`，并在该环境中运行测试：
+- 使用 Pydantic v2 定义统一翻译数据模型：`DocumentFormat`、`UnitStatus`、`DocumentLocation`、`TranslationUnit` 和 `TranslationResult`。
+- 支持 `md`、`docx`、`pptx`、`pdf`、`dwg` 五种格式的严格校验。
+- 基于规范化 JSON 和 SHA-256 生成稳定的 unit ID 与缓存键。
+- 提供不修改译文的占位符内容、大小写和出现次数校验。
+- 提供模型 JSON 序列化/反序列化及基础确定性校验。
 
-```powershell
-& ".\.venv\Scripts\python.exe" -m pytest
-```
-
-启动程序：
-
-```powershell
-& ".\.venv\Scripts\python.exe" -m document_translator
-```
+本阶段不包含任何文档格式适配器、模型调用或网络 API。
