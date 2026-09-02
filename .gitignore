@@ -1,0 +1,43 @@
+# Project environment
+.venv/
+
+# Python caches and tooling
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+dist/
+build/
+*.egg-info/
+
+# Logs, outputs, temporary files
+*.log
+logs/
+output/
+outputs/
+*.tmp
+*.temp
+tmp/
+temp/
+
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+secrets/
+
+# Large local models
+*.gguf
+models/
+
+# Office temporary and lock files
+~$*
+*.asd
+*.wbk
+*.tmp
