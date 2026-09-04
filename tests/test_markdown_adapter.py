@@ -82,6 +82,14 @@ def test_empty_translation_keeps_source_and_reports_error() -> None:
     assert out.text == text and "MISSING_TRANSLATION" in out.errors[0]
 
 
+def test_empty_translation_result_keeps_source_and_reports_error() -> None:
+    text = "淇濈暀\n"
+    unit = extract_translation_units(text)[0]
+    out = rewrite_markdown(text, [unit], {unit.id: result(unit, "   ")})
+    assert out.text == text
+    assert out.errors == (f"{unit.id}: MISSING_TRANSLATION",)
+
+
 def test_wrong_id_and_placeholder_failure_reject_writeback() -> None:
     text = "保留 ⟦PH_1⟧\n"
     unit = extract_translation_units(text)[0]

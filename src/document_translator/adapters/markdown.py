@@ -337,7 +337,11 @@ def rewrite_markdown(
             errors.append(f"{unit.id}: MISSING_TRANSLATION")
             continue
         candidate = translations[unit.id]
-        if candidate is None or (isinstance(candidate, str) and not candidate.strip()):
+        if candidate is None or (
+            isinstance(candidate, str) and not candidate.strip()
+        ) or (
+            isinstance(candidate, TranslationResult) and not candidate.translation.strip()
+        ):
             errors.append(f"{unit.id}: MISSING_TRANSLATION")
             continue
         if isinstance(candidate, TranslationResult):
