@@ -26,15 +26,16 @@ def _parser() -> argparse.ArgumentParser:
     translate.add_argument("--target-language", required=True)
     translate.add_argument(
         "--provider",
-        choices=("local-llama", "qwen-mt"),
+        choices=("local-llama", "local-hy-mt", "qwen-mt"),
         default="qwen-mt",
         help="translation provider (default: qwen-mt)",
     )
     translate.add_argument(
         "--model",
-        help="provider model (default: qwen-mt-plus for qwen-mt; local-model for local-llama)",
+        help=("provider model (default: qwen-mt-plus for qwen-mt; local-model for local-llama; "
+              "Hy-MT2-1.8B-Q6_K.gguf for local-hy-mt)"),
     )
-    translate.add_argument("--local-endpoint", help="local llama-server endpoint (local-llama only)")
+    translate.add_argument("--local-endpoint", help="local llama-server endpoint (local providers only)")
     translate.add_argument("--cache", type=Path, metavar="PATH", help="explicit SQLite cache path")
     translate.add_argument("--translation-mode", default="default")
     translate.add_argument("--overwrite", action="store_true", help="allow replacement of DESTINATION")
@@ -44,13 +45,17 @@ def _parser() -> argparse.ArgumentParser:
 def _provider_for(args: argparse.Namespace, client: httpx.Client):
     if args.provider == "qwen-mt":
         if args.local_endpoint is not None:
-            raise ValueError("--local-endpoint is only valid with --provider local-llama")
+            raise ValueError("--local-endpoint is only valid with a local provider")
         config = QwenMTConfig(model=args.model if args.model is not None else "qwen-mt-plus")
         return QwenMTProvider(config, client=client)
 
+    is_hy_mt = args.provider == "local-hy-mt"
     config = LocalLlamaConfig(
-        model=args.model if args.model is not None else "local-model",
+        model=args.model if args.model is not None else (
+            "Hy-MT2-1.8B-Q6_K.gguf" if is_hy_mt else "local-model"
+        ),
         endpoint=args.local_endpoint if args.local_endpoint is not None else LocalLlamaConfig().endpoint,
+        response_mode="plain_text" if is_hy_mt else "json",
     )
     return LocalLlamaProvider(config, client=client)
 

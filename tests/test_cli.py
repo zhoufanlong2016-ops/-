@@ -94,6 +94,22 @@ def test_local_factory_uses_local_defaults_and_endpoint(tmp_path, monkeypatch):
     assert provider.config.endpoint == "http://localhost:9999"
 
 
+def test_hy_mt_factory_uses_plain_text_mode_and_hy_mt_default(tmp_path, monkeypatch):
+    configure_fakes(monkeypatch)
+    source = tmp_path / "source.md"
+    destination = tmp_path / "translated.md"
+    source.write_text("Hello", encoding="utf-8")
+
+    assert cli.main([
+        "translate-markdown", str(source), str(destination), "--source-language", "zh-CN", "--target-language", "en",
+        "--provider", "local-hy-mt",
+    ]) == 0
+
+    provider = FakeService.instances[0].provider
+    assert provider.config.model == "Hy-MT2-1.8B-Q6_K.gguf"
+    assert provider.config.response_mode == "plain_text"
+
+
 def test_qwen_lite_is_rejected_without_output(tmp_path, monkeypatch, capsys):
     configure_fakes(monkeypatch)
     source = tmp_path / "source.md"

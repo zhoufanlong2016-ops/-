@@ -59,6 +59,34 @@ def test_translate_success_isolated_request_and_no_files(tmp_path) -> None:
     assert result.glossary_version == "none"
 
 
+def test_plain_text_response_mode_binds_the_known_unit_id() -> None:
+    unit = make_unit()
+    client, requests = client_for({"choices": [{"message": {"content": "Keep [[TOKEN_1]] safe."}}]})
+
+    result = LocalLlamaProvider(
+        LocalLlamaConfig(model="hy-mt2", response_mode="plain_text"), client=client
+    ).translate_unit(unit)
+
+    assert result.unit_id == unit.id
+    assert result.translation == "Keep [[TOKEN_1]] safe."
+    prompt = requests[0].content.decode()
+    assert "Return only the translation" in prompt
+    assert "Return JSON only" not in prompt
+    assert "<source>" in prompt
+
+
+def test_plain_text_response_rejects_prompt_leakage() -> None:
+    unit = make_unit()
+    client, _ = client_for({"choices": [{"message": {"content": "<source>prompt leakage</source>"}}]})
+
+    with pytest.raises(LocalLlamaError) as caught:
+        LocalLlamaProvider(
+            LocalLlamaConfig(model="hy-mt2", response_mode="plain_text"), client=client
+        ).translate_unit(unit)
+
+    assert caught.value.code == "PROMPT_LEAKAGE"
+
+
 def test_glossary_injects_only_matching_terms_and_sets_result_version() -> None:
     unit = make_unit()
     glossary = Glossary(
@@ -115,7 +143,7 @@ def test_http_error_raises_provider_error() -> None:
     assert caught.value.code == "HTTP_ERROR"
 
 
-@pytest.mark.parametrize("kwargs", [{"model": ""}, {"timeout": 0}])
+@pytest.mark.parametrize("kwargs", [{"model": ""}, {"timeout": 0}, {"response_mode": "xml"}])
 def test_config_rejects_unsafe_values(kwargs) -> None:
     with pytest.raises(ValueError):
         LocalLlamaConfig(**kwargs)

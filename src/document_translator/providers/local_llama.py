@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Literal
 
 import httpx
 
@@ -24,6 +24,7 @@ class LocalLlamaConfig:
     endpoint: str = "http://127.0.0.1:8088"
     model: str = "local-model"
     timeout: float = 60.0
+    response_mode: Literal["json", "plain_text"] = "json"
 
     def __post_init__(self) -> None:
         if not self.endpoint.strip():
@@ -32,6 +33,8 @@ class LocalLlamaConfig:
             raise ValueError("model must not be empty")
         if self.timeout <= 0:
             raise ValueError("timeout must be positive")
+        if self.response_mode not in {"json", "plain_text"}:
+            raise ValueError("response_mode must be json or plain_text")
 
 
 class LocalLlamaError(RuntimeError):
@@ -48,6 +51,18 @@ class LocalLlamaProvider:
     provider_name = "local_llama"
     prompt_version = "local-llama-v1"
     glossary_version = "none"
+    _plain_text_prompt_markers = (
+        "unit_id",
+        "source_text",
+        "json only",
+        "json output",
+        '"translation"',
+        "return only the translation",
+        "do not return json",
+        "preserve every protected token",
+        "<source>",
+        "</source>",
+    )
     def __init__(
         self,
         config: LocalLlamaConfig | None = None,
@@ -83,26 +98,37 @@ class LocalLlamaProvider:
 
         try:
             content = self._response_content(response.json())
-            translated = json.loads(content)
-        except (ValueError, TypeError, json.JSONDecodeError) as exc:
-            raise LocalLlamaError("MALFORMED_RESPONSE", "response does not contain valid translation JSON") from exc
+        except (ValueError, TypeError) as exc:
+            raise LocalLlamaError("MALFORMED_RESPONSE", "response does not contain model text") from exc
 
-        if not isinstance(translated, dict) or set(translated) != {"unit_id", "translation"}:
-            raise LocalLlamaError("INVALID_RESPONSE_SCHEMA", "translation JSON must contain only unit_id and translation")
-        if translated["unit_id"] != unit.id:
-            raise LocalLlamaError("UNIT_ID_MISMATCH", "response unit ID does not match request")
-        if not isinstance(translated["translation"], str) or not translated["translation"].strip():
+        if self.config.response_mode == "json":
+            try:
+                translated = json.loads(content)
+            except json.JSONDecodeError as exc:
+                raise LocalLlamaError("MALFORMED_RESPONSE", "response does not contain valid translation JSON") from exc
+            if not isinstance(translated, dict) or set(translated) != {"unit_id", "translation"}:
+                raise LocalLlamaError("INVALID_RESPONSE_SCHEMA", "translation JSON must contain only unit_id and translation")
+            if translated["unit_id"] != unit.id:
+                raise LocalLlamaError("UNIT_ID_MISMATCH", "response unit ID does not match request")
+            translation = translated["translation"]
+        else:
+            translation = content.strip()
+            lowered_translation = translation.casefold()
+            if any(marker in lowered_translation for marker in self._plain_text_prompt_markers):
+                raise LocalLlamaError("PROMPT_LEAKAGE", "plain-text response contains translation prompt content")
+
+        if not isinstance(translation, str) or not translation.strip():
             raise LocalLlamaError("EMPTY_TRANSLATION", "response translation must be non-empty text")
 
         result = TranslationResult(
             unit_id=unit.id,
-            translation=translated["translation"],
+            translation=translation,
             provider=self.provider_name,
             model=self.config.model,
             prompt_version=self.prompt_version,
             glossary_version=self.glossary_version,
             source_hash=sha256_text(unit.source_text),
-            result_hash=sha256_text(translated["translation"]),
+            result_hash=sha256_text(translation),
             request_count=1,
             validation_status="valid",
         )
@@ -135,6 +161,15 @@ class LocalLlamaProvider:
                 glossary_instruction = (
                     "\nUse these required terminology mappings exactly:\n" + mappings + "\n"
                 )
+        if self.config.response_mode == "plain_text":
+            return (
+                "Translate the source text from " + unit.source_language + " to " + unit.target_language + ".\n"
+                "Return only the translation. Do not return JSON, labels, explanations, the source text, "
+                "or any instruction text.\n"
+                "Preserve every protected token exactly, including spelling and count: " + protected + ".\n"
+                + glossary_instruction
+                + "<source>\n" + unit.source_text + "\n</source>"
+            )
         return (
             "Translate the source text from " + unit.source_language + " to " + unit.target_language + ".\n"
             "Return JSON only, with exactly these keys: unit_id and translation.\n"
