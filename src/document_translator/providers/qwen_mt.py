@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import os
 from dataclasses import dataclass
 from typing import Any
@@ -20,6 +19,7 @@ from document_translator.services.glossary import Glossary
 
 _COMPATIBLE_ENDPOINT = "https://dashscope.aliyuncs.com/compatible-mode/v1"
 _ALLOWED_MODELS = frozenset({"qwen-mt-plus", "qwen-mt-flash"})
+_QWEN_LANGUAGE_NAMES = {"zh": "Chinese", "zh-cn": "Chinese", "en": "English"}
 
 
 @dataclass(frozen=True, slots=True)
@@ -70,10 +70,21 @@ class QwenMTProvider:
         if not api_key or not api_key.strip():
             raise QwenMTError("API_KEY_MISSING", "DashScope API key is not configured")
 
+        translation_options: dict[str, object] = {
+            "source_lang": self._qwen_language(unit.source_language),
+            "target_lang": self._qwen_language(unit.target_language),
+        }
+        if self._glossary is not None:
+            entries = self._glossary.entries_for(unit.source_text)
+            if entries:
+                translation_options["terms"] = [
+                    {"source": entry.source, "target": entry.target} for entry in entries
+                ]
         payload = {
             "model": self.config.model,
             "temperature": 0,
-            "messages": [{"role": "user", "content": self._prompt_for(unit)}],
+            "messages": [{"role": "user", "content": unit.source_text}],
+            "translation_options": translation_options,
         }
         try:
             response = self.client.post(
@@ -87,32 +98,31 @@ class QwenMTProvider:
             raise QwenMTError("HTTP_ERROR", "DashScope request failed") from exc
 
         try:
-            translated = json.loads(self._response_content(response.json()))
-        except (ValueError, TypeError, json.JSONDecodeError) as exc:
-            raise QwenMTError("MALFORMED_RESPONSE", "response does not contain valid translation JSON") from exc
-
-        if not isinstance(translated, dict) or set(translated) != {"unit_id", "translation"}:
-            raise QwenMTError("INVALID_RESPONSE_SCHEMA", "translation JSON must contain only unit_id and translation")
-        if translated["unit_id"] != unit.id:
-            raise QwenMTError("UNIT_ID_MISMATCH", "response unit ID does not match request")
-        if not isinstance(translated["translation"], str) or not translated["translation"].strip():
+            translation = self._response_content(response.json()).strip()
+        except (ValueError, TypeError) as exc:
+            raise QwenMTError("MALFORMED_RESPONSE", "response does not contain translation text") from exc
+        if not translation:
             raise QwenMTError("EMPTY_TRANSLATION", "response translation must be non-empty text")
 
         result = TranslationResult(
             unit_id=unit.id,
-            translation=translated["translation"],
+            translation=translation,
             provider=self.provider_name,
             model=self.config.model,
             prompt_version=self.prompt_version,
             glossary_version=self.glossary_version,
             source_hash=sha256_text(unit.source_text),
-            result_hash=sha256_text(translated["translation"]),
+            result_hash=sha256_text(translation),
             request_count=1,
             validation_status="valid",
         )
         if validate_result_for_unit(unit, result):
             raise QwenMTError("VALIDATION_FAILED", "translation result failed validation")
         return result
+
+    @staticmethod
+    def _qwen_language(language: str) -> str:
+        return _QWEN_LANGUAGE_NAMES.get(language.strip().casefold(), language)
 
     @staticmethod
     def _response_content(body: Any) -> str:
@@ -125,22 +135,3 @@ class QwenMTProvider:
         if not isinstance(message, dict) or not isinstance(message.get("content"), str):
             raise ValueError("response choice must have string message content")
         return message["content"]
-
-    def _prompt_for(self, unit: TranslationUnit) -> str:
-        protected = json.dumps(unit.protected_tokens, ensure_ascii=False)
-        glossary_instruction = ""
-        if self._glossary is not None:
-            entries = self._glossary.entries_for(unit.source_text)
-            if entries:
-                mappings = "\nRequired terminology mappings (use exactly):\n" + "\n".join(
-                    f"{entry.source} -> {entry.target}" for entry in entries
-                ) + "\n"
-                glossary_instruction = mappings
-        return (
-            f"Translate from {unit.source_language} to {unit.target_language}. Return JSON only: "
-            "{\"unit_id\": \"...\", \"translation\": \"...\"}. "
-            f"Set unit_id to {unit.id}. Preserve protected tokens exactly: {protected}. "
-            "Preserve numbers, units, chainage, standards, and placeholders.\n"
-            + glossary_instruction
-            + f"Source:\n{unit.source_text}"
-        )

@@ -33,7 +33,7 @@ def client_for(body: object, status_code: int = 200) -> tuple[httpx.Client, list
 
 def success_body(unit: TranslationUnit, translation: str | None = None) -> dict:
     translated = translation or "在 K12+340 按 BS EN 752 安装 600 mm 阀门 [[TOKEN_1]]。"
-    return {"choices": [{"message": {"content": json.dumps({"unit_id": unit.id, "translation": translated})}}]}
+    return {"choices": [{"message": {"content": translated}}]}
 
 
 def test_translate_success_uses_compatible_endpoint_auth_and_no_leakage(monkeypatch, tmp_path) -> None:
@@ -52,7 +52,7 @@ def test_translate_success_uses_compatible_endpoint_auth_and_no_leakage(monkeypa
     assert requests[0].headers["Authorization"] == "Bearer test-secret"
     sent = requests[0].content.decode()
     assert "reference_translation" not in sent
-    assert "protected_literals" not in sent
+    assert "translation_options" in sent
     assert "K12+340" in sent and "600 mm" in sent and "BS EN 752" in sent
     assert list(tmp_path.iterdir()) == []
     assert result.glossary_version == "none"
@@ -74,8 +74,8 @@ def test_glossary_injects_only_matching_terms_and_sets_result_version(monkeypatc
 
     sent = requests[0].content.decode()
     assert result.glossary_version == "glossary-v1"
-    assert "valve -> 阀门" in sent
-    assert "unrelated term -> 不相关术语" not in sent
+    assert '"source":"valve","target":"阀门"' in sent
+    assert "unrelated term" not in sent
 
 
 @pytest.mark.parametrize("api_key", [None, "   "])
@@ -100,17 +100,8 @@ def test_config_rejects_lite_and_unknown_models(model: str) -> None:
         QwenMTConfig(model=model)
 
 
-@pytest.mark.parametrize(
-    ("body", "code"),
-    [
-        ({"choices": [{"message": {"content": "not json"}}]}, "MALFORMED_RESPONSE"),
-        (None, "MALFORMED_RESPONSE"),
-        ({"choices": []}, "MALFORMED_RESPONSE"),
-        ({"choices": [{"message": {"content": json.dumps({"unit_id": "b" * 64, "translation": "ok [[TOKEN_1]]"})}}]}, "UNIT_ID_MISMATCH"),
-        ({"choices": [{"message": {"content": json.dumps({"unit_id": "a", "translation": "x", "extra": "no"})}}]}, "INVALID_RESPONSE_SCHEMA"),
-    ],
-)
-def test_malformed_content_schema_and_unit_id_are_rejected(monkeypatch, body: object, code: str) -> None:
+@pytest.mark.parametrize("body", [None, {"choices": []}])
+def test_malformed_response_envelope_is_rejected(monkeypatch, body: object) -> None:
     unit = make_unit()
     client, _ = client_for(body)
     monkeypatch.setenv("DASHSCOPE_API_KEY", "test-secret")
@@ -118,7 +109,7 @@ def test_malformed_content_schema_and_unit_id_are_rejected(monkeypatch, body: ob
     with pytest.raises(QwenMTError) as caught:
         QwenMTProvider(client=client).translate_unit(unit)
 
-    assert caught.value.code == code
+    assert caught.value.code == "MALFORMED_RESPONSE"
 
 
 def test_malformed_api_json_and_multiple_choices_are_rejected(monkeypatch) -> None:
