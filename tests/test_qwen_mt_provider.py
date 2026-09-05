@@ -153,7 +153,7 @@ def test_http_error_is_rejected_without_exposing_key(monkeypatch) -> None:
     with pytest.raises(QwenMTError) as caught:
         QwenMTProvider(client=client).translate_unit(unit)
 
-    assert caught.value.code == "HTTP_ERROR"
+    assert caught.value.code == "HTTP_503"
     assert "do-not-expose" not in str(caught.value)
 
 

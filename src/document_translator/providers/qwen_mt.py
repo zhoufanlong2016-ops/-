@@ -94,6 +94,8 @@ class QwenMTProvider:
                 timeout=self.config.timeout,
             )
             response.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            raise QwenMTError(f"HTTP_{exc.response.status_code}", "DashScope request failed") from exc
         except httpx.HTTPError as exc:
             raise QwenMTError("HTTP_ERROR", "DashScope request failed") from exc
 
