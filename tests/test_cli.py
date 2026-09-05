@@ -26,10 +26,11 @@ class FakeService:
     instances: list["FakeService"] = []
     fail = False
 
-    def __init__(self, provider, cache, *, translation_mode):
+    def __init__(self, provider, cache, *, translation_mode, max_attempts):
         self.provider = provider
         self.cache = cache
         self.translation_mode = translation_mode
+        self.max_attempts = max_attempts
         self.calls = []
         self.__class__.instances.append(self)
 
@@ -74,6 +75,7 @@ def test_qwen_default_factory_and_success_summary(tmp_path, monkeypatch, capsys)
     assert service.provider.__class__.__name__ == "QwenMTProvider"
     assert service.provider.config.model == "qwen-mt-plus"
     assert service.cache is None
+    assert service.max_attempts == 3
     assert "translated 2 units; cache hits=1; cache misses=1" in capsys.readouterr().out
 
 
@@ -153,7 +155,7 @@ def test_cache_is_only_created_when_explicitly_requested(tmp_path, monkeypatch):
 
     assert cli.main([
         "translate-markdown", str(source), str(destination), "--source-language", "en", "--target-language", "zh",
-        "--cache", str(cache_path), "--translation-mode", "review",
+        "--cache", str(cache_path), "--translation-mode", "review", "--max-attempts", "2",
     ]) == 0
 
     service = FakeService.instances[0]
@@ -161,6 +163,7 @@ def test_cache_is_only_created_when_explicitly_requested(tmp_path, monkeypatch):
     assert service.cache.path == cache_path
     assert service.cache.closed
     assert service.translation_mode == "review"
+    assert service.max_attempts == 2
 
 
 def test_failure_returns_nonzero_without_destination(tmp_path, monkeypatch, capsys):

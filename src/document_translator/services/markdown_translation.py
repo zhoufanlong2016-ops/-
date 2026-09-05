@@ -64,12 +64,16 @@ class MarkdownTranslationService:
         cache: TranslationCache | None = None,
         *,
         translation_mode: str = "default",
+        max_attempts: int = 3,
     ) -> None:
         if not translation_mode:
             raise ValueError("translation_mode must not be empty")
+        if max_attempts < 1:
+            raise ValueError("max_attempts must be at least 1")
         self._provider = provider
         self._cache = cache
         self._translation_mode = translation_mode
+        self._max_attempts = max_attempts
 
     def translate_text(
         self,
@@ -168,10 +172,17 @@ class MarkdownTranslationService:
             raise MarkdownTranslationServiceError("unable to read translation result from cache") from error
 
     def _translate_and_validate(self, unit: TranslationUnit) -> TranslationResult:
-        try:
-            result = self._provider.translate_unit(unit)
-        except Exception as error:
-            raise MarkdownTranslationServiceError("translation provider failed") from error
+        last_error: Exception | None = None
+        for _ in range(self._max_attempts):
+            try:
+                result = self._provider.translate_unit(unit)
+                self._validate_provider_result(unit, result)
+                return result
+            except Exception as error:
+                last_error = error
+        raise MarkdownTranslationServiceError("translation provider failed after retries") from last_error
+
+    def _validate_provider_result(self, unit: TranslationUnit, result: object) -> None:
         if not isinstance(result, TranslationResult):
             raise MarkdownTranslationServiceError("translation provider returned an invalid result type")
         identity_errors = []
@@ -188,7 +199,6 @@ class MarkdownTranslationService:
             raise MarkdownTranslationServiceError(
                 "translation provider returned an invalid result: " + ", ".join(errors)
             )
-        return result
 
     def _provider_model(self) -> str:
         try:

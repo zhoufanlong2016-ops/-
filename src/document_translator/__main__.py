@@ -38,6 +38,7 @@ def _parser() -> argparse.ArgumentParser:
     translate.add_argument("--local-endpoint", help="local llama-server endpoint (local providers only)")
     translate.add_argument("--cache", type=Path, metavar="PATH", help="explicit SQLite cache path")
     translate.add_argument("--translation-mode", default="default")
+    translate.add_argument("--max-attempts", type=int, default=3, help="provider attempts per uncached unit")
     translate.add_argument("--overwrite", action="store_true", help="allow replacement of DESTINATION")
     return parser
 
@@ -74,6 +75,7 @@ def _translate_markdown(args: argparse.Namespace) -> int:
                 provider,
                 cache,
                 translation_mode=args.translation_mode,
+                max_attempts=args.max_attempts,
             )
             outcome = service.translate_file(
                 args.source,

@@ -46,6 +46,18 @@ class FakeProvider:
         )
 
 
+class FlakyProvider(FakeProvider):
+    def __init__(self, failures: int) -> None:
+        super().__init__()
+        self.failures = failures
+
+    def translate_unit(self, unit: TranslationUnit) -> TranslationResult:
+        self.calls += 1
+        if self.calls <= self.failures:
+            raise RuntimeError("temporary provider failure")
+        return super().translate_unit(unit)
+
+
 def test_in_memory_translates_protected_markdown_and_validates_writeback() -> None:
     provider = FakeProvider()
     outcome = MarkdownTranslationService(provider).translate_text("Hello `code` world\n")
@@ -110,6 +122,32 @@ def test_provider_failure_does_not_create_destination(tmp_path) -> None:
         MarkdownTranslationService(FakeProvider(fail=True)).translate_file(source, provider_destination)
 
     assert not provider_destination.exists()
+
+
+def test_retries_an_uncached_unit_and_caches_the_success(tmp_path) -> None:
+    provider = FlakyProvider(failures=2)
+    with TranslationCache(tmp_path / "cache.sqlite3") as cache:
+        first = MarkdownTranslationService(provider, cache, max_attempts=3).translate_text("Hello world\n")
+        second = MarkdownTranslationService(provider, cache, max_attempts=3).translate_text("Hello world\n")
+
+    assert provider.calls == 4
+    assert first.cache_misses == 1 and second.cache_hits == 1
+
+
+def test_retry_exhaustion_does_not_create_destination(tmp_path) -> None:
+    source = tmp_path / "source.md"
+    destination = tmp_path / "translated.md"
+    source.write_text("Hello world\n", encoding="utf-8")
+
+    with pytest.raises(MarkdownTranslationServiceError, match="after retries"):
+        MarkdownTranslationService(FlakyProvider(failures=3), max_attempts=3).translate_file(source, destination)
+
+    assert not destination.exists()
+
+
+def test_rejects_an_invalid_retry_limit() -> None:
+    with pytest.raises(ValueError, match="max_attempts"):
+        MarkdownTranslationService(FakeProvider(), max_attempts=0)
 
 
 def test_rewrite_rejection_does_not_create_destination(tmp_path, monkeypatch) -> None:
