@@ -62,6 +62,8 @@ class LocalLlamaProvider:
         "preserve every protected token",
         "<source>",
         "</source>",
+        "translate the following text into",
+        "only output the translated result",
     )
     def __init__(
         self,
@@ -71,14 +73,15 @@ class LocalLlamaProvider:
         glossary: Glossary | None = None,
     ) -> None:
         self.config = config or LocalLlamaConfig()
+        if self.config.response_mode == "plain_text":
+            self.prompt_version = "hy-mt2-native-v2"
         self.client = client
         self._glossary = glossary
         self.glossary_version = glossary.version if glossary is not None else "none"
 
     def translate_unit(self, unit: TranslationUnit) -> TranslationResult:
-        payload = {
+        payload: dict[str, Any] = {
             "model": self.config.model,
-            "temperature": 0,
             "messages": [
                 {
                     "role": "user",
@@ -86,6 +89,10 @@ class LocalLlamaProvider:
                 }
             ],
         }
+        if self.config.response_mode == "plain_text":
+            payload.update({"temperature": 0.7, "top_p": 0.6, "top_k": 20, "repeat_penalty": 1.05})
+        else:
+            payload["temperature"] = 0
         try:
             response = self.client.post(
                 f"{self.config.endpoint.rstrip('/')}/v1/chat/completions",
@@ -162,13 +169,24 @@ class LocalLlamaProvider:
                     "\nUse these required terminology mappings exactly:\n" + mappings + "\n"
                 )
         if self.config.response_mode == "plain_text":
+            target = {"en": "English", "zh-cn": "Chinese", "zh": "Chinese"}.get(
+                unit.target_language.casefold(), unit.target_language
+            )
+            references = ""
+            if self._glossary is not None:
+                entries = self._glossary.entries_for(unit.source_text)
+                if entries:
+                    references = "Reference the following translations:\n" + "\n".join(
+                        f"{entry.source} translates to {entry.target}" for entry in entries
+                    ) + "\n\n"
+            protection = (
+                "Preserve these symbols exactly: " + protected + ".\n"
+                if unit.protected_tokens else ""
+            )
             return (
-                "Translate the source text from " + unit.source_language + " to " + unit.target_language + ".\n"
-                "Return only the translation. Do not return JSON, labels, explanations, the source text, "
-                "or any instruction text.\n"
-                "Preserve every protected token exactly, including spelling and count: " + protected + ".\n"
-                + glossary_instruction
-                + "<source>\n" + unit.source_text + "\n</source>"
+                references + protection + "Translate the following text into " + target
+                + ". Note that you should only output the translated result without any additional explanation:\n\n"
+                + unit.source_text
             )
         return (
             "Translate the source text from " + unit.source_language + " to " + unit.target_language + ".\n"

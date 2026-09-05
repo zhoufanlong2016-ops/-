@@ -70,9 +70,15 @@ def test_plain_text_response_mode_binds_the_known_unit_id() -> None:
     assert result.unit_id == unit.id
     assert result.translation == "Keep [[TOKEN_1]] safe."
     prompt = requests[0].content.decode()
-    assert "Return only the translation" in prompt
+    assert "Translate the following text into Chinese" in prompt
+    assert result.prompt_version == "hy-mt2-native-v2"
+    payload = json.loads(prompt)
+    assert payload["temperature"] == 0.7
+    assert payload["top_p"] == 0.6
+    assert payload["top_k"] == 20
+    assert payload["repeat_penalty"] == 1.05
     assert "Return JSON only" not in prompt
-    assert "<source>" in prompt
+    assert "<source>" not in prompt
 
 
 def test_plain_text_response_rejects_prompt_leakage() -> None:
@@ -85,6 +91,30 @@ def test_plain_text_response_rejects_prompt_leakage() -> None:
         ).translate_unit(unit)
 
     assert caught.value.code == "PROMPT_LEAKAGE"
+
+
+def test_hy_prompt_maps_language_and_preserves_matching_glossary():
+    unit = make_unit()
+    data = unit.model_dump(exclude={"id"})
+    data["target_language"] = "zh-CN"
+    unit = TranslationUnit(id=generate_unit_id(**{k: v for k, v in data.items() if k != "status"}), **data)
+    glossary = Glossary(entries=(GlossaryEntry(source="Keep", target="保留"),), version="terms-1")
+    client, requests = client_for({"choices": [{"message": {"content": "保留 [[TOKEN_1]]。"}}]})
+    result = LocalLlamaProvider(LocalLlamaConfig(response_mode="plain_text"), client=client, glossary=glossary).translate_unit(unit)
+    prompt = json.loads(requests[0].content)["messages"][0]["content"]
+    assert "into Chinese" in prompt
+    assert "Keep translates to 保留" in prompt
+    assert prompt.endswith(unit.source_text)
+    assert unit.id not in prompt
+    assert result.glossary_version == "terms-1"
+
+
+@pytest.mark.parametrize("text,code", [("   ", "EMPTY_TRANSLATION"), ("译文未保留标记", "VALIDATION_FAILED")])
+def test_hy_plain_text_still_rejects_empty_or_missing_tokens(text, code):
+    client, _ = client_for({"choices": [{"message": {"content": text}}]})
+    with pytest.raises(LocalLlamaError) as caught:
+        LocalLlamaProvider(LocalLlamaConfig(response_mode="plain_text"), client=client).translate_unit(make_unit())
+    assert caught.value.code == code
 
 
 def test_glossary_injects_only_matching_terms_and_sets_result_version() -> None:

@@ -67,6 +67,15 @@ def test_repeated_source_text_uses_separate_spans() -> None:
     assert units[0].id != units[1].id
 
 
+def test_likely_cjk_hard_wrap_merges_into_one_rewritable_span() -> None:
+    text = "这是一个足够长但没有句末标点的中文段落，用于确认翻译器能识别跨空行拆开的词语，并且保留源代码中的逐行位置以便安全回写外部承\n\n包商围绕在其身边。\n"
+    units = extract_translation_units(text)
+    assert len(units) == 1
+    assert units[0].source_text.endswith("外部承\n\n包商围绕在其身边。")
+    assert units[0].location.object_id.startswith("range:0:")
+    assert rewrite_markdown(text, units, {units[0].id: "External contractors surrounded him."}).text == "External contractors surrounded him.\n"
+
+
 def test_missing_translation_keeps_source_and_reports_error() -> None:
     text = "保留\n"
     unit = extract_translation_units(text)[0]

@@ -23,6 +23,8 @@ _URL_RE = re.compile(r"https?://[^\s<>()]+")
 _FENCE_RE = re.compile(r"^\s{0,3}(`{3,}|~{3,})(.*)$")
 _FRONT_MATTER_MARKERS = {"---", "..."}
 _TABLE_ALIGNMENT_CELL_RE = re.compile(r"^:?-{3,}:?$")
+_CJK_RE = re.compile(r"[\u4e00-\u9fff]")
+_SENTENCE_END_RE = re.compile(r"[。！？；：.!?;:][”’）】〕〉》]?$")
 
 
 @dataclass(frozen=True)
@@ -241,6 +243,51 @@ def _line_content_span(line: str, line_start: int) -> tuple[int, int] | None:
     return (line_start + start, line_start + end) if start < end else None
 
 
+def _merge_hard_wrapped_units(text: str, units: Sequence[TranslationUnit]) -> list[TranslationUnit]:
+    """Merge a likely CJK word split across a blank line into one rewritable span."""
+    merged: list[TranslationUnit] = []
+    index = 0
+    while index < len(units):
+        left = units[index]
+        right = units[index + 1] if index + 1 < len(units) else None
+        left_match = re.fullmatch(r"line:(\d+):span:.*", left.location.object_id or "")
+        right_match = re.fullmatch(r"line:(\d+):span:.*", right.location.object_id or "") if right else None
+        should_merge = (
+            right is not None
+            and left_match is not None
+            and right_match is not None
+            and int(right_match.group(1)) == int(left_match.group(1)) + 2
+            and len(left.source_text) >= 60
+            and not left.protected_tokens
+            and not right.protected_tokens
+            and not _SENTENCE_END_RE.search(left.source_text)
+            and _CJK_RE.fullmatch(left.source_text[-1]) is not None
+            and _CJK_RE.fullmatch(right.source_text[0]) is not None
+        )
+        if not should_merge:
+            merged.append(left)
+            index += 1
+            continue
+        span_nodes = [node for node in (*left.location.node_ids, *right.location.node_ids) if node.startswith("span:")]
+        start = int(span_nodes[0].split(":")[1])
+        end = int(span_nodes[-1].split(":")[2])
+        location = DocumentLocation(
+            part="markdown", object_id=f"range:{start}:{end}", node_ids=span_nodes,
+        )
+        data = left.model_dump(exclude={"id", "status"})
+        data.update(
+            location=location,
+            source_text=text[start:end],
+            protected_tokens=[],
+            context_before="",
+            context_after="",
+        )
+        data["id"] = generate_unit_id(**data)
+        merged.append(TranslationUnit.model_validate(data))
+        index += 2
+    return merged
+
+
 def extract_translation_units(
     text: str, *, source_language: str = "auto", target_language: str = "en",
     document_hash: str | None = None,
@@ -303,7 +350,7 @@ def extract_translation_units(
                 data["id"] = generate_unit_id(**data)
                 units.append(TranslationUnit.model_validate(data))
         offset += len(line)
-    return units
+    return _merge_hard_wrapped_units(text, units)
 
 
 def rewrite_markdown(
@@ -316,19 +363,26 @@ def rewrite_markdown(
     seen_spans: set[tuple[int, int]] = set()
     for unit in units:
         location = unit.location
-        match = re.fullmatch(r"line:(\d+):span:(\d+):(\d+)", location.object_id or "")
-        if not match:
+        line_match = re.fullmatch(r"line:(\d+):span:(\d+):(\d+)", location.object_id or "")
+        range_match = re.fullmatch(r"range:(\d+):(\d+)", location.object_id or "")
+        if line_match:
+            line_number, start_in_line, end_in_line = map(int, line_match.groups())
+            line_offsets = [0]
+            for line in text.splitlines(keepends=True):
+                line_offsets.append(line_offsets[-1] + len(line))
+            if line_number >= len(line_offsets):
+                errors.append(f"{unit.id}: INVALID_LOCATION")
+                continue
+            start = line_offsets[line_number - 1] + start_in_line
+            end = line_offsets[line_number - 1] + end_in_line
+        elif range_match:
+            start, end = map(int, range_match.groups())
+            if start < 0 or end > len(text) or start >= end:
+                errors.append(f"{unit.id}: INVALID_LOCATION")
+                continue
+        else:
             errors.append(f"{unit.id}: INVALID_LOCATION")
             continue
-        line_number, start_in_line, end_in_line = map(int, match.groups())
-        line_offsets = [0]
-        for line in text.splitlines(keepends=True):
-            line_offsets.append(line_offsets[-1] + len(line))
-        if line_number >= len(line_offsets):
-            errors.append(f"{unit.id}: INVALID_LOCATION")
-            continue
-        start = line_offsets[line_number - 1] + start_in_line
-        end = line_offsets[line_number - 1] + end_in_line
         protected = _protect_inline(text[start:end])
         if protected.text != unit.source_text or list(protected.tokens) != unit.protected_tokens:
             errors.append(f"{unit.id}: SOURCE_SPAN_MISMATCH")
