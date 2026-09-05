@@ -29,6 +29,11 @@ class Provider:
 def test_unit_preserves_benchmark_literals_as_tokens():
     unit = unit_for(record())
     assert unit.protected_tokens == ["K12+340"]
+    assert "K12+340" in unit.source_text
+
+
+def test_case_insensitive_english_term_check():
+    assert checks_for(record(), "Install Valve at K12+340.")["required_terms"]
 
 
 def test_checks_detect_required_term_and_prompt_leakage():

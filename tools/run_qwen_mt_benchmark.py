@@ -46,7 +46,7 @@ def checks_for(record: dict[str, Any], translation: str) -> dict[str, bool]:
             translation.count(literal) == record["source_text"].count(literal)
             for literal in record["protected_literals"]
         ),
-        "required_terms": all(term["target"] in translation for term in record["required_terms"]),
+        "required_terms": all(term["target"].casefold() in translation.casefold() for term in record["required_terms"]),
         "prompt_leakage": not any(marker in translation.casefold() for marker in (
             "unit_id", "source_text", "return json", "translate the following text into",
         )),
@@ -60,7 +60,7 @@ def _atomic_write(path: Path, rows: list[dict[str, Any]]) -> None:
     os.replace(temporary, path)
 
 
-def run(records: list[dict[str, Any]], provider_factory, result_path: Path, *, model: str, max_attempts: int) -> list[dict[str, Any]]:
+def run(records: list[dict[str, Any]], provider_factory, result_path: Path, *, model: str, max_attempts: int, retry_delay: float = 1.0) -> list[dict[str, Any]]:
     existing = {
         row["id"]: row for row in (
             json.loads(line) for line in result_path.read_text(encoding="utf-8").splitlines()
@@ -82,6 +82,8 @@ def run(records: list[dict[str, Any]], provider_factory, result_path: Path, *, m
                 break
             except Exception as error:
                 error_code = getattr(error, "code", type(error).__name__)
+                if attempts < max_attempts:
+                    time.sleep(retry_delay * attempts)
         checks = checks_for(record, translation) if translation else {}
         success = bool(translation) and not error_code and all(checks.values())
         existing[record["id"]] = {

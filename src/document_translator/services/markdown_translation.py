@@ -8,6 +8,7 @@ from typing import Protocol
 
 from document_translator.adapters.markdown import (
     MarkdownRewriteResult,
+    detect_hard_wraps,
     extract_translation_units,
     read_markdown,
     rewrite_markdown,
@@ -53,6 +54,7 @@ class MarkdownTranslationOutcome:
     cache_hits: int
     cache_misses: int
     rewrite: MarkdownRewriteResult
+    preflight_warnings: tuple[str, ...] = ()
 
 
 class MarkdownTranslationService:
@@ -93,6 +95,7 @@ class MarkdownTranslationService:
             raise MarkdownTranslationServiceError("unable to extract Markdown translation units") from error
 
         results: list[TranslationResult] = []
+        preflight_warnings = detect_hard_wraps(text)
         cache_hits = 0
         cache_misses = 0
         for unit in units:
@@ -123,6 +126,7 @@ class MarkdownTranslationService:
             cache_hits=cache_hits,
             cache_misses=cache_misses,
             rewrite=rewrite,
+            preflight_warnings=preflight_warnings,
         )
 
     def translate_file(

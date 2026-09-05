@@ -67,6 +67,13 @@ def test_in_memory_translates_protected_markdown_and_validates_writeback() -> No
     assert outcome.rewrite.errors == ()
     assert outcome.rewrite.text == "Nihao `code` shijie\n"
     assert outcome.results[0].unit_id == outcome.units[0].id
+    assert outcome.preflight_warnings == ()
+
+
+def test_preflight_warning_is_returned_for_hard_wrap() -> None:
+    text = "这是一个足够长但没有句末标点的中文段落，用于确认翻译器能识别跨空行拆开的词语，并且保留源代码中的逐行位置以便安全回写外部承\n\n包商围绕在其身边。\n"
+    outcome = MarkdownTranslationService(FakeProvider()).translate_text(text)
+    assert outcome.preflight_warnings
 
 
 def test_second_equivalent_run_uses_cache_without_provider_calls(tmp_path) -> None:

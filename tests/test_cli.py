@@ -20,6 +20,7 @@ class FakeOutcome:
     units: tuple[object, ...] = (object(), object())
     cache_hits: int = 1
     cache_misses: int = 1
+    preflight_warnings: tuple[str, ...] = ()
 
 
 class FakeService:

@@ -2,7 +2,7 @@ from pathlib import Path
 import re
 
 from document_translator.adapters.markdown import (
-    extract_translation_units, read_markdown, rewrite_markdown, write_markdown,
+    detect_hard_wraps, extract_translation_units, read_markdown, rewrite_markdown, write_markdown,
 )
 from document_translator.core import TranslationResult, sha256_text
 
@@ -74,6 +74,7 @@ def test_likely_cjk_hard_wrap_merges_into_one_rewritable_span() -> None:
     assert units[0].source_text.endswith("外部承\n\n包商围绕在其身边。")
     assert units[0].location.object_id.startswith("range:0:")
     assert rewrite_markdown(text, units, {units[0].id: "External contractors surrounded him."}).text == "External contractors surrounded him.\n"
+    assert detect_hard_wraps(text) == ("lines 1 and 3: possible split word 便安全回写外部承 / 包商围绕在其身边",)
 
 
 def test_missing_translation_keeps_source_and_reports_error() -> None:

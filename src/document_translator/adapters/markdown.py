@@ -27,6 +27,21 @@ _CJK_RE = re.compile(r"[\u4e00-\u9fff]")
 _SENTENCE_END_RE = re.compile(r"[。！？；：.!?;:][”’）】〕〉》]?$")
 
 
+def detect_hard_wraps(text: str) -> tuple[str, ...]:
+    """Report likely CJK word splits before translation; do not silently hide them."""
+    lines = text.splitlines()
+    issues: list[str] = []
+    for index, (left, right) in enumerate(zip(lines, lines[2:]), start=1):
+        left = left.strip()
+        right = right.strip()
+        if (
+            len(left) >= 60 and left and right and not _SENTENCE_END_RE.search(left)
+            and _CJK_RE.fullmatch(left[-1]) and _CJK_RE.fullmatch(right[0])
+        ):
+            issues.append(f"lines {index} and {index + 2}: possible split word {left[-8:]} / {right[:8]}")
+    return tuple(issues)
+
+
 @dataclass(frozen=True)
 class MarkdownReadResult:
     text: str

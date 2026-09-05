@@ -92,6 +92,8 @@ def _translate_markdown(args: argparse.Namespace) -> int:
         f"translated {len(outcome.units)} units; cache hits={outcome.cache_hits}; "
         f"cache misses={outcome.cache_misses}; output={args.destination}"
     )
+    for warning in outcome.preflight_warnings:
+        print(f"preflight warning: {warning}", file=sys.stderr)
     return 0
 
 
