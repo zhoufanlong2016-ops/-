@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ApplicationPackage SchemaVersion="1.0"
+                    AutodeskProduct="AutoCAD"
+                    Name="CadBridge"
+                    AppVersion="1.0.0"
+                    ProductCode="{D2EDC490-A0AD-4E66-8654-C1E68112C744}">
+  <CompanyDetails Name="Document Translator" />
+  <RuntimeRequirements OS="Win64" Platform="AutoCAD*" SeriesMin="R25.0" SeriesMax="R25.0" />
+  <Components>
+    <RuntimeRequirements OS="Win64" Platform="AutoCAD*" SeriesMin="R25.0" SeriesMax="R25.0" />
+    <ComponentEntry AppName="CadBridge"
+                    ModuleName="./Contents/CadBridge.dll"
+                    AppDescription="Versioned DWG text export/import bridge"
+                    LoadOnAutoCADStartup="True">
+      <Commands GroupName="CadBridgeCommands">
+        <Command Global="TR_EXPORT" Local="TR_EXPORT" />
+        <Command Global="TR_IMPORT" Local="TR_IMPORT" />
+      </Commands>
+    </ComponentEntry>
+  </Components>
+</ApplicationPackage>

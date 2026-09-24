@@ -1,0 +1,10 @@
+{
+  "STYLE-ARIAL_NARROW": {
+    "target_font_file": "simhei.ttf",
+    "apply_to_mtext": false
+  },
+  "ARIAL": {
+    "target_font_file": "simhei.ttf",
+    "apply_to_mtext": false
+  }
+}

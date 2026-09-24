@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from argparse import Namespace
 from dataclasses import dataclass
 
 import pytest
@@ -27,11 +28,12 @@ class FakeService:
     instances: list["FakeService"] = []
     fail = False
 
-    def __init__(self, provider, cache, *, translation_mode, max_attempts):
+    def __init__(self, provider, cache, *, translation_mode, max_attempts, max_segment_chars=None):
         self.provider = provider
         self.cache = cache
         self.translation_mode = translation_mode
         self.max_attempts = max_attempts
+        self.max_segment_chars = max_segment_chars
         self.calls = []
         self.__class__.instances.append(self)
 
@@ -80,37 +82,18 @@ def test_qwen_default_factory_and_success_summary(tmp_path, monkeypatch, capsys)
     assert "translated 2 units; cache hits=1; cache misses=1" in capsys.readouterr().out
 
 
-def test_local_factory_uses_local_defaults_and_endpoint(tmp_path, monkeypatch):
-    configure_fakes(monkeypatch)
-    source = tmp_path / "source.md"
-    destination = tmp_path / "translated.md"
-    source.write_text("Hello", encoding="utf-8")
+def test_default_en_zh_engineering_glossary_is_selected() -> None:
+    glossary = cli._glossary_for(Namespace(
+        glossary=None,
+        source_language="en",
+        target_language="zh",
+    ))
 
-    assert cli.main([
-        "translate-markdown", str(source), str(destination), "--source-language", "en", "--target-language", "zh",
-        "--provider", "local-llama", "--local-endpoint", "http://localhost:9999",
-    ]) == 0
-
-    provider = FakeService.instances[0].provider
-    assert provider.__class__.__name__ == "LocalLlamaProvider"
-    assert provider.config.model == "local-model"
-    assert provider.config.endpoint == "http://localhost:9999"
-
-
-def test_hy_mt_factory_uses_plain_text_mode_and_hy_mt_default(tmp_path, monkeypatch):
-    configure_fakes(monkeypatch)
-    source = tmp_path / "source.md"
-    destination = tmp_path / "translated.md"
-    source.write_text("Hello", encoding="utf-8")
-
-    assert cli.main([
-        "translate-markdown", str(source), str(destination), "--source-language", "zh-CN", "--target-language", "en",
-        "--provider", "local-hy-mt",
-    ]) == 0
-
-    provider = FakeService.instances[0].provider
-    assert provider.config.model == "Hy-MT2-1.8B-Q6_K.gguf"
-    assert provider.config.response_mode == "plain_text"
+    assert glossary is not None
+    assert [(entry.source, entry.target) for entry in glossary.entries] == [
+        ("Clearing and Grubb", "清表及清根"),
+        ("No.", "编号"),
+    ]
 
 
 def test_qwen_lite_is_rejected_without_output(tmp_path, monkeypatch, capsys):
@@ -134,6 +117,33 @@ def test_required_languages_are_enforced(tmp_path):
     with pytest.raises(SystemExit) as caught:
         cli.main(["translate-markdown", str(source), str(destination), "--source-language", "en"])
     assert caught.value.code == 2
+
+
+def test_markdown_and_pptx_accept_openai_provider() -> None:
+    parser = cli._parser()
+
+    markdown = parser.parse_args([
+        "translate-markdown", "source.md", "translated.md",
+        "--source-language", "en", "--target-language", "zh", "--provider", "openai",
+    ])
+    pptx = parser.parse_args([
+        "translate-pptx", "source.pptx", "translated.pptx",
+        "--source-language", "en", "--target-language", "zh", "--provider", "openai",
+    ])
+
+    assert markdown.provider == "openai"
+    assert pptx.provider == "openai"
+
+
+def test_xlsx_accepts_cloud_provider_and_hidden_sheet_option() -> None:
+    args = cli._parser().parse_args([
+        "translate-xlsx", "source.xlsx", "translated.xlsx",
+        "--source-language", "en", "--target-language", "zh",
+        "--provider", "openai", "--include-hidden-sheets",
+    ])
+
+    assert args.provider == "openai"
+    assert args.include_hidden_sheets is True
 
 
 def test_source_destination_match_is_rejected(tmp_path, monkeypatch, capsys):

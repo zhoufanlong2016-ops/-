@@ -4,9 +4,12 @@ version = "0.1.0"
 description = "Minimal project skeleton for a document translator."
 requires-python = ">=3.13,<3.14"
 dependencies = [
+    "babeldoc==0.6.2",
     "httpx",
     "marko",
     "pydantic",
+    "pdf2zh-next==2.9.0",
+    "pymupdf<1.25.3",
 ]
 
 [dependency-groups]
@@ -20,6 +23,9 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+document_translator = ["assets/*.csv"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

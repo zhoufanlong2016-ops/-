@@ -3,7 +3,7 @@ import zipfile
 
 import pytest
 
-from document_translator.services import Glossary, GlossaryError, load_glossary
+from document_translator.services import Glossary, GlossaryEntry, GlossaryError, load_glossary
 
 
 def write_csv(path, rows, *, bom=False):
@@ -50,6 +50,31 @@ def test_csv_bom_optional_columns_and_deterministic_matching(tmp_path):
     assert [(entry.source, entry.target) for entry in glossary.entries] == [("pump", "泵"), ("pump station", "泵站")]
     assert [entry.source for entry in glossary.entries_for("pump station and pump")] == ["pump station", "pump"]
     assert glossary.entries_for("Pump") == ()
+
+
+def test_matching_accepts_hyphen_and_simple_english_plural_variants() -> None:
+    glossary = Glossary(
+        entries=(
+            GlossaryEntry(source="control panel", target="控制柜"),
+            GlossaryEntry(source="launch shaft", target="始发井"),
+        ),
+        version="v1",
+    )
+
+    assert [entry.target for entry in glossary.entries_for("control-panel supply")] == ["控制柜"]
+    assert [entry.target for entry in glossary.entries_for("two launch shafts")] == ["始发井"]
+
+
+def test_matching_prefers_longer_cjk_phrase() -> None:
+    glossary = Glossary(
+        entries=(
+            GlossaryEntry(source="污水管", target="sewer pipe"),
+            GlossaryEntry(source="污水管道", target="sewer pipeline"),
+        ),
+        version="v1",
+    )
+
+    assert [entry.source for entry in glossary.entries_for("污水管道")] == ["污水管道"]
 
 
 @pytest.mark.parametrize(

@@ -13,6 +13,7 @@ from document_translator.core import (
     DocumentFormat, DocumentLocation, TranslationResult, TranslationUnit,
     generate_unit_id, sha256_text, validate_placeholders, validate_result_for_unit,
 )
+from document_translator.translation_rules import rule_protected_tokens
 
 _PLACEHOLDER_RE = re.compile(r"⟦[^⟧]+⟧")
 _HTML_TAG_RE = re.compile(r"</?[A-Za-z][^>]*>|<!--[\s\S]*?-->")
@@ -293,7 +294,7 @@ def _merge_hard_wrapped_units(text: str, units: Sequence[TranslationUnit]) -> li
         data.update(
             location=location,
             source_text=text[start:end],
-            protected_tokens=[],
+            protected_tokens=rule_protected_tokens(text[start:end]),
             context_before="",
             context_after="",
         )
@@ -359,7 +360,8 @@ def extract_translation_units(
                 data = dict(
                     document_hash=document_hash, format=DocumentFormat.MD, location=location,
                     source_language=source_language, target_language=target_language,
-                    source_text=protected.text, protected_tokens=list(protected.tokens),
+                    source_text=protected.text,
+                    protected_tokens=rule_protected_tokens(protected.text, protected.tokens),
                     style_signature="", context_before="", context_after="",
                 )
                 data["id"] = generate_unit_id(**data)
@@ -399,7 +401,8 @@ def rewrite_markdown(
             errors.append(f"{unit.id}: INVALID_LOCATION")
             continue
         protected = _protect_inline(text[start:end])
-        if protected.text != unit.source_text or list(protected.tokens) != unit.protected_tokens:
+        expected_tokens = rule_protected_tokens(protected.text, protected.tokens)
+        if protected.text != unit.source_text or expected_tokens != unit.protected_tokens:
             errors.append(f"{unit.id}: SOURCE_SPAN_MISMATCH")
             continue
         if unit.id not in translations:

@@ -5,7 +5,7 @@ from pydantic import ValidationError
 
 from document_translator.core import (
     DocumentFormat, DocumentLocation, TranslationResult, TranslationUnit, UnitStatus,
-    generate_cache_key, generate_unit_id, sha256_text, validate_placeholders,
+    generate_cache_key, generate_unit_id, sha256_text, validate_glossary_terms, validate_placeholders,
     validate_result_for_unit,
 )
 
@@ -53,6 +53,16 @@ def test_result_hash_mismatch_is_error() -> None:
     assert "RESULT_HASH_MISMATCH" in validate_result_for_unit(unit, result)
 
 
+def test_glossary_terms_require_exact_target_occurrence() -> None:
+    assert validate_glossary_terms("control panel", "控制柜", [("control panel", "控制柜")]) == []
+    errors = validate_glossary_terms("control panel", "控制面板", [("control panel", "控制柜")])
+    assert errors and "GLOSSARY_TERM_MISSING" in errors[0]
+
+
+def test_glossary_terms_accept_english_case_variants() -> None:
+    assert validate_glossary_terms("污水管道", "Sewer Pipeline", [("污水管道", "sewer pipeline")]) == []
+
+
 @pytest.mark.parametrize("translation", ["Keep.", "Keep ⟦ph_001⟧.", "Keep ⟦PH_001⟧ ⟦PH_001⟧."])
 def test_missing_case_or_duplicate_placeholder_is_error(translation: str) -> None:
     assert validate_placeholders("⟦PH_001⟧", translation, ["⟦PH_001⟧"])
@@ -69,9 +79,13 @@ def test_wrong_id_is_rejected() -> None:
         make_unit(id="b" * 64)
 
 
-def test_illegal_format_is_rejected() -> None:
+def test_unknown_format_is_rejected() -> None:
     with pytest.raises(ValidationError):
-        make_unit(format="xlsx")
+        make_unit(format="xls")
+
+
+def test_xlsx_format_is_accepted() -> None:
+    assert make_unit(format="xlsx").format is DocumentFormat.XLSX
 
 
 def test_empty_source_text_is_rejected() -> None:

@@ -58,6 +58,28 @@ class FlakyProvider(FakeProvider):
         return super().translate_unit(unit)
 
 
+class RecordingProvider(FakeProvider):
+    def __init__(self) -> None:
+        super().__init__()
+        self.source_texts: list[str] = []
+
+    def translate_unit(self, unit: TranslationUnit) -> TranslationResult:
+        self.source_texts.append(unit.source_text)
+        return super().translate_unit(unit)
+
+
+class BatchFakeProvider(FakeProvider):
+    provider_name = "qwen_mt"
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.batch_calls = 0
+
+    def translate_batch(self, units: list[TranslationUnit]) -> list[TranslationResult]:
+        self.batch_calls += 1
+        return [self.translate_unit(unit) for unit in units]
+
+
 def test_in_memory_translates_protected_markdown_and_validates_writeback() -> None:
     provider = FakeProvider()
     outcome = MarkdownTranslationService(provider).translate_text("Hello `code` world\n")
@@ -68,6 +90,14 @@ def test_in_memory_translates_protected_markdown_and_validates_writeback() -> No
     assert outcome.rewrite.text == "Nihao `code` shijie\n"
     assert outcome.results[0].unit_id == outcome.units[0].id
     assert outcome.preflight_warnings == ()
+
+
+def test_markdown_units_protect_engineering_values_in_addition_to_inline_syntax() -> None:
+    outcome = MarkdownTranslationService(FakeProvider()).translate_text(
+        "Hello `code` at 105+820, ISO 9001 and 5%\n",
+    )
+
+    assert outcome.units[0].protected_tokens == ["⟦MD_0001⟧", "105+820", "ISO 9001", "5%"]
 
 
 def test_preflight_warning_is_returned_for_hard_wrap() -> None:
@@ -86,6 +116,18 @@ def test_second_equivalent_run_uses_cache_without_provider_calls(tmp_path) -> No
     assert first.cache_misses == 2 and first.cache_hits == 0
     assert second.cache_hits == 2 and second.cache_misses == 0
     assert provider.calls == 2
+
+
+def test_uncached_markdown_units_use_batch_and_then_cache(tmp_path) -> None:
+    provider = BatchFakeProvider()
+    with TranslationCache(tmp_path / "cache.sqlite3") as cache:
+        service = MarkdownTranslationService(provider, cache)
+        first = service.translate_text("Hello world\nHello again\n")
+        second = service.translate_text("Hello world\nHello again\n")
+
+    assert first.cache_hits == 0 and first.cache_misses == 2
+    assert second.cache_hits == 2 and second.cache_misses == 0
+    assert provider.batch_calls == 1
 
 
 def test_cache_reuses_text_for_different_document_identity(tmp_path) -> None:
@@ -146,7 +188,7 @@ def test_retry_exhaustion_does_not_create_destination(tmp_path) -> None:
     destination = tmp_path / "translated.md"
     source.write_text("Hello world\n", encoding="utf-8")
 
-    with pytest.raises(MarkdownTranslationServiceError, match="after retries"):
+    with pytest.raises(MarkdownTranslationServiceError, match=r"after 3 attempts for unit [0-9a-f]{64}: RuntimeError"):
         MarkdownTranslationService(FlakyProvider(failures=3), max_attempts=3).translate_file(source, destination)
 
     assert not destination.exists()
@@ -155,6 +197,17 @@ def test_retry_exhaustion_does_not_create_destination(tmp_path) -> None:
 def test_rejects_an_invalid_retry_limit() -> None:
     with pytest.raises(ValueError, match="max_attempts"):
         MarkdownTranslationService(FakeProvider(), max_attempts=0)
+
+
+def test_long_markdown_unit_is_split_at_source_sentence_boundaries() -> None:
+    provider = RecordingProvider()
+    text = "甲" * 100 + "。" + "乙" * 61 + "。\n"
+
+    outcome = MarkdownTranslationService(provider, max_segment_chars=160).translate_text(text)
+
+    assert provider.source_texts == ["甲" * 100 + "。", "乙" * 61 + "。"]
+    assert outcome.results[0].request_count == 2
+    assert outcome.rewrite.text == "甲" * 100 + "。 " + "乙" * 61 + "。\n"
 
 
 def test_rewrite_rejection_does_not_create_destination(tmp_path, monkeypatch) -> None:

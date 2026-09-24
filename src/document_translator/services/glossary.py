@@ -6,6 +6,7 @@ import csv
 import hashlib
 import json
 import posixpath
+import re
 import zipfile
 from dataclasses import dataclass
 from pathlib import Path
@@ -80,9 +81,43 @@ class Glossary:
         return cls(entries=entries, version=version)
 
     def entries_for(self, source_text: str) -> tuple[GlossaryEntry, ...]:
-        """Return literal source terms present in *source_text* in stable priority order."""
-        matches = [entry for entry in self.entries if entry.source in source_text]
-        return tuple(sorted(matches, key=lambda entry: (-len(entry.source), entry.source)))
+        """Return matched terms, tolerating ordinary English punctuation/number variants."""
+        normalized_text = _normalize_term_text(source_text)
+        matches = []
+        for entry in self.entries:
+            normalized_source = _normalize_term_text(entry.source)
+            if not normalized_source:
+                continue
+            if normalized_source in normalized_text or (
+                not normalized_source.endswith("s") and f"{normalized_source}s" in normalized_text
+            ):
+                matches.append(entry)
+        ordered = sorted(matches, key=lambda entry: (-len(entry.source), entry.source))
+        # For CJK terms, a shorter entry embedded in a longer matched term is
+        # normally a substring artifact (污水管 inside 污水管道), not a second
+        # translation requirement. Keep established nested behavior for
+        # English glossaries while selecting the longest Chinese phrase.
+        selected: list[GlossaryEntry] = []
+        for entry in ordered:
+            if _contains_cjk(entry.source) and any(
+                _contains_cjk(longer.source)
+                and _normalize_term_text(entry.source) in _normalize_term_text(longer.source)
+                for longer in selected
+            ):
+                continue
+            selected.append(entry)
+        return tuple(selected)
+
+
+def _normalize_term_text(value: str) -> str:
+    """Normalize only matching syntax; never alter glossary output text."""
+    value = value.replace("‐", "-").replace("‑", "-").replace("–", "-").replace("—", "-")
+    value = re.sub(r"[-\s]+", " ", value)
+    return value.strip()
+
+
+def _contains_cjk(value: str) -> bool:
+    return bool(re.search(r"[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]", value))
 
 
 def load_glossary(path: str | Path) -> Glossary:

@@ -15,6 +15,7 @@ class DocumentFormat(StrEnum):
     MD = "md"
     DOCX = "docx"
     PPTX = "pptx"
+    XLSX = "xlsx"
     PDF = "pdf"
     DWG = "dwg"
 

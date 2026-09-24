@@ -1,0 +1,171 @@
+"""DashScope general-Qwen Chat Completions provider."""
+
+from __future__ import annotations
+
+import json
+import os
+from dataclasses import dataclass
+from typing import Any
+
+import httpx
+
+from document_translator.core import (
+    TranslationResult,
+    TranslationUnit,
+    sha256_text,
+    validate_glossary_terms,
+    validate_result_for_unit,
+)
+from document_translator.services.glossary import Glossary
+from document_translator.translation_rules import protect_for_translation, restore_after_translation
+
+from .translation_prompt import PROMPT_VERSION, compile_translation_policy, matched_glossary_entries
+
+
+_ENDPOINT = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
+
+
+@dataclass(frozen=True, slots=True)
+class QwenChatConfig:
+    model: str
+    api_key_env: str = "DASHSCOPE_API_KEY"
+    timeout: float = 120.0
+    # General Qwen models differ in how reliably they emit every JSON item;
+    # keep the default conservative so one omitted item cannot invalidate a
+    # long document batch.
+    batch_input_characters: int = 512
+
+    def __post_init__(self) -> None:
+        if not self.model.strip() or self.model.casefold().startswith("qwen-mt"):
+            raise ValueError("Qwen Chat requires a non-Qwen-MT model")
+        if not self.api_key_env.strip() or self.timeout <= 0 or self.batch_input_characters < 512:
+            raise ValueError("Qwen Chat configuration is invalid")
+
+
+class QwenChatError(RuntimeError):
+    def __init__(self, code: str, message: str) -> None:
+        self.code = code
+        super().__init__(message)
+
+
+class QwenChatProvider:
+    provider_name = "qwen"
+    prompt_version = PROMPT_VERSION
+    glossary_version = "none"
+
+    def __init__(self, config: QwenChatConfig, *, client: httpx.Client, glossary: Glossary | None = None) -> None:
+        self.config = config
+        self.client = client
+        self._glossary = glossary
+        self.glossary_version = glossary.version if glossary is not None else "none"
+
+    def translate_unit(self, unit: TranslationUnit) -> TranslationResult:
+        return self.translate_batch([unit])[0]
+
+    def translate_batch(self, units: list[TranslationUnit]) -> list[TranslationResult]:
+        if not units:
+            return []
+        batches: list[list[TranslationUnit]] = [[]]
+        size = 0
+        for unit in units:
+            cost = len(unit.source_text) + 64
+            if batches[-1] and size + cost > self.config.batch_input_characters:
+                batches.append([])
+                size = 0
+            batches[-1].append(unit)
+            size += cost
+        results: list[TranslationResult] = []
+        for batch in batches:
+            results.extend(self._translate_with_split(batch))
+        return results
+
+    def _translate_with_split(self, units: list[TranslationUnit]) -> list[TranslationResult]:
+        try:
+            return self._translate_batch_once(units)
+        except QwenChatError as exc:
+            if exc.code not in {"BATCH_MAPPING_INVALID", "BATCH_VALIDATION_FAILED"} or len(units) == 1:
+                raise
+            midpoint = len(units) // 2
+            return self._translate_with_split(units[:midpoint]) + self._translate_with_split(units[midpoint:])
+
+    def _translate_batch_once(self, units: list[TranslationUnit], *, correction: dict[str, list[str]] | None = None) -> list[TranslationResult]:
+        key = os.getenv(self.config.api_key_env)
+        if not key or not key.strip():
+            raise QwenChatError("API_KEY_MISSING", "DashScope API key is not configured")
+        first = units[0]
+        policy = compile_translation_policy(first, self._glossary)
+        terms_by_id = {
+            unit.id: tuple((entry.source, entry.target) for entry in matched_glossary_entries(unit, self._glossary))
+            if self._glossary is not None else () for unit in units
+        }
+        batch_terms = list(policy.required_terms)
+        for unit in units[1:]:
+            batch_terms.extend(terms_by_id[unit.id])
+        batch_terms = list(dict.fromkeys(batch_terms))
+        terminology = "\n\nRequired terminology (mandatory):\n" + "\n".join(
+            f"- {source} -> {target}" for source, target in batch_terms
+        ) if batch_terms else ""
+        correction_text = ""
+        if correction:
+            correction_text = "\n\nAUTOMATIC CORRECTION. Fix every listed defect and return the same IDs.\n" + "\n".join(
+                f"{unit_id}: {'; '.join(errors)}" for unit_id, errors in correction.items()
+            )
+        protected = {unit.id: protect_for_translation(unit.source_text, unit.protected_tokens) for unit in units}
+        items = [{"id": unit.id, "text": protected[unit.id].text} for unit in units]
+        system = policy.instruction + terminology + correction_text + "\nReturn JSON only: {\"items\":[{\"id\":string,\"translation\":string}]}"
+        body = {
+            "model": self.config.model,
+            "temperature": 0,
+            # Document translation is a deterministic extraction/rewriting
+            # task.  Disable hybrid reasoning so large batches do not spend
+            # the request timeout in an internal thinking pass.
+            "enable_thinking": False,
+            "messages": [{"role": "system", "content": system}, {"role": "user", "content": json.dumps({"items": items}, ensure_ascii=False)}],
+            "response_format": {"type": "json_object"},
+        }
+        try:
+            response = self.client.post(_ENDPOINT, headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"}, json=body, timeout=self.config.timeout)
+            response.raise_for_status()
+            content = self._content(response.json())
+            payload = json.loads(content)
+            rows = payload["items"]
+            if not isinstance(rows, list):
+                raise ValueError("items must be an array")
+        except httpx.HTTPStatusError as exc:
+            raise QwenChatError(f"HTTP_{exc.response.status_code}", "DashScope Qwen Chat request failed") from exc
+        except (httpx.HTTPError, ValueError, TypeError, KeyError, json.JSONDecodeError) as exc:
+            raise QwenChatError("BATCH_FAILED", "DashScope Qwen Chat response was invalid") from exc
+        mapped = {row.get("id"): row.get("translation") for row in rows if isinstance(row, dict)}
+        expected = {unit.id for unit in units}
+        if set(mapped) != expected or any(not isinstance(value, str) for value in mapped.values()):
+            raise QwenChatError("BATCH_MAPPING_INVALID", "Qwen Chat batch IDs are incomplete")
+        results: list[TranslationResult] = []
+        invalid: dict[str, list[str]] = {}
+        for unit in units:
+            text = mapped[unit.id].strip()
+            try:
+                text = restore_after_translation(text, protected[unit.id])
+            except ValueError as exc:
+                invalid[unit.id] = [f"PROTECTED_PLACEHOLDER_RESTORE_FAILED: {exc}"]
+            result = TranslationResult(unit_id=unit.id, translation=text, provider=self.provider_name, model=self.config.model, prompt_version=self.prompt_version, glossary_version=self.glossary_version, source_hash=sha256_text(unit.source_text), result_hash=sha256_text(text), request_count=1, validation_status="valid")
+            errors = [*validate_result_for_unit(unit, result), *validate_glossary_terms(unit.source_text, text, terms_by_id[unit.id])]
+            if errors:
+                invalid.setdefault(unit.id, []).extend(errors)
+            results.append(result)
+        if invalid:
+            if correction is not None:
+                raise QwenChatError("BATCH_VALIDATION_FAILED", "; ".join(f"{key}: {value}" for key, value in invalid.items()))
+            repaired = self._translate_batch_once([unit for unit in units if unit.id in invalid], correction=invalid)
+            repaired_by_id = {item.unit_id: item for item in repaired}
+            return [repaired_by_id.get(item.unit_id, item) for item in results]
+        return results
+
+    @staticmethod
+    def _content(body: Any) -> str:
+        try:
+            content = body["choices"][0]["message"]["content"]
+        except (KeyError, IndexError, TypeError) as exc:
+            raise ValueError("response has no chat content") from exc
+        if not isinstance(content, str) or not content.strip():
+            raise ValueError("response content must be non-empty text")
+        return content.strip().removeprefix("```json").removesuffix("```").strip()

@@ -3,7 +3,7 @@ import json
 import httpx
 import pytest
 
-from document_translator.core import DocumentFormat, DocumentLocation, TranslationUnit, generate_unit_id
+from document_translator.core import DocumentFormat, DocumentLocation, TranslationUnit, generate_unit_id, sha256_text
 from document_translator.providers import QwenMTConfig, QwenMTError, QwenMTProvider
 from document_translator.services import Glossary, GlossaryEntry
 
@@ -54,6 +54,14 @@ def test_translate_success_uses_compatible_endpoint_auth_and_no_leakage(monkeypa
     assert "reference_translation" not in sent
     assert "translation_options" in sent
     assert "K12+340" in sent and "600 mm" in sent and "BS EN 752" in sent
+    assert "Engineering and contract terminology" not in sent
+    payload = json.loads(sent)
+    assert payload["messages"][0]["content"] == unit.source_text
+    assert [message["role"] for message in payload["messages"]] == ["user"]
+    assert payload["enable_thinking"] is False
+    assert "max_tokens" not in payload
+    assert payload["stream"] is False
+    assert "Preserve every number with its unit" in payload["translation_options"]["domains"]
     assert list(tmp_path.iterdir()) == []
     assert result.glossary_version == "none"
 
@@ -76,6 +84,44 @@ def test_glossary_injects_only_matching_terms_and_sets_result_version(monkeypatc
     assert result.glossary_version == "glossary-v1"
     assert '"source":"valve","target":"阀门"' in sent
     assert "unrelated term" not in sent
+
+
+def test_rule_tokens_are_sent_as_official_qwen_verbatim_terms(monkeypatch) -> None:
+    unit = make_unit().model_copy(update={
+        "source_text": "Install 5% at 105+820.",
+        "protected_tokens": ["5%", "105+820"],
+    })
+    unit = unit.model_copy(update={"id": generate_unit_id(**unit.model_dump(exclude={"id", "status"}))})
+    client, requests = client_for({"choices": [{"message": {"content": "在 5% 处安装 105+820。"}}]})
+    monkeypatch.setenv("DASHSCOPE_API_KEY", "test-secret")
+
+    result = QwenMTProvider(client=client).translate_unit(unit)
+
+    assert result.translation == "在 5% 处安装 105+820。"
+    payload = json.loads(requests[0].content)
+    assert {"source": "5%", "target": "5%"} in payload["translation_options"]["terms"]
+    assert {"source": "105+820", "target": "105+820"} in payload["translation_options"]["terms"]
+
+
+def test_validation_failure_repairs_only_source_gaps(monkeypatch) -> None:
+    unit = make_unit().model_copy(update={
+        "source_text": "The event occurred in 2015.", "protected_tokens": ["2015"],
+    })
+    unit = unit.model_copy(update={"id": generate_unit_id(**unit.model_dump(exclude={"id", "status"}))})
+    seen: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        content = json.loads(request.content)["messages"][0]["content"]
+        seen.append(content)
+        reply = "事件发生在 202015 年。" if len(seen) == 1 else "事件发生在"
+        return httpx.Response(200, json={"choices": [{"message": {"content": reply}}]}, request=request)
+
+    monkeypatch.setenv("DASHSCOPE_API_KEY", "test-secret")
+    result = QwenMTProvider(client=httpx.Client(transport=httpx.MockTransport(handler))).translate_unit(unit)
+
+    assert "2015" in result.translation
+    assert "202015" not in result.translation
+    assert seen == ["The event occurred in 2015.", "The event occurred in"]
 
 
 @pytest.mark.parametrize("api_key", [None, "   "])
@@ -165,3 +211,78 @@ def test_configurable_api_key_environment_name(monkeypatch) -> None:
     QwenMTProvider(QwenMTConfig(api_key_env="TEST_DASHSCOPE_KEY"), client=client).translate_unit(unit)
 
     assert requests[0].headers["Authorization"] == "Bearer alternate-secret"
+
+
+def test_batch_translates_full_original_units_under_shared_rate_gate(monkeypatch) -> None:
+    def unit(index: int, text: str) -> TranslationUnit:
+        data = {
+            "document_hash": "b" * 64,
+            "format": DocumentFormat.DWG,
+            "location": DocumentLocation(part="Model", object_id=f"{index:X}"),
+            "source_language": "Chinese",
+            "target_language": "English",
+            "source_text": text,
+            "protected_tokens": [],
+        }
+        return TranslationUnit(id=generate_unit_id(**data), **data)
+
+    units = [unit(1, "第一项"), unit(2, "第二项")]
+    calls = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls.append(json.loads(request.content))
+        return httpx.Response(200, json={"choices": [{"message": {"content": "[[TRB:000000]]\nFirst\n[[/TRB:000000]]\n\n[[TRB:000001]]\nSecond\n[[/TRB:000001]]"}}]}, request=request)
+
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    monkeypatch.setenv("DASHSCOPE_API_KEY", "test-secret")
+
+    results = QwenMTProvider(client=client).translate_batch(units)
+
+    assert [item.translation for item in results] == ["First", "Second"]
+    assert [item.source_hash for item in results] == [sha256_text(unit.source_text) for unit in units]
+    assert len(calls) == 1
+    assert "[[TRB:000000]]" in calls[0]["messages"][0]["content"]
+
+
+def test_batch_glossary_failure_is_repaired_as_a_second_batch(monkeypatch) -> None:
+    unit = make_unit()
+    glossary = Glossary(entries=(GlossaryEntry(source="valve", target="阀门"),), version="glossary-v1")
+    calls = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls.append(json.loads(request.content))
+        text = "在 K12+340 按 BS EN 752 安装 600 mm 设备 [[TOKEN_1]]。"
+        if len(calls) == 2:
+            text = "在 K12+340 按 BS EN 752 安装 600 mm 阀门 [[TOKEN_1]]。"
+        return httpx.Response(200, json={"choices": [{"message": {"content": f"[[TRB:000000]]\n{text}\n[[/TRB:000000]]"}}]}, request=request)
+
+    monkeypatch.setenv("DASHSCOPE_API_KEY", "test-secret")
+    provider = QwenMTProvider(
+        client=httpx.Client(transport=httpx.MockTransport(handler)), glossary=glossary,
+    )
+    result = provider.translate_batch([unit])[0]
+
+    assert result.translation.endswith("阀门 [[TOKEN_1]]。")
+    assert len(calls) == 2
+    for call in calls:
+        assert {tuple(item.values()) for item in call["translation_options"]["terms"]} >= {
+            ("valve", "阀门"), ("[[TOKEN_1]]", "[[TOKEN_1]]"),
+        }
+    assert "AUTOMATIC CORRECTION" in calls[1]["messages"][0]["content"]
+
+
+def test_single_unit_batch_accepts_raw_qwen_translation(monkeypatch) -> None:
+    unit = make_unit()
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={"choices": [{"message": {"content": "直接译文 [[TOKEN_1]]。"}}]},
+            request=request,
+        )
+
+    monkeypatch.setenv("DASHSCOPE_API_KEY", "test-secret")
+    provider = QwenMTProvider(client=httpx.Client(transport=httpx.MockTransport(handler)))
+    result = provider.translate_batch([unit])[0]
+
+    assert result.translation == "直接译文 [[TOKEN_1]]。"

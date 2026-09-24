@@ -60,47 +60,72 @@ def _atomic_write(path: Path, rows: list[dict[str, Any]]) -> None:
     os.replace(temporary, path)
 
 
+def _batch_key(record: dict[str, Any]) -> tuple[Any, ...]:
+    """Keep one request batch within one language/glossary contract."""
+    terms = tuple((entry["source"], entry["target"]) for entry in record["required_terms"])
+    return record["source_language"], record["target_language"], terms
+
+
 def run(records: list[dict[str, Any]], provider_factory, result_path: Path, *, model: str, max_attempts: int, retry_delay: float = 1.0) -> list[dict[str, Any]]:
     existing = {
         row["id"]: row for row in (
             json.loads(line) for line in result_path.read_text(encoding="utf-8").splitlines()
         )
     } if result_path.exists() else {}
-    for record in records:
-        if existing.get(record["id"], {}).get("success"):
-            continue
+    pending = [record for record in records if not existing.get(record["id"], {}).get("success")]
+    groups: dict[tuple[Any, ...], list[dict[str, Any]]] = {}
+    for record in pending:
+        groups.setdefault(_batch_key(record), []).append(record)
+
+    for group in groups.values():
+        provider = provider_factory(group[0])
+        units = [unit_for(record) for record in group]
+        batch_translate = getattr(provider, "translate_batch", None)
         started = time.perf_counter()
-        translation = ""
-        error_code = ""
         attempts = 0
+        translated = []
+        error_code = ""
         for _ in range(max_attempts):
             attempts += 1
             try:
-                result = provider_factory(record).translate_unit(unit_for(record))
-                translation = result.translation
+                if callable(batch_translate):
+                    translated = list(batch_translate(units))
+                    if len(translated) != len(units):
+                        raise ValueError("batch translation count mismatch")
+                    if {result.unit_id for result in translated} != {unit.id for unit in units}:
+                        raise ValueError("batch translation IDs do not match source units")
+                else:
+                    translated = [provider.translate_unit(unit) for unit in units]
                 error_code = ""
                 break
             except Exception as error:
+                translated = []
                 error_code = getattr(error, "code", type(error).__name__)
                 if attempts < max_attempts:
                     time.sleep(retry_delay * attempts)
-        checks = checks_for(record, translation) if translation else {}
-        success = bool(translation) and not error_code and all(checks.values())
-        existing[record["id"]] = {
-            "id": record["id"],
-            "provider": "qwen_mt",
-            "model": model,
-            "attempts": attempts,
-            "elapsed_seconds": round(time.perf_counter() - started, 3),
-            "success": success,
-            "error_code": error_code or ("VALIDATION_FAILED" if not success else ""),
-            "checks": checks,
-            "translation": translation,
-            "needs_manual_review": True,
-            "reference_sent_to_model": False,
-        }
+
+        elapsed = round(time.perf_counter() - started, 3)
+        by_id = {result.unit_id: result for result in translated}
+        for record, unit in zip(group, units, strict=True):
+            result = by_id.get(unit.id)
+            translation = result.translation if result is not None else ""
+            checks = checks_for(record, translation) if translation else {}
+            success = bool(translation) and not error_code and all(checks.values())
+            existing[record["id"]] = {
+                "id": record["id"],
+                "provider": "qwen_mt",
+                "model": model,
+                "attempts": attempts,
+                "elapsed_seconds": elapsed,
+                "success": success,
+                "error_code": error_code or ("VALIDATION_FAILED" if not success else ""),
+                "checks": checks,
+                "translation": translation,
+                "needs_manual_review": True,
+                "reference_sent_to_model": False,
+            }
+            print(f"{record['id']}: {'ok' if success else 'failed'}", flush=True)
         _atomic_write(result_path, [existing[item["id"]] for item in records if item["id"] in existing])
-        print(f"{record['id']}: {'ok' if success else 'failed'}", flush=True)
     return [existing[record["id"]] for record in records]
 
 
@@ -109,14 +134,17 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--dataset", type=Path, default=Path("benchmarks/engineering_translation_100.jsonl"))
     parser.add_argument("--results", type=Path, required=True)
     parser.add_argument("--model", choices=("qwen-mt-plus", "qwen-mt-flash"), default="qwen-mt-flash")
+    parser.add_argument("--glossary", type=Path, help="CSV/XLSX glossary to use for every benchmark unit")
     parser.add_argument("--max-attempts", type=int, default=3)
     args = parser.parse_args(argv)
     if args.max_attempts < 1:
         raise ValueError("max-attempts must be at least 1")
     records = load_records(args.dataset)
+    shared_glossary = Glossary.load(args.glossary) if args.glossary is not None else None
     with httpx.Client(trust_env=False) as client:
         def provider_factory(record: dict[str, Any]) -> QwenMTProvider:
-            return QwenMTProvider(QwenMTConfig(model=args.model), client=client, glossary=glossary_for(record))
+            glossary = shared_glossary if shared_glossary is not None else glossary_for(record)
+            return QwenMTProvider(QwenMTConfig(model=args.model), client=client, glossary=glossary)
         results = run(records, provider_factory, args.results, model=args.model, max_attempts=args.max_attempts)
     passed = sum(result["success"] for result in results)
     print(json.dumps({"records": len(results), "passed": passed, "failed": len(results) - passed}, ensure_ascii=False))
