@@ -20,3 +20,13 @@
 PDF translation is delegated to the installed BabelDOC worker (`pdf2zh_next`).
 The legacy PyMuPDF block-rewrite module is diagnostic-only and is not used by
 the `translate-pdf` command.
+
+## 桌面界面
+
+启动拖放式界面：
+
+```powershell
+.venv\Scripts\python.exe -m document_translator gui
+```
+
+界面支持 Markdown、DOCX、PPTX、XLSX 和 PDF 的自动格式识别，选择服务商/模型、源语言和目标语言后批量导出到新文件；CSV 或 XLSX 术语库可选。Windows 资源管理器中的文件可直接拖到窗口，翻译任务在后台执行，不覆盖源文件。DWG 会提示先通过 AutoCAD/CadBridge 导出文本任务，再执行导入闭环。

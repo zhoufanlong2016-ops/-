@@ -1,0 +1,273 @@
+"""Small desktop front-end for the document translation pipeline.
+
+The GUI deliberately delegates translation to the existing CLI.  This keeps
+provider routing, caching, validation and atomic output behavior in one place
+instead of creating a second translation implementation.
+"""
+
+from __future__ import annotations
+
+import os
+from pathlib import Path
+import subprocess
+import sys
+import threading
+import tkinter as tk
+from tkinter import filedialog, messagebox, ttk
+from typing import Callable, Iterable
+
+
+SUPPORTED_FORMATS = {
+    ".md": "Markdown",
+    ".markdown": "Markdown",
+    ".docx": "Word DOCX",
+    ".pptx": "PowerPoint PPTX",
+    ".xlsx": "Excel XLSX",
+    ".pdf": "PDF",
+    ".dwg": "AutoCAD DWG",
+}
+
+PROVIDER_MODELS = {
+    "qwen-mt": ("qwen-mt-plus", "qwen-mt-flash"),
+    "qwen": ("qwen3.8-max", "qwen3.7-plus", "qwen-plus", "qwen-max"),
+    "openai": ("gpt-5.6-luna", "gpt-5.6-terra"),
+}
+
+
+def detect_format(path: str | Path) -> str:
+    """Return the user-facing format name for a supported file."""
+    suffix = Path(path).suffix.casefold()
+    try:
+        return SUPPORTED_FORMATS[suffix]
+    except KeyError as error:
+        raise ValueError(f"不支持的文件格式: {suffix or '(无扩展名)'}") from error
+
+
+def default_destination(source: str | Path, output_dir: str | Path | None = None) -> Path:
+    """Build a non-overwriting destination name next to or below the source."""
+    source_path = Path(source)
+    directory = Path(output_dir) if output_dir else source_path.parent
+    candidate = directory / f"{source_path.stem}_translated{source_path.suffix}"
+    index = 2
+    while candidate.exists():
+        candidate = directory / f"{source_path.stem}_translated_{index}{source_path.suffix}"
+        index += 1
+    return candidate
+
+
+def build_cli_command(
+    source: str | Path,
+    destination: str | Path,
+    *,
+    provider: str,
+    model: str,
+    source_language: str,
+    target_language: str,
+    glossary: str | Path | None = None,
+) -> list[str]:
+    """Build the existing CLI command for one supported input file."""
+    source_path = Path(source)
+    suffix = source_path.suffix.casefold()
+    commands = {".md": "translate-markdown", ".markdown": "translate-markdown", ".docx": "translate-docx", ".pptx": "translate-pptx", ".xlsx": "translate-xlsx", ".pdf": "translate-pdf"}
+    if suffix == ".dwg":
+        raise ValueError("DWG 需要先通过 AutoCAD CadBridge 导出文本任务，界面暂不直接覆盖源图纸")
+    command = commands[suffix]
+    if suffix == ".pdf" and provider == "qwen-mt":
+        raise ValueError("PDF 需要选择 qwen（Chat）或 openai，不能使用 qwen-mt 翻译端点")
+    actual_provider = "gpt" if suffix == ".pdf" and provider == "openai" else ("qwen" if suffix == ".pdf" else provider)
+    args = [sys.executable, "-m", "document_translator", command, str(source_path), str(destination), "--source-language", source_language, "--target-language", target_language, "--provider", actual_provider, "--model", model]
+    if glossary:
+        args.extend(("--glossary", str(glossary)))
+    if suffix == ".pdf":
+        args.extend(("--allow-complex-pdf", "--report", str(Path(destination).with_suffix(".report.json"))))
+    elif suffix == ".docx":
+        args.extend(("--comparison-report", str(Path(destination).with_suffix(".comparison.json"))))
+    elif suffix == ".pptx":
+        args.extend(("--layout-report", str(Path(destination).with_suffix(".layout.json"))))
+    return args
+
+
+class _WindowsDropTarget:
+    """Receive native Windows Explorer file drops without extra packages."""
+
+    def __init__(self, root: tk.Tk, callback: Callable[[list[str]], None]) -> None:
+        self.root = root
+        self.callback = callback
+        self._old_proc = None
+        self._proc = None
+        if os.name != "nt":
+            return
+        try:
+            import ctypes
+            from ctypes import wintypes
+
+            user32 = ctypes.windll.user32
+            shell32 = ctypes.windll.shell32
+            hwnd = root.winfo_id()
+            user32.DragAcceptFiles(hwnd, True)
+            self._user32 = user32
+            self._shell32 = shell32
+            self._hwnd = hwnd
+            self._call_window_proc = user32.CallWindowProcW
+            self._call_window_proc.restype = ctypes.c_ssize_t
+            self._old_proc = user32.GetWindowLongPtrW(hwnd, -4)
+            wndproc_type = ctypes.WINFUNCTYPE(ctypes.c_ssize_t, wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM)
+
+            def wndproc(window, message, wparam, lparam):
+                if message == 0x0233:  # WM_DROPFILES
+                    count = shell32.DragQueryFileW(wparam, 0xFFFFFFFF, None, 0)
+                    paths = []
+                    for index in range(count):
+                        length = shell32.DragQueryFileW(wparam, index, None, 0)
+                        buffer = ctypes.create_unicode_buffer(length + 1)
+                        shell32.DragQueryFileW(wparam, index, buffer, length + 1)
+                        paths.append(buffer.value)
+                    shell32.DragFinish(wparam)
+                    root.after(0, lambda: callback(paths))
+                    return 0
+                return self._call_window_proc(self._old_proc, window, message, wparam, lparam)
+
+            self._proc = wndproc_type(wndproc)
+            user32.SetWindowLongPtrW(hwnd, -4, self._proc)
+            root.bind("<Destroy>", self.close, add="+")
+        except Exception:
+            self._old_proc = None
+
+    def close(self, _event=None) -> None:
+        if self._old_proc and getattr(self, "_user32", None):
+            self._user32.SetWindowLongPtrW(self._hwnd, -4, self._old_proc)
+            self._old_proc = None
+
+
+class TranslationApp:
+    def __init__(self, root: tk.Tk) -> None:
+        self.root = root
+        self.root.title("文档保真翻译器 · 智能排版")
+        self.root.geometry("900x650")
+        self.root.minsize(760, 560)
+        self.files: list[Path] = []
+        self.provider = tk.StringVar(value="qwen")
+        self.model = tk.StringVar(value="qwen3.8-max")
+        self.source_language = tk.StringVar(value="auto")
+        self.target_language = tk.StringVar(value="en")
+        self.glossary = tk.StringVar()
+        self.output_dir = tk.StringVar()
+        self.status = tk.StringVar(value="请拖入文件，或点击“选择文件”")
+        self._build()
+        self._drop_target = _WindowsDropTarget(root, self.add_files)
+
+    def _build(self) -> None:
+        style = ttk.Style()
+        try:
+            style.theme_use("vista")
+        except tk.TclError:
+            pass
+        outer = ttk.Frame(self.root, padding=18)
+        outer.pack(fill="both", expand=True)
+        ttk.Label(outer, text="文档保真翻译器", font=("Microsoft YaHei UI", 20, "bold")).pack(anchor="w")
+        ttk.Label(outer, text="自动识别格式 · 批量调用模型 · 保留原文件并导出新文件", foreground="#5b6472").pack(anchor="w", pady=(0, 12))
+        drop = ttk.LabelFrame(outer, text="输入文件（支持拖放）", padding=10)
+        drop.pack(fill="both", expand=True)
+        self.file_list = tk.Listbox(drop, height=8, activestyle="none", selectmode="extended")
+        self.file_list.pack(side="left", fill="both", expand=True)
+        scrollbar = ttk.Scrollbar(drop, orient="vertical", command=self.file_list.yview)
+        scrollbar.pack(side="right", fill="y")
+        self.file_list.configure(yscrollcommand=scrollbar.set)
+        buttons = ttk.Frame(outer)
+        buttons.pack(fill="x", pady=8)
+        ttk.Button(buttons, text="选择文件", command=self.choose_files).pack(side="left")
+        ttk.Button(buttons, text="清空", command=self.clear_files).pack(side="left", padx=6)
+        ttk.Label(buttons, textvariable=self.status).pack(side="right")
+        settings = ttk.LabelFrame(outer, text="翻译设置", padding=10)
+        settings.pack(fill="x")
+        for column in range(4):
+            settings.columnconfigure(column, weight=1)
+        ttk.Label(settings, text="服务商").grid(row=0, column=0, sticky="w")
+        provider_box = ttk.Combobox(settings, textvariable=self.provider, values=tuple(PROVIDER_MODELS), state="readonly")
+        provider_box.grid(row=1, column=0, sticky="ew", padx=(0, 8)); provider_box.bind("<<ComboboxSelected>>", self._provider_changed)
+        ttk.Label(settings, text="模型").grid(row=0, column=1, sticky="w")
+        self.model_box = ttk.Combobox(settings, textvariable=self.model, state="readonly")
+        self.model_box.grid(row=1, column=1, sticky="ew", padx=(0, 8)); self._provider_changed()
+        ttk.Label(settings, text="源语言").grid(row=0, column=2, sticky="w")
+        ttk.Entry(settings, textvariable=self.source_language).grid(row=1, column=2, sticky="ew", padx=(0, 8))
+        ttk.Label(settings, text="目标语言").grid(row=0, column=3, sticky="w")
+        ttk.Entry(settings, textvariable=self.target_language).grid(row=1, column=3, sticky="ew")
+        ttk.Label(settings, text="CSV/XLSX 术语库（可选）").grid(row=2, column=0, columnspan=2, sticky="w", pady=(10, 0))
+        ttk.Entry(settings, textvariable=self.glossary).grid(row=3, column=0, columnspan=3, sticky="ew", padx=(0, 8))
+        ttk.Button(settings, text="选择术语库", command=self.choose_glossary).grid(row=3, column=3, sticky="ew")
+        ttk.Label(settings, text="输出目录（留空则与源文件同目录）").grid(row=4, column=0, columnspan=2, sticky="w", pady=(10, 0))
+        ttk.Entry(settings, textvariable=self.output_dir).grid(row=5, column=0, columnspan=3, sticky="ew", padx=(0, 8))
+        ttk.Button(settings, text="选择目录", command=self.choose_output_dir).grid(row=5, column=3, sticky="ew")
+        self.execute_button = ttk.Button(outer, text="执行翻译并导出", command=self.execute)
+        self.execute_button.pack(fill="x", pady=(12, 8), ipady=6)
+        self.log = tk.Text(outer, height=8, state="disabled", wrap="word", background="#f7f8fa")
+        self.log.pack(fill="both", expand=False)
+
+    def _provider_changed(self, _event=None) -> None:
+        values = PROVIDER_MODELS[self.provider.get()]
+        self.model_box.configure(values=values)
+        if self.model.get() not in values:
+            self.model.set(values[0])
+
+    def choose_files(self) -> None:
+        paths = filedialog.askopenfilenames(filetypes=[("支持的文档", "*.md *.markdown *.docx *.pptx *.xlsx *.pdf *.dwg"), ("所有文件", "*.*")])
+        self.add_files(list(paths))
+
+    def add_files(self, paths: Iterable[str]) -> None:
+        for raw in paths:
+            path = Path(raw)
+            if not path.is_file() or path.suffix.casefold() not in SUPPORTED_FORMATS:
+                continue
+            if path not in self.files:
+                self.files.append(path); self.file_list.insert("end", f"{SUPPORTED_FORMATS[path.suffix.casefold()]}  ·  {path}")
+        self.status.set(f"已选择 {len(self.files)} 个文件")
+
+    def clear_files(self) -> None:
+        self.files.clear(); self.file_list.delete(0, "end"); self.status.set("请拖入文件，或点击“选择文件”")
+
+    def choose_glossary(self) -> None:
+        path = filedialog.askopenfilename(filetypes=[("术语库", "*.csv *.xlsx"), ("CSV", "*.csv"), ("Excel", "*.xlsx")])
+        if path: self.glossary.set(path)
+
+    def choose_output_dir(self) -> None:
+        path = filedialog.askdirectory()
+        if path: self.output_dir.set(path)
+
+    def _write_log(self, text: str) -> None:
+        self.log.configure(state="normal"); self.log.insert("end", text); self.log.see("end"); self.log.configure(state="disabled")
+
+    def execute(self) -> None:
+        if not self.files:
+            messagebox.showwarning("缺少输入", "请先拖入或选择至少一个文件")
+            return
+        self.execute_button.configure(state="disabled")
+        threading.Thread(target=self._run_jobs, daemon=True).start()
+
+    def _run_jobs(self) -> None:
+        for source in list(self.files):
+            try:
+                if self.output_dir.get().strip():
+                    Path(self.output_dir.get().strip()).mkdir(parents=True, exist_ok=True)
+                destination = default_destination(source, self.output_dir.get().strip() or None)
+                command = build_cli_command(source, destination, provider=self.provider.get(), model=self.model.get(), source_language=self.source_language.get().strip() or "auto", target_language=self.target_language.get().strip() or "en", glossary=self.glossary.get().strip() or None)
+                self.root.after(0, self._write_log, f"开始：{source.name} → {destination.name}\n")
+                project_root = Path(__file__).resolve().parents[2]
+                environment = os.environ.copy()
+                source_root = str(project_root / "src")
+                environment["PYTHONPATH"] = source_root + os.pathsep + environment.get("PYTHONPATH", "")
+                process = subprocess.Popen(command, cwd=str(project_root), env=environment, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding="utf-8", errors="replace")
+                assert process.stdout is not None
+                for line in process.stdout:
+                    self.root.after(0, self._write_log, line)
+                code = process.wait()
+                self.root.after(0, self._write_log, f"完成：{source.name}，退出码 {code}\n")
+            except Exception as error:
+                self.root.after(0, self._write_log, f"失败：{source.name}：{error}\n")
+        self.root.after(0, lambda: self.execute_button.configure(state="normal"))
+
+
+def run_gui() -> int:
+    root = tk.Tk()
+    TranslationApp(root)
+    root.mainloop()
+    return 0

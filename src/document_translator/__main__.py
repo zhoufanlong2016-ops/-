@@ -121,6 +121,7 @@ def _parser() -> argparse.ArgumentParser:
     validate.add_argument("output", type=Path, metavar="OUTPUT")
     validate.add_argument("--type", choices=("auto", "markdown", "docx", "pptx", "xlsx"), default="auto")
     validate.add_argument("--target-language", default="en", help="expected output language for script checks")
+    subparsers.add_parser("gui", help="open the drag-and-drop desktop translation interface")
     return parser
 
 
@@ -357,6 +358,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = _parser()
     args = parser.parse_args(argv)
     try:
+        if args.command == "gui":
+            from .gui import run_gui
+
+            return run_gui()
         if args.command == "translate-markdown":
             return _translate_markdown(args)
         if args.command == "translate-docx":

@@ -21,6 +21,9 @@ dev = [
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
+[project.scripts]
+document-translator = "document_translator.__main__:main"
+
 [tool.setuptools.packages.find]
 where = ["src"]
 
