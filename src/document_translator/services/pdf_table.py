@@ -20,6 +20,7 @@ import math
 import os
 from pathlib import Path
 import tempfile
+import re
 from typing import Any, Callable
 
 
@@ -37,6 +38,37 @@ class PdfTableMappingError(PdfTableError):
 
 class PdfTableFitError(PdfTableError):
     """Raised when translated text does not fit at the minimum font size."""
+
+
+_TABLE_LIST_ITEM_RE = re.compile(r"^\s*(?:\d+[.)]|[-*•])\s+")
+
+
+def _normalise_render_text(text: str) -> str:
+    """Convert provider visual line breaks into reflowable table text.
+
+    A plain paragraph returned with embedded newlines must be allowed to wrap
+    at the cell's actual width.  Explicit numbered/bulleted lists retain their
+    line boundaries because those are semantic separators rather than visual
+    extraction artifacts.
+    """
+
+    lines = [re.sub(r"\s+", " ", line).strip() for line in text.replace("\r\n", "\n").replace("\r", "\n").split("\n")]
+    lines = [line for line in lines if line]
+    if not lines:
+        return ""
+    if any(_TABLE_LIST_ITEM_RE.match(line) for line in lines):
+        # Keep breaks only when a new numbered/bulleted item starts.  Provider
+        # line extraction often inserts visual breaks inside the same item;
+        # those must become spaces so the textbox can reflow the item at the
+        # actual cell width.
+        grouped: list[str] = []
+        for line in lines:
+            if _TABLE_LIST_ITEM_RE.match(line) or not grouped:
+                grouped.append(line)
+            else:
+                grouped[-1] += " " + line
+        return "\n".join(grouped)
+    return " ".join(lines)
 
 
 @dataclass(frozen=True, slots=True)
@@ -450,23 +482,48 @@ def _fit_textbox(
     font_step: float,
     align: int,
 ) -> float:
-    """Find a fitting point size using a disposable page text box."""
+    """Find a fitting point size while preferring fewer wrapped lines.
+
+    A first-fit search can keep a large font even when a slightly smaller,
+    still-readable size would place the next word on the current line.  Probe
+    every candidate on an isolated page, then choose the minimum line count;
+    ties prefer the largest point size.
+    """
+
+    import fitz
 
     size = float(initial_font_size)
     step_count = int(math.floor((size - minimum_font_size) / font_step + 1e-9))
+    fitting: list[tuple[int, float]] = []
     for step_index in range(step_count + 1):
         candidate = max(minimum_font_size, round(size - step_index * font_step, 4))
-        result = page.insert_textbox(
-            rect,
-            text,
-            fontname=fontname,
-            fontfile=fontfile,
-            fontsize=candidate,
-            align=align,
-            overlay=True,
-        )
-        if result >= -1e-6:
-            return candidate
+        probe = fitz.open()
+        try:
+            probe_page = probe.new_page(width=page.rect.width, height=page.rect.height)
+            result = probe_page.insert_textbox(
+                rect,
+                text,
+                fontname=fontname,
+                fontfile=fontfile,
+                fontsize=candidate,
+                align=align,
+                overlay=True,
+            )
+            if result < -1e-6:
+                continue
+            line_count = sum(
+                len(block.get("lines", []))
+                for block in probe_page.get_text("dict").get("blocks", [])
+                if block.get("type") == 0
+            )
+            fitting.append((max(1, line_count), candidate))
+        finally:
+            probe.close()
+    if fitting:
+        # Keep the largest fitting size.  Horizontal utilisation is handled by
+        # the condensed font selected by the caller; shrinking solely to save
+        # a wrapped line is explicitly not allowed by the font policy.
+        return max(fitting, key=lambda item: item[1])[1]
     raise PdfTableFitError(
         f"cell text does not fit at minimum font size {minimum_font_size:g}pt: {text[:100]!r}"
     )
@@ -601,7 +658,7 @@ def render_table_translations(
             source_drawing_counts[page_number] = len(page.get_drawings())
             fit_page = temporary_fit_doc.new_page(width=page.rect.width, height=page.rect.height)
             for cell in cells:
-                translated = mapping[cell.id]
+                translated = _normalise_render_text(mapping[cell.id])
                 if not translated.strip():
                     continue
                 if cell.rect is None:
@@ -642,7 +699,7 @@ def render_table_translations(
                 raise PdfTableError(f"vector graphics changed while redacting page {page_number}")
 
             for cell in cells:
-                translated = mapping[cell.id]
+                translated = _normalise_render_text(mapping[cell.id])
                 if not translated.strip():
                     continue
                 assert cell.rect is not None

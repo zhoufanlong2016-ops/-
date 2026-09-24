@@ -506,7 +506,7 @@ def build_layout_contracts(source_path: str | Path) -> tuple[LayoutContract, ...
                         source_color=color,
                         source_font=font,
                         source_block_index=block_index,
-                        metadata=metadata,
+                        metadata={**metadata, "content_bounds": content_bounds},
                     )
                 )
             # An article paragraph is frequently emitted as one PDF text
@@ -608,6 +608,7 @@ def _font_file(
     text: str,
     *,
     page: Any | None = None,
+    prefer_narrow: bool = False,
 ) -> str | None:
     """Choose a target font without creating same-family PDF CMap collisions.
 
@@ -629,11 +630,19 @@ def _font_file(
         # Times New Roman is a stable serif fallback whose family is normally
         # absent from BabelDOC's CJK/serif asset set.
         candidates = (
+            r"C:\Windows\Fonts\ARIALN.TTF",
+            r"C:\Windows\Fonts\times.ttf",
+            r"C:\Windows\Fonts\arial.ttf",
+        ) if prefer_narrow else (
             r"C:\Windows\Fonts\times.ttf",
             r"C:\Windows\Fonts\arial.ttf",
         )
     elif "arial" in name:
-        candidates = (r"C:\Windows\Fonts\arial.ttf", r"C:\Windows\Fonts\times.ttf")
+        candidates = (
+            r"C:\Windows\Fonts\ARIALN.TTF",
+            r"C:\Windows\Fonts\arial.ttf",
+            r"C:\Windows\Fonts\times.ttf",
+        ) if prefer_narrow else (r"C:\Windows\Fonts\arial.ttf", r"C:\Windows\Fonts\times.ttf")
     elif "fang" in name:
         candidates = (
             r"C:\Windows\Fonts\simfang.ttf",
@@ -641,6 +650,10 @@ def _font_file(
         )
     else:
         candidates = (
+            r"C:\Windows\Fonts\ARIALN.TTF",
+            r"C:\Windows\Fonts\arial.ttf",
+            r"C:\Windows\Fonts\times.ttf",
+        ) if prefer_narrow else (
             r"C:\Windows\Fonts\arial.ttf",
             r"C:\Windows\Fonts\times.ttf",
         )
@@ -686,13 +699,13 @@ def _candidate_text_blocks(page: Any) -> list[dict[str, Any]]:
     return result
 
 
-def _merge_article_candidate_blocks(
+def _merge_reflow_candidate_blocks(
     contract: LayoutContract,
     start: dict[str, Any],
     blocks: list[dict[str, Any]],
     used: set[int],
 ) -> dict[str, Any]:
-    """Collect continuation blocks belonging to one translated article.
+    """Collect visual candidate blocks belonging to one semantic contract.
 
     BabelDOC may retain separate text blocks for source continuation lines.
     The source contract supplies a bounded vertical region, while a new
@@ -706,7 +719,25 @@ def _merge_article_candidate_blocks(
         return start
     selected = [start]
     source_bottom = contract.bbox[3]
-    max_top = source_bottom + max(8.0, contract.source_font_size * 0.75)
+    # A one-line centered title commonly sits immediately above a table
+    # header.  Do not absorb that next row merely because it is close in Y;
+    # multiline display titles still get the wider continuation tolerance.
+    max_top = source_bottom + (
+        4.0 if contract.role == "centered_text" and contract.one_line_preferred
+        else max(8.0, contract.source_font_size * 0.75)
+    )
+    if contract.role == "centered_text":
+        # A centered source block is often split into two candidate blocks;
+        # nearest-centre matching may land on the second line. Pull the
+        # preceding visual line into the same semantic block so the original
+        # first line is redacted instead of being left underneath.
+        for item in reversed(ordered[:start_position]):
+            if item["index"] in used:
+                continue
+            if item["bbox"][3] < contract.bbox[1] - max(8.0, contract.source_font_size):
+                break
+            if item["bbox"][0] < contract.bbox[2] and item["bbox"][2] > contract.bbox[0]:
+                selected.insert(0, item)
     for item in ordered[start_position + 1 :]:
         if item["index"] in used:
             continue
@@ -724,7 +755,10 @@ def _merge_article_candidate_blocks(
     return {
         **start,
         "indices": tuple(item["index"] for item in selected),
-        "text": "\n".join(item["text"] for item in selected),
+        # Candidate blocks are visual lines, not semantic paragraphs.  Keep
+        # them in one reflowable text run so the textbox can use the available
+        # width instead of reproducing BabelDOC's premature hard breaks.
+        "text": " ".join(item["text"] for item in selected),
         "bbox": (min(box[0] for box in boxes), min(box[1] for box in boxes), max(box[2] for box in boxes), max(box[3] for box in boxes)),
         "font_size": median(item["font_size"] for item in selected),
         "color": selected[0]["color"],
@@ -761,13 +795,21 @@ def _choose_candidate_block(contract: LayoutContract, blocks: list[dict[str, Any
     if not scored:
         return None
     selected = min(scored, key=lambda item: item[0])[1]
-    if contract.role == "article_text":
-        return _merge_article_candidate_blocks(contract, selected, blocks, used)
+    if contract.role in {"article_text", "centered_text"}:
+        return _merge_reflow_candidate_blocks(contract, selected, blocks, used)
     return selected
 
 
 def _fit_rect(contract: LayoutContract, page: Any, blocks: list[dict[str, Any]], candidate: dict[str, Any]) -> tuple[float, float, float, float]:
-    left, right = _content_bounds(page)
+    source_bounds = contract.metadata.get("content_bounds") if isinstance(contract.metadata, Mapping) else None
+    if (
+        isinstance(source_bounds, (tuple, list))
+        and len(source_bounds) == 2
+        and all(isinstance(value, (int, float)) for value in source_bounds)
+    ):
+        left, right = float(source_bounds[0]), float(source_bounds[1])
+    else:
+        left, right = _content_bounds(page)
     source = contract.bbox
     next_y = page.rect.height - 18.0
     for block in blocks:
@@ -782,11 +824,10 @@ def _fit_rect(contract: LayoutContract, page: Any, blocks: list[dict[str, Any]],
         # line box so a valid single-line title is not silently dropped.
         y1 = max(y1, y0 + max(16.0, contract.source_font_size * 1.5))
     if contract.alignment == 1:
-        # Centered display blocks belong to the physical page, not to the
-        # candidate's translated text extents (which may extend past the
-        # source right margin).  Using the page box prevents a long translated
-        # line from shifting every subsequent centered block to the right.
-        return (0.0, y0, float(page.rect.width), y1)
+        # Centered display blocks still obey the source page's content bounds;
+        # centering is performed inside the preserved margins, not across the
+        # physical trim box.
+        return (left, y0, right, y1)
     # Keep the original left anchor while allowing the English expansion to use
     # the unused right side.  This is what avoids needless wraps in salutations
     # and article labels without centring ordinary paragraphs.
@@ -852,9 +893,22 @@ def _fit_fontsize(
     available = max(1.0, rect[2] - rect[0] - 4.0)
     size = max(minimum, base)
     while size >= minimum - 1e-6:
-        if one_line and _text_width(text.replace("\n", " "), size, fontfile) > available:
-            size = round(size - 0.5, 2)
-            continue
+        if one_line:
+            if _text_width(text.replace("\n", " "), size, fontfile) > available:
+                size = round(size - 0.5, 2)
+                continue
+            fits, line_count = _probe_line_count(
+                text.replace("\n", " "),
+                rect,
+                fontsize=size,
+                fontfile=fontfile,
+                fontname=fontname,
+                align=align,
+            )
+            if not fits or line_count > 1:
+                size = round(size - 0.5, 2)
+                continue
+            return round(size, 2)
         if not one_line:
             fits, line_count = _probe_line_count(
                 text,
@@ -870,7 +924,7 @@ def _fit_fontsize(
             ):
                 size = round(size - 0.5, 2)
                 continue
-        if one_line or fits:
+        if fits:
             return round(size, 2)
     raise LayoutContractError(f"layout contract cannot fit one line at minimum font size {minimum:g}: {text[:80]}")
 
@@ -884,6 +938,11 @@ def _normalise_render_text(text: str, *, one_line: bool) -> str:
     text = _SOFT_HYPHEN_RE.sub("", text)
     if one_line:
         return _WHITESPACE_RE.sub(" ", text).strip()
+    # BabelDOC emits one block per visual line in many translated PDFs.  For
+    # article prose those newlines are not semantic paragraph boundaries and
+    # retaining them needlessly wastes the right side of the source textbox.
+    # Structural headings and genuinely multiline display text keep their
+    # explicit lines.
     return "\n".join(_WHITESPACE_RE.sub(" ", line).strip() for line in text.splitlines()).strip()
 
 
@@ -912,13 +971,16 @@ def _operation_for(
     # Centered display blocks are reflowed from their semantic text rather
     # than inheriting provider line breaks.  This lets the fit probe preserve
     # the source block's line budget across fonts and document lengths.
-    if contract.role == "centered_text" and not one_line:
+    if contract.role in {"centered_text", "article_text"} and not one_line:
         text = _WHITESPACE_RE.sub(" ", _SOFT_HYPHEN_RE.sub("", text)).strip()
     else:
         text = _normalise_render_text(text, one_line=one_line)
     rect = _fit_rect(contract, page, blocks, candidate)
-    base = contract.source_font_size if contract.role in {"centered_text", "chapter_heading", "article_heading", "salutation", "document_reference"} else candidate["font_size"]
-    fontfile = _font_file(candidate["font"], text, page=page)
+    base = contract.source_font_size if contract.role in {"centered_text", "chapter_heading", "article_heading", "article_text", "salutation", "document_reference"} else candidate["font_size"]
+    # English prose should try the policy's narrow face before reducing the
+    # point size.  This is especially important for translated table/contract
+    # paragraphs whose source line budget still has usable vertical space.
+    fontfile = _font_file(candidate["font"], text, page=page, prefer_narrow=contract.role == "article_text")
     fontname = (
         "PDFLayout_" + re.sub(r"[^A-Za-z0-9]", "", Path(fontfile).stem)[:20]
         if fontfile

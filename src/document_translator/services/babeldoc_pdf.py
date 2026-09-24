@@ -425,8 +425,10 @@ def _patch_table_candidate(
 
     def cell_align(cell: PdfTableCell) -> int:
         # Preserve the common source-table convention: header and the narrow
-        # role/name column are centred, while long responsibility text is left
-        # aligned for readable wrapping.
+        # role/name column are centred, while long responsibility prose stays
+        # left aligned.  The table fitter below reduces wrapping by selecting
+        # the readable size that fits the fewest lines, rather than stretching
+        # inter-word spacing.
         return 1 if cell.row == 1 or cell.column == 1 else 0
 
     render_report = render_table_translations(
@@ -583,7 +585,14 @@ def _table_fontfile(target_language: str) -> Path:
     """Choose a known installed font for the table overlay, failing closed."""
 
     if target_language.strip().casefold() in _LATIN_TARGET_LANGUAGES:
-        candidates = (Path(r"C:\Windows\Fonts\arial.ttf"), Path(r"C:\Windows\Fonts\ARIALUNI.ttf"))
+        # Long English table cells use the policy's condensed face first so
+        # width is recovered before the renderer has to reduce point size.
+        candidates = (
+            Path(r"C:\Windows\Fonts\ARIALN.TTF"),
+            Path(r"C:\Windows\Fonts\LiberationSansNarrow-Regular.ttf"),
+            Path(r"C:\Windows\Fonts\arial.ttf"),
+            Path(r"C:\Windows\Fonts\ARIALUNI.ttf"),
+        )
     else:
         candidates = (
             Path(r"C:\Windows\Fonts\Noto Sans SC (TrueType).otf"),

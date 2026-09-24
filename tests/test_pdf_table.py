@@ -12,6 +12,7 @@ from document_translator.services.pdf_table import (
     render_table_translations,
     validate_table_translations,
 )
+from document_translator.services.pdf_table import _normalise_render_text
 
 
 def _fontfile() -> Path:
@@ -39,6 +40,11 @@ def _make_table_pdf(path: Path, *, narrow: bool = False) -> None:
     page.insert_text(((x_right + 20) / 2 + 5, 82), "Source", fontsize=10)
     document.save(path)
     document.close()
+
+
+def test_normalise_render_text_reflows_plain_paragraph_but_preserves_lists() -> None:
+    assert _normalise_render_text("first line\nsecond line") == "first line second line"
+    assert _normalise_render_text("1. first\ncontinuation\n2. second") == "1. first continuation\n2. second"
 
 
 def test_extracts_logical_grid_with_stable_ids_and_multiline_text(tmp_path):
