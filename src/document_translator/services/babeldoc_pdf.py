@@ -11,7 +11,9 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import hashlib
 import json
+import math
 import queue
 import os
 import shutil
@@ -30,6 +32,8 @@ from .pdf_pipeline import (
     PdfPreflight,
     PdfPreflightError,
     inspect_pdf,
+    normalize_unicode_dashes,
+    remove_control_characters,
     publish_candidate,
     repair_pdf_text_cmaps,
     validate_candidate,
@@ -44,6 +48,8 @@ from .pdf_table import (
 )
 from .pdf_layout import load_numbering_profile, restore_layout_contract
 from .translation_gateway import GatewayConfig, TranslationGateway
+from document_translator.providers.translation_prompt import general_translation_instruction
+from document_translator.translation_rules import source_name_constraints, validate_name_retention, validate_translation_residue, auto_correct_translation
 
 
 class BabelDocPdfTranslationService:
@@ -54,6 +60,12 @@ class BabelDocPdfTranslationService:
         # production path below uses pdf2zh-next's supported high-level API so
         # CLI flags cannot drift from the installed library.
         if executable.casefold() in {"pdf2zh_next", "pdf2zh_next.exe", "pdf2zh"}:
+            # A PyInstaller build runs the project-owned ``pdf_worker`` from
+            # the frozen bundle and imports pdf2zh-next as a bundled module;
+            # there is no separate venv Scripts directory to probe.
+            if getattr(sys, "frozen", False):
+                self.executable = executable
+                return
             project_worker = Path(sys.executable).with_name("pdf2zh_next.exe")
             if project_worker.is_file():
                 self.executable = str(project_worker)
@@ -81,6 +93,7 @@ class BabelDocPdfTranslationService:
         minimum_font_size: float = 6.0,
         gateway_base_url: str | None = None,
     ) -> tuple[Path, PdfPreflight, Path]:
+        job_started_at = time.monotonic()
         source, destination = Path(source_path).resolve(), Path(destination_path).resolve()
         if source == destination:
             raise ValueError("source and destination paths must differ")
@@ -114,15 +127,24 @@ class BabelDocPdfTranslationService:
         numbering_profile = load_numbering_profile(style_profile, target_language=target_language)
         destination.parent.mkdir(parents=True, exist_ok=True)
 
-        # pdf2zh-next/BabelDOC create config/cache files during import. Keep
-        # this mutable state in the output volume and restore the caller's
-        # environment after the job, so one translation cannot leak paths into
-        # other document types.
+        # Keep BabelDOC's mutable job state beside the output, but keep its
+        # large immutable assets in the user's stable cache.  Previously HOME
+        # pointed at this per-job directory, so every PDF redownloaded all
+        # fonts/CMaps/model assets during the translation.
         worker_state = destination.parent / ".pdf_worker_state"
         worker_state.mkdir(parents=True, exist_ok=True)
+        asset_home = Path.home()
+        missing_assets = _missing_babeldoc_assets(asset_home)
+        if missing_assets:
+            preview = ", ".join(missing_assets[:5])
+            suffix = " ..." if len(missing_assets) > 5 else ""
+            raise RuntimeError(
+                "BabelDOC resources are not prepared; run the separate PDF resource preparation "
+                f"step before translating. Missing: {preview}{suffix}"
+            )
         worker_env = {
-            "USERPROFILE": str(worker_state),
-            "HOME": str(worker_state),
+            "USERPROFILE": str(asset_home),
+            "HOME": str(asset_home),
             "XDG_CONFIG_HOME": str(worker_state / ".config"),
             "HF_HOME": str(worker_state / ".cache" / "huggingface"),
         }
@@ -134,6 +156,7 @@ class BabelDocPdfTranslationService:
             "engine": "babeldoc.format.pdf.high_level.async_translate",
             "gateway": "local" if gateway_base_url is None else "external",
             "source_hash": preflight.source_hash,
+            "timing_seconds": {},
         }
         with tempfile.TemporaryDirectory(
             prefix="document-translator-pdf-", dir=destination.parent
@@ -161,6 +184,7 @@ class BabelDocPdfTranslationService:
                 # retained in memory and only rendered after the candidate is
                 # available.
                 if preflight.table_pages:
+                    table_started_at = time.monotonic()
                     table_plan = _prepare_table_translations(
                         source=source,
                         table_pages=preflight.table_pages,
@@ -170,7 +194,9 @@ class BabelDocPdfTranslationService:
                         gateway_url=base_url,
                     )
                     run_metadata["table_route"] = table_plan[2]
+                    run_metadata["timing_seconds"]["table_translation"] = round(time.monotonic() - table_started_at, 3)
 
+                worker_started_at = time.monotonic()
                 with _temporary_environment(worker_env):
                     result, events = _run_high_level_translation(
                         source=source,
@@ -182,6 +208,7 @@ class BabelDocPdfTranslationService:
                         glossary=glossary,
                     )
                 run_metadata.update(events)
+                run_metadata["timing_seconds"]["babeldoc_translation"] = round(time.monotonic() - worker_started_at, 3)
                 run_metadata.update(_gateway_audit_summary(gateway_audit_path))
 
                 source_candidate = _result_candidate(result, workdir)
@@ -192,6 +219,7 @@ class BabelDocPdfTranslationService:
                 candidate = workdir / "validated-candidate.pdf"
                 shutil.copy2(source_candidate, candidate)
                 if table_plan is not None:
+                    table_render_started_at = time.monotonic()
                     table_candidate = workdir / "validated-table-candidate.pdf"
                     table_run = _patch_table_candidate(
                         candidate=candidate,
@@ -202,6 +230,7 @@ class BabelDocPdfTranslationService:
                         minimum_font_size=minimum_font_size,
                     )
                     run_metadata["table_route"] = {**table_plan[2], **table_run}
+                    run_metadata["timing_seconds"]["table_render"] = round(time.monotonic() - table_render_started_at, 3)
                     candidate = table_candidate
                 else:
                     run_metadata["table_route"] = {
@@ -209,7 +238,23 @@ class BabelDocPdfTranslationService:
                         "table_count": 0,
                         "cell_count": 0,
                     }
+                rotated_candidate = workdir / "validated-rotated-candidate.pdf"
+                rotated_started_at = time.monotonic()
+                rotated_run = _translate_and_patch_rotated_text(
+                    source=source,
+                    candidate=candidate,
+                    destination=rotated_candidate,
+                    source_language=source_language,
+                    target_language=target_language,
+                    model=model,
+                    gateway_url=base_url,
+                    glossary=glossary,
+                )
+                run_metadata["rotated_text_route"] = rotated_run
+                run_metadata["timing_seconds"]["rotated_text"] = round(time.monotonic() - rotated_started_at, 3)
+                candidate = rotated_candidate
                 layout_candidate = workdir / "validated-layout-candidate.pdf"
+                layout_started_at = time.monotonic()
                 layout_run = restore_layout_contract(
                     source,
                     candidate,
@@ -219,7 +264,12 @@ class BabelDocPdfTranslationService:
                     minimum_font_size=minimum_font_size,
                 )
                 run_metadata["layout_contract"] = layout_run
+                run_metadata["timing_seconds"]["layout_restore"] = round(time.monotonic() - layout_started_at, 3)
                 candidate = layout_candidate
+                run_metadata["deterministic_label_repairs"] = _repair_deterministic_pdf_labels(
+                    candidate, target_language=target_language
+                )
+                validation_started_at = time.monotonic()
                 run_metadata["cmap_repairs"] = repair_pdf_text_cmaps(candidate)
                 validation = validate_candidate(
                     source,
@@ -229,6 +279,8 @@ class BabelDocPdfTranslationService:
                     layout_profile=numbering_profile,
                     minimum_font_size=minimum_font_size,
                 )
+                run_metadata["timing_seconds"]["validation_and_cmap"] = round(time.monotonic() - validation_started_at, 3)
+                run_metadata["timing_seconds"]["total"] = round(time.monotonic() - job_started_at, 3)
                 # Write the audit record before the atomic rename.  If either
                 # operation fails, the same quarantine path below retains the
                 # candidate and prevents a partial publication.
@@ -242,6 +294,7 @@ class BabelDocPdfTranslationService:
                 )
                 published = publish_candidate(candidate, destination)
             except Exception as error:
+                run_metadata["timing_seconds"]["total_until_failure"] = round(time.monotonic() - job_started_at, 3)
                 run_metadata.update(_gateway_audit_summary(gateway_audit_path))
                 quarantine_dir, quarantined_candidate = _quarantine_failure(
                     destination=destination,
@@ -269,10 +322,14 @@ class BabelDocPdfTranslationService:
 
 _LATIN_TARGET_LANGUAGES = frozenset({"en", "en-us", "en-gb", "english"})
 _TABLE_GATEWAY_TIMEOUT_SECONDS = 300
-# Two cells normally form one complete row in the source documents.  Keeping
-# the structured response at one row avoids the truncation seen when a long
-# responsibility column is combined with several neighbouring rows.
-_TABLE_BATCH_CELL_LIMIT = 2
+# Send a complete bounded table context to the model.  The former two-cell
+# limit turned a 20-cell table into ten serial API requests; stable IDs make a
+# 24-cell response equally verifiable while dramatically reducing latency.
+# Keep ordinary tables in a small number of requests, but cap the estimated
+# prompt body so one unusually long responsibility cell cannot occupy a
+# 10k-character request and wait for the provider's 120-second timeout.
+_TABLE_BATCH_CELL_LIMIT = 24
+_TABLE_BATCH_CHAR_LIMIT = 6000
 _TABLE_BATCH_RETRIES = 2
 
 
@@ -339,30 +396,51 @@ def _prepare_table_translations(
     translations: dict[str, str] = {cell.id: "" for cell in cells if cell.is_empty}
     gateway_batches = 0
     gateway_attempts = 0
+    batch_cell_limit, batch_char_limit, cell_text_limit, output_token_limit = _table_model_limits(model)
     if translatable:
-        for batch in _table_translation_batches(translatable, _TABLE_BATCH_CELL_LIMIT):
-            request_items = [{"id": cell.id, "input": cell.text} for cell in batch]
-            for attempt in range(_TABLE_BATCH_RETRIES + 1):
-                gateway_attempts += 1
-                try:
-                    response = _post_table_translation_batch(
-                        gateway_url=gateway_url,
-                        model=model,
-                        source_language=source_language,
-                        target_language=target_language,
-                        items=request_items,
-                    )
-                    translations.update(_normalise_table_response(response))
-                    break
-                except RuntimeError as error:
-                    if (
-                        "STRUCTURED_OUTPUT_MAPPING_INVALID" not in str(error)
-                        or attempt >= _TABLE_BATCH_RETRIES
-                    ):
-                        raise
-                    time.sleep(min(2.0**attempt, 8.0))
-            gateway_batches += 1
-    validated = validate_pdf_table_translations(tables, translations)
+        for batch in _table_translation_batches(
+            translatable,
+            batch_cell_limit,
+            maximum_chars=batch_char_limit,
+        ):
+            request_groups, part_ids = _expand_long_table_cells(
+                batch,
+                batch_char_limit,
+                maximum_text_chars=cell_text_limit,
+            )
+            response_map: dict[str, str] = {}
+            for request_items in request_groups:
+                for attempt in range(_TABLE_BATCH_RETRIES + 1):
+                    gateway_attempts += 1
+                    try:
+                        response = _post_table_translation_batch(
+                            gateway_url=gateway_url,
+                            model=model,
+                            source_language=source_language,
+                            target_language=target_language,
+                            items=request_items,
+                            max_output_tokens=output_token_limit,
+                        )
+                        mapped = _normalise_table_response(response)
+                        if set(mapped) != {item["id"] for item in request_items}:
+                            raise RuntimeError("table translation response IDs are incomplete or unknown")
+                        response_map.update(mapped)
+                        break
+                    except RuntimeError as error:
+                        if (
+                            "STRUCTURED_OUTPUT_MAPPING_INVALID" not in str(error)
+                            or attempt >= _TABLE_BATCH_RETRIES
+                        ):
+                            raise
+                        time.sleep(min(2.0**attempt, 8.0))
+                gateway_batches += 1
+            for cell in batch:
+                ids = part_ids[cell.id]
+                missing = [item_id for item_id in ids if item_id not in response_map]
+                if missing:
+                    raise RuntimeError(f"table translation response missing cell parts: {missing[0]}")
+                translations[cell.id] = "".join(response_map[item_id] for item_id in ids)
+    validated = validate_pdf_table_translations(tables, translations, source_language=source_language, target_language=target_language)
     return tables, validated, {
         "status": "translated",
         "table_count": len(tables),
@@ -374,9 +452,88 @@ def _prepare_table_translations(
     }
 
 
+def _table_model_limits(model: str) -> tuple[int, int, int, int]:
+    """Return conservative table limits for each provider/model family.
+
+    Qwen-plus has been observed timing out on a single roughly 8k-character
+    cell.  Keep its prompts and parts smaller; larger-context models can use
+    more cells, while the default remains conservative for unknown models.
+    """
+    name = (model or "").casefold()
+    if "qwen-plus" in name:
+        return 16, 4500, 3000, 4096
+    if "qwen-max" in name:
+        return 24, 6000, 4500, 8192
+    if name.startswith("qwen"):
+        return 20, 5000, 3500, 8192
+    if name.startswith("gpt-5.6-sol"):
+        return 24, 10000, 6000, 8192
+    if name.startswith("gpt-5.6-terra"):
+        return 24, 8000, 5000, 8192
+    if name.startswith("gpt-5.6-luna"):
+        return 20, 6000, 4000, 4096
+    if name.startswith("gpt-5") or name.startswith("o"):
+        return 20, 6000, 4000, 4096
+    return _TABLE_BATCH_CELL_LIMIT, _TABLE_BATCH_CHAR_LIMIT, 4500, 4096
+
+
+def _expand_long_table_cells(
+    cells: tuple[PdfTableCell, ...],
+    maximum_chars: int,
+    *,
+    maximum_text_chars: int | None = None,
+) -> tuple[list[list[dict[str, str]]], dict[str, list[str]]]:
+    """Split oversized cell text into stable ordered sub-items.
+
+    A single long cell cannot be made safe by cell-count batching.  Split at
+    whitespace/newline boundaries where possible, retain every source
+    character, and reassemble the translated parts locally after validation.
+    """
+    request_items: list[dict[str, str]] = []
+    part_ids: dict[str, list[str]] = {}
+    # Reserve room for the system prompt, JSON indentation and the stable-ID
+    # envelope; the gateway audit's prompt length includes all of these.
+    per_item_overhead = 1500
+    max_text = max(512, maximum_text_chars or maximum_chars - per_item_overhead)
+    for cell in cells:
+        text = cell.text
+        parts: list[str] = []
+        start = 0
+        while len(text) - start > max_text:
+            end = start + max_text
+            boundary = max(text.rfind("\n", start, end), text.rfind(" ", start, end))
+            if boundary <= start + max_text // 2:
+                boundary = end
+            parts.append(text[start:boundary])
+            start = boundary
+        parts.append(text[start:])
+        ids = [cell.id if len(parts) == 1 else f"{cell.id}::part-{index + 1}" for index in range(len(parts))]
+        part_ids[cell.id] = ids
+        request_items.extend(
+            {"id": item_id, "input": part}
+            for item_id, part in zip(ids, parts, strict=True)
+        )
+    groups: list[list[dict[str, str]]] = []
+    current: list[dict[str, str]] = []
+    estimated = 0
+    for item in request_items:
+        cost = len(item["input"]) + 96
+        if current and estimated + cost > maximum_chars:
+            groups.append(current)
+            current = []
+            estimated = 0
+        current.append(item)
+        estimated += cost
+    if current:
+        groups.append(current)
+    return groups, part_ids
+
+
 def _table_translation_batches(
     cells: tuple[PdfTableCell, ...],
     maximum_cells: int,
+    *,
+    maximum_chars: int | None = None,
 ) -> tuple[tuple[PdfTableCell, ...], ...]:
     """Group cells by complete table rows for bounded structured responses."""
 
@@ -407,7 +564,26 @@ def _table_translation_batches(
         current.extend(row)
     if current:
         batches.append(tuple(current))
-    return tuple(batches)
+    if maximum_chars is None or maximum_chars <= 0:
+        return tuple(batches)
+
+    bounded: list[tuple[PdfTableCell, ...]] = []
+    for batch in batches:
+        current: list[PdfTableCell] = []
+        estimated = 0
+        for cell in batch:
+            # JSON quoting and the id/input envelope add overhead beyond the
+            # source text.  Keep a conservative fixed allowance per cell.
+            cost = len(cell.text) + 96
+            if current and estimated + cost > maximum_chars:
+                bounded.append(tuple(current))
+                current = []
+                estimated = 0
+            current.append(cell)
+            estimated += cost
+        if current:
+            bounded.append(tuple(current))
+    return tuple(bounded)
 
 
 def _patch_table_candidate(
@@ -462,21 +638,22 @@ def _post_table_translation_batch(
     source_language: str,
     target_language: str,
     items: list[dict[str, str]],
+    max_output_tokens: int = 4096,
 ) -> object:
     """Send one table-cell batch through the already selected local gateway."""
 
+    items = [{**item, "required_names": source_name_constraints(item["input"], source_language, target_language)} for item in items]
+
     system_prompt = (
-        "You are translating a PDF table from "
-        f"{source_language} to {target_language}. Return ONLY a json array. "
+        general_translation_instruction(source_language, target_language)
+        + "\n\nPDF table batch contract: return ONLY a json array. "
         "For every input item return exactly one object with the same id and "
         "an output field containing the complete translation. Do not omit, "
         "merge, reorder, or invent IDs. Preserve numbers, units, numbering, "
         "punctuation, line breaks where useful, and code-like identifiers. "
-        "For document references, translate natural-language issuer text and "
-        "reference markers for the target language; preserve only the year, "
-        "serial number, and their order. Do not copy source-script text into a "
-        "Latin-target result. Keep tags, boundary whitespace, and the complete "
-        "translation intact. Keep the translation concise enough to fit its "
+        "Do not copy source-script text into a Latin-target result. Keep tags, "
+        "boundary whitespace, and the complete translation intact. Keep the "
+        "translation concise enough to fit its "
         "original cell."
     )
     request_payload = {
@@ -490,7 +667,7 @@ def _post_table_translation_batch(
             },
         ],
         "response_format": {"type": "json_object"},
-        "max_tokens": 4096,
+        "max_tokens": max_output_tokens,
     }
     endpoint = gateway_url.rstrip("/") + "/chat/completions"
     request = Request(
@@ -550,9 +727,20 @@ def _post_table_translation_batch(
     if content.endswith("```"):
         content = content[:-3]
     try:
-        return json.loads(content.strip())
+        parsed = json.loads(content.strip())
     except json.JSONDecodeError as exc:
         raise RuntimeError("table translation response was not a JSON array") from exc
+    mapped = _normalise_table_response(parsed)
+    if set(mapped) != {item["id"] for item in items}:
+        raise RuntimeError("table translation response IDs are incomplete or unknown")
+    from document_translator.core.validation import validate_placeholders
+    from document_translator.translation_rules import rule_protected_tokens
+    for item in items:
+        errors = validate_name_retention(item["input"], mapped[item["id"]], source_language, target_language)
+        errors.extend(validate_placeholders(item["input"], mapped[item["id"]], rule_protected_tokens(item["input"])))
+        if errors:
+            raise RuntimeError("table translation validation failed: " + "; ".join(errors))
+    return parsed
 
 
 def _normalise_table_response(value: object) -> dict[str, str]:
@@ -573,7 +761,8 @@ def _normalise_table_response(value: object) -> dict[str, str]:
         if not isinstance(translated, str):
             raise RuntimeError(f"table translation response has no output for cell: {item_id}")
         result[item_id] = (
-            translated.replace("\\r\\n", "\n")
+            normalize_unicode_dashes(remove_control_characters(translated))
+            .replace("\\r\\n", "\n")
             .replace("\\n", "\n")
             .replace("\r\n", "\n")
             .replace("\r", "\n")
@@ -595,6 +784,12 @@ def _table_fontfile(target_language: str) -> Path:
         )
     else:
         candidates = (
+            # The Windows Noto SC OTF is present on this machine but its
+            # cmap is decoded incorrectly by PyMuPDF when used as a newly
+            # inserted font.  BabelDOC's static Source Han TTF is the same
+            # family with a reliable Unicode cmap.
+            Path.home() / ".cache" / "babeldoc" / "fonts" / "SourceHanSansCN-Regular.ttf",
+            Path.home() / ".cache" / "babeldoc" / "fonts" / "SourceHanSansCN-Bold.ttf",
             Path(r"C:\Windows\Fonts\Noto Sans SC (TrueType).otf"),
             Path(r"C:\Windows\Fonts\simhei.ttf"),
             Path(r"C:\Windows\Fonts\msyh.ttc"),
@@ -606,6 +801,376 @@ def _table_fontfile(target_language: str) -> Path:
         "no installed font is available for the PDF table overlay; "
         + ", ".join(str(path) for path in candidates)
     )
+
+
+def _missing_babeldoc_assets(home: Path) -> list[str]:
+    """Return missing/corrupt BabelDOC assets without starting a download."""
+    try:
+        from babeldoc.assets.assets import generate_all_assets_file_list
+    except ImportError:
+        return ["babeldoc asset metadata"]
+
+    folders = {
+        "fonts": home / ".cache" / "babeldoc" / "fonts",
+        "models": home / ".cache" / "babeldoc" / "models",
+        "tiktoken": home / ".cache" / "babeldoc" / "tiktoken",
+        "cmap": home / ".cache" / "babeldoc" / "cmap",
+    }
+    missing: list[str] = []
+    for category, entries in generate_all_assets_file_list().items():
+        folder = folders[category]
+        for entry in entries:
+            path = folder / entry["name"]
+            if not path.is_file():
+                missing.append(f"{category}/{entry['name']}")
+                continue
+            digest = hashlib.sha3_256(path.read_bytes()).hexdigest()
+            if digest != entry["sha3_256"]:
+                missing.append(f"{category}/{entry['name']} (checksum)")
+    return missing
+
+
+def _rotated_text_pages(source: Path) -> tuple[int, ...]:
+    """Return zero-based pages whose source text uses an arbitrary angle."""
+    try:
+        import fitz
+        document = fitz.open(source)
+    except Exception:
+        return ()
+    pages: list[int] = []
+    try:
+        for index, page in enumerate(document):
+            rotated = False
+            for block in page.get_text("dict").get("blocks", []):
+                for line in block.get("lines", []):
+                    direction = line.get("dir")
+                    if not direction or len(direction) < 2:
+                        continue
+                    dx, dy = float(direction[0]), float(direction[1])
+                    # Horizontal and vertical text are supported by BabelDOC;
+                    # any other angle would be flattened by its IL renderer.
+                    if abs(dx) > 0.05 and abs(dy) > 0.05:
+                        rotated = True
+                        break
+                if rotated:
+                    break
+            if rotated:
+                pages.append(index)
+    finally:
+        document.close()
+    return tuple(pages)
+
+
+def _rotated_text_items(source: Path) -> list[dict[str, object]]:
+    """Extract arbitrary-angle text lines with enough geometry to redraw them."""
+    import fitz
+
+    document = fitz.open(source)
+    items: list[dict[str, object]] = []
+    try:
+        rotated_pages: set[int] = set()
+        for page_number, page in enumerate(document, 1):
+            for block in page.get_text("dict").get("blocks", []):
+                for line in block.get("lines", []):
+                    direction = line.get("dir")
+                    if direction and len(direction) >= 2:
+                        dx, dy = float(direction[0]), float(direction[1])
+                        if abs(dx) > 0.05 and abs(dy) > 0.05:
+                            rotated_pages.add(page_number)
+                            break
+                if page_number in rotated_pages:
+                    break
+        for page_number, page in enumerate(document, 1):
+            if page_number not in rotated_pages:
+                continue
+            for block_number, block in enumerate(page.get_text("dict").get("blocks", [])):
+                if block.get("type") != 0:
+                    continue
+                for line_number, line in enumerate(block.get("lines", [])):
+                    direction = line.get("dir")
+                    text = "".join(str(span.get("text", "")) for span in line.get("spans", [])).strip()
+                    if not text or not direction or len(direction) < 2:
+                        continue
+                    dx, dy = float(direction[0]), float(direction[1])
+                    spans = [span for span in line.get("spans", []) if str(span.get("text", "")).strip()]
+                    if not spans:
+                        continue
+                    origin = tuple(float(value) for value in spans[0].get("origin", line.get("bbox", (0, 0))[:2]))
+                    fontsize = max(float(span.get("size", 9.0) or 9.0) for span in spans)
+                    color_value = int(spans[0].get("color", 0) or 0)
+                    color = ((color_value >> 16 & 255) / 255.0, (color_value >> 8 & 255) / 255.0, (color_value & 255) / 255.0)
+                    quads = []
+                    for span in spans:
+                        try:
+                            quad = fitz.recover_quad((dx, dy), span)
+                            quads.append(tuple((float(point.x), float(point.y)) for point in quad))
+                        except Exception:
+                            quads = []
+                            break
+                    if not quads:
+                        continue
+                    item_id = hashlib.sha256(
+                        f"{page_number}:{block_number}:{line_number}:{text}".encode("utf-8")
+                    ).hexdigest()
+                    items.append({
+                        "id": item_id,
+                        "input": text,
+                        "page": page_number,
+                        "origin": origin,
+                        "angle": math.degrees(math.atan2(-dy, dx)),
+                        "fontsize": fontsize,
+                        "color": color,
+                        "quads": quads,
+                    })
+    finally:
+        document.close()
+    return items
+
+
+def _post_rotated_translation_batch(
+    *, gateway_url: str, model: str, source_language: str,
+    target_language: str, items: list[dict[str, object]],
+    glossary: object | None = None,
+    correction: str = "",
+) -> dict[str, str]:
+    """Translate rotated labels through the same structured gateway contract."""
+    system = (
+        general_translation_instruction(source_language, target_language)
+        + "\n\nReturn only a JSON array. Each item must contain the same id and an "
+        "output field. Do not omit, merge, reorder, or invent items. Preserve "
+        "all numbers, units, identifiers, drawing references, and supplied terms."
+    )
+    if correction:
+        system += "\nAUTOMATIC CORRECTION: " + correction
+    from document_translator.translation_rules import rule_protected_tokens, protect_for_translation, restore_after_translation
+    protected = {str(item["id"]): protect_for_translation(str(item["input"]), rule_protected_tokens(str(item["input"]))) for item in items}
+    if glossary is not None:
+        from document_translator.services.glossary import Glossary
+        glossary_obj = glossary if isinstance(glossary, Glossary) else Glossary.load(str(glossary))
+        terms = []
+        for item in items:
+            terms.extend((entry.source, entry.target) for entry in glossary_obj.entries_for(str(item["input"])))
+        terms = list(dict.fromkeys(terms))
+        if terms:
+            system += "\n\nRequired terminology (mandatory):\n" + "\n".join(
+                f"- {source} -> {target}" for source, target in terms
+            )
+    payload = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": system},
+            {"role": "user", "content": "## Here is the input:\n" + json.dumps(
+                [{"id": item["id"], "input": protected[str(item["id"])].text, "required_names": source_name_constraints(str(item["input"]), source_language, target_language)} for item in items],
+                ensure_ascii=False,
+            )},
+        ],
+        "response_format": {"type": "json_object"},
+        "max_tokens": 4096,
+    }
+    request = Request(
+        gateway_url.rstrip("/") + "/chat/completions",
+        data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
+        method="POST",
+        headers={"Content-Type": "application/json"},
+    )
+    try:
+        with urlopen(request, timeout=_TABLE_GATEWAY_TIMEOUT_SECONDS) as response:
+            body = json.loads(response.read().decode("utf-8"))
+    except (HTTPError, URLError, OSError, TimeoutError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise RuntimeError("rotated text translation gateway request failed") from exc
+    try:
+        content = body["choices"][0]["message"]["content"]
+        parsed = json.loads(str(content).strip().removeprefix("```json").removesuffix("```").strip())
+    except (KeyError, IndexError, TypeError, ValueError, json.JSONDecodeError) as exc:
+        raise RuntimeError("rotated text translation response was not valid JSON") from exc
+    rows = parsed.get("items") if isinstance(parsed, dict) else parsed
+    if not isinstance(rows, list):
+        raise RuntimeError("rotated text translation response is not an array")
+    expected = {str(item["id"]): str(item["input"]) for item in items}
+    item_by_id = {str(item["id"]): item for item in items}
+    mapped: dict[str, str] = {}
+    item_errors: dict[str, list[str]] = {}
+    from document_translator.core.validation import validate_placeholders
+    from document_translator.translation_rules import rule_protected_tokens
+    glossary_obj = None
+    if glossary is not None:
+        from document_translator.services.glossary import Glossary
+        glossary_obj = glossary if isinstance(glossary, Glossary) else Glossary.load(str(glossary))
+    for row in rows:
+        if not isinstance(row, dict) or not isinstance(row.get("id"), str) or not isinstance(row.get("output"), str):
+            raise RuntimeError("rotated text translation item is invalid")
+        item_id = row["id"]
+        if item_id in mapped or item_id not in expected:
+            raise RuntimeError("rotated text translation IDs are incomplete")
+        try:
+            output = restore_after_translation(row["output"], protected[item_id])
+        except ValueError as exc:
+            if correction:
+                raise RuntimeError("rotated text correction failed to preserve protected literals") from exc
+            repaired = _post_rotated_translation_batch(
+                gateway_url=gateway_url, model=model, source_language=source_language,
+                target_language=target_language, items=[item_by_id[item_id],], glossary=glossary,
+                correction="Return every [[TRP_nnnn]] marker unchanged, exactly once. Do not translate or omit protected markers.",
+            )
+            mapped.update(repaired)
+            continue
+        output = auto_correct_translation(expected[item_id], output, source_language, target_language)
+        errors = validate_placeholders(expected[item_id], output, rule_protected_tokens(expected[item_id]))
+        errors.extend(validate_name_retention(expected[item_id], output, source_language, target_language))
+        errors.extend(validate_translation_residue(expected[item_id], output, source_language, target_language))
+        if glossary_obj is not None:
+            for entry in glossary_obj.entries_for(expected[item_id]):
+                if output.casefold().count(entry.target.casefold()) < expected[item_id].count(entry.source):
+                    errors.append(f"GLOSSARY_TERM_MISSING: {entry.source!r} -> {entry.target!r}")
+        if errors:
+            item_errors[item_id] = errors
+            continue
+        mapped[item_id] = output
+    if item_errors:
+        details = "; ".join(
+            f"{item_id}: {error}" for item_id, errors in item_errors.items() for error in errors
+        )
+        if correction:
+            raise RuntimeError("rotated text translation validation failed: " + details)
+        repaired = _post_rotated_translation_batch(
+            gateway_url=gateway_url, model=model, source_language=source_language,
+            target_language=target_language,
+            items=[item_by_id[item_id] for item_id in item_errors], glossary=glossary,
+            correction=details,
+        )
+        mapped.update(repaired)
+    if set(mapped) != set(expected):
+        raise RuntimeError("rotated text translation IDs are incomplete")
+    return mapped
+
+
+def _translate_and_patch_rotated_text(
+    *, source: Path, candidate: Path, destination: Path,
+    source_language: str, target_language: str, model: str, gateway_url: str,
+    glossary: str | Path | None = None,
+) -> dict[str, object]:
+    """Translate arbitrary-angle source lines and redraw them on the candidate."""
+    items = _rotated_text_items(source)
+    if not items:
+        shutil.copy2(candidate, destination)
+        return {"status": "not_required", "item_count": 0, "batch_count": 0}
+    translations: dict[str, str] = {}
+    from document_translator.translation_rules import rule_protected_tokens
+    translatable = []
+    for item in items:
+        text = str(item["input"])
+        tokens = rule_protected_tokens(text)
+        remainder = text
+        for token in sorted(tokens, key=len, reverse=True):
+            remainder = remainder.replace(token, "")
+        if not any(char.isalpha() for char in remainder):
+            translations[str(item["id"])] = text
+        else:
+            translatable.append(item)
+    for start in range(0, len(translatable), 24):
+        translations.update(_post_rotated_translation_batch(
+            gateway_url=gateway_url, model=model, source_language=source_language,
+            target_language=target_language, items=translatable[start : start + 24], glossary=glossary,
+        ))
+    import fitz
+    document = fitz.open(candidate)
+    source_document = fitz.open(source)
+    try:
+        pages: dict[int, list[dict[str, object]]] = {}
+        for item in items:
+            pages.setdefault(int(item["page"]), []).append(item)
+        fontfile = _table_fontfile(target_language)
+        for page_number, page_items in pages.items():
+            # BabelDOC intentionally skips arbitrary-angle pages, but its
+            # later cleanup can still drop axis-aligned labels. Replace the
+            # whole page with the untouched source page before redrawing all
+            # extracted labels, so no map text or drawing geometry is lost.
+            document.delete_page(page_number - 1)
+            document.insert_pdf(source_document, from_page=page_number - 1, to_page=page_number - 1, start_at=page_number - 1)
+            page = document[page_number - 1]
+            for item in page_items:
+                for points in item["quads"]:
+                    # A map label is drawn over map imagery. Transparent
+                    # text-only redaction must not paint a white rectangle
+                    # over that imagery or over neighbouring labels.
+                    page.add_redact_annot(fitz.Quad(points), fill=False)
+            # Remove only text operators.  Map lines, fills and images are
+            # part of the drawing and must survive the label replacement.
+            page.apply_redactions(images=0, graphics=0, text=0)
+            for item in page_items:
+                origin = fitz.Point(*item["origin"])
+                page.insert_text(
+                    origin,
+                    translations[str(item["id"])],
+                    fontname="pdfrotcjk",
+                    fontfile=str(fontfile),
+                    fontsize=float(item["fontsize"]),
+                    # PyMuPDF's ``rotate`` argument accepts only page-like
+                    # right angles for insert_text.  ``morph`` is the
+                    # supported arbitrary-angle path for CAD/map labels.
+                    morph=(origin, fitz.Matrix(float(item["angle"]))),
+                    color=item["color"],
+                    overlay=True,
+                )
+        document.save(destination, garbage=1, deflate=True)
+    finally:
+        source_document.close()
+        document.close()
+    return {"status": "patched", "item_count": len(items), "translated_item_count": len(translatable), "batch_count": (len(translatable) + 23) // 24}
+
+
+def _repair_deterministic_pdf_labels(path: Path, *, target_language: str) -> dict[str, object]:
+    """Repair deterministic label/date residues left by BabelDOC fallbacks."""
+    if not target_language.casefold().startswith("zh"):
+        return {"status": "not_required", "repairs": []}
+    import fitz
+    from document_translator.translation_rules import auto_correct_translation
+
+    document = fitz.open(path)
+    repairs: list[dict[str, object]] = []
+    fontfile = _table_fontfile(target_language)
+    try:
+        for page_number, page in enumerate(document, 1):
+            pending: list[tuple[fitz.Point, fitz.Rect, str, float, tuple[float, float, float]]] = []
+            for block in page.get_text("dict").get("blocks", []):
+                for line in block.get("lines", []):
+                    for span in line.get("spans", []):
+                        text = str(span.get("text", ""))
+                        corrected = auto_correct_translation(text, text, "en", target_language)
+                        if corrected == text or not text.strip():
+                            continue
+                        bbox = fitz.Rect(span["bbox"])
+                        color_value = int(span.get("color", 0) or 0)
+                        color = (
+                            (color_value >> 16 & 255) / 255.0,
+                            (color_value >> 8 & 255) / 255.0,
+                            (color_value & 255) / 255.0,
+                        )
+                        origin = fitz.Point(*span.get("origin", bbox[:2]))
+                        pending.append((origin, bbox, corrected, float(span.get("size", 9.0) or 9.0), color))
+            if not pending:
+                continue
+            for _origin, bbox, _corrected, _size, _color in pending:
+                page.add_redact_annot(bbox, fill=False)
+            page.apply_redactions(images=0, graphics=0, text=0)
+            for origin, _bbox, corrected, size, color in pending:
+                page.insert_text(
+                    origin, corrected, fontname="pdfautocjk", fontfile=str(fontfile),
+                    fontsize=size, color=color, overlay=True,
+                )
+                repairs.append({"page": page_number, "to": corrected})
+        result = {"status": "repaired" if repairs else "not_required", "repairs": repairs}
+        if repairs:
+            temporary = path.with_suffix(path.suffix + ".deterministic.tmp")
+            document.save(temporary, garbage=1, deflate=True)
+            document.close()
+            temporary.replace(path)
+        return result
+    finally:
+        try:
+            document.close()
+        except Exception:
+            pass
 
 
 @contextlib.contextmanager
@@ -673,34 +1238,39 @@ def _run_high_level_translation(
         "model": model,
         "gateway_url": gateway_url,
         "glossary": str(Path(glossary).resolve()) if glossary is not None else None,
+        "skip_translation_pages": list(_rotated_text_pages(source)),
     }
     process = subprocess.Popen(
         [sys.executable, "-m", "document_translator.pdf_worker"],
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.DEVNULL,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-        bufsize=1,
+        # Keep the worker protocol byte-oriented.  On Windows, using a
+        # TextIOWrapper here can normalize/rewrap backslashes before the
+        # worker's JSON decoder sees them.
+        text=False,
+        bufsize=0,
     )
     assert process.stdin is not None
     assert process.stdout is not None
-    process.stdin.write(json.dumps(payload, ensure_ascii=False))
+    process.stdin.write(json.dumps(payload, ensure_ascii=False).encode("utf-8"))
     process.stdin.close()
     events: queue.Queue[tuple[str, str | None]] = queue.Queue()
 
     def read_worker_output() -> None:
         assert process.stdout is not None
         for output_line in process.stdout:
-            events.put(("line", output_line))
+            events.put(("line", output_line.decode("utf-8", errors="replace")))
         events.put(("eof", None))
 
     threading.Thread(target=read_worker_output, name="pdf-worker-output", daemon=True).start()
     finish_result: object | None = None
     progress_events = 0
     last_stage: str | None = None
+    stage_started_at = time.monotonic()
+    stage_durations: dict[str, float] = {}
     token_usage: object | None = None
+    translation_stats: dict[str, int] | None = None
     deadline = time.monotonic() + 30 * 60
     try:
         while True:
@@ -721,7 +1291,21 @@ def _run_high_level_translation(
             event = json.loads(line)
             progress_events += 1
             if isinstance(event.get("stage"), str):
-                last_stage = event["stage"]
+                stage = event["stage"]
+                now = time.monotonic()
+                if last_stage is not None:
+                    stage_durations[last_stage] = round(
+                        stage_durations.get(last_stage, 0.0) + now - stage_started_at,
+                        3,
+                    )
+                last_stage = stage
+                stage_started_at = now
+            if event.get("type") == "translation_stats":
+                translation_stats = {
+                    key: value
+                    for key in ("successful_paragraphs", "fallback_paragraphs", "translated_paragraphs")
+                    if isinstance((value := event.get(key)), int)
+                }
             if event.get("type") == "error":
                 raise RuntimeError(str(event.get("error", "BabelDOC translation failed")))
             if event.get("type") == "finish":
@@ -736,9 +1320,12 @@ def _run_high_level_translation(
             "progress_events": progress_events,
             "last_stage": last_stage,
             "worker_mode": "project_subprocess_babeldoc",
+            "stage_durations": stage_durations,
         }
         if token_usage is not None:
             metadata["token_usage"] = token_usage
+        if translation_stats is not None:
+            metadata["babeldoc_translation_stats"] = translation_stats
         return finish_result, metadata
     finally:
         _terminate_worker_tree(process)
@@ -824,7 +1411,19 @@ def _gateway_audit_summary(path: Path) -> dict[str, object]:
         return {"gateway_requests": 0, "gateway_batch_sizes": [], "gateway_audit_read_error": True}
     requests = [record for record in records if record.get("event") != "upstream_result"]
     sizes = [record.get("batch_count") for record in requests if isinstance(record.get("batch_count"), int)]
-    return {"gateway_requests": len(requests), "gateway_batch_sizes": sizes}
+    results = [record for record in records if record.get("event") == "upstream_result"]
+    elapsed = [record.get("elapsed_ms") for record in results if isinstance(record.get("elapsed_ms"), (int, float))]
+    failures = [record for record in results if record.get("outcome") != "ok"]
+    return {
+        "gateway_requests": len(requests),
+        "gateway_batch_sizes": sizes,
+        "gateway_structured_requests": len(sizes),
+        "gateway_fallback_requests": len(requests) - len(sizes),
+        "gateway_upstream_results": len(results),
+        "gateway_upstream_elapsed_ms_total": round(sum(elapsed), 3),
+        "gateway_upstream_elapsed_ms_max": round(max(elapsed), 3) if elapsed else 0,
+        "gateway_upstream_failures": len(failures),
+    }
 
 
 def _write_preflight_rejection_report(

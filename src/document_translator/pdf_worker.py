@@ -9,15 +9,205 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import sys
 import traceback
 from pathlib import Path
+
+
+_SKIP_TRANSLATION_PAGES: tuple[int, ...] = ()
 
 
 def _install_layout_policy() -> None:
     from babeldoc.translator.translator import OpenAITranslator
 
     _disable_nested_provider_retries(OpenAITranslator)
+    _disable_nested_pdf_save_process()
+    _install_translation_stats_event()
+
+
+def _disable_nested_pdf_save_process() -> None:
+    """Avoid BabelDOC's 120-second nested clean-save timeout in the worker.
+
+    The project already runs BabelDOC inside an isolated worker and validates
+    the resulting PDF after it returns.  Spawning another Windows process for
+    MuPDF's clean save can remain alive until BabelDOC's hard timeout when the
+    worker is frozen by PyInstaller.  A direct non-clean save preserves the
+    PDF content; the project-level structural/CMap gates still run afterward.
+    """
+    from babeldoc.format.pdf.document_il.backend.pdf_creater import PDFCreater
+
+    if getattr(PDFCreater, "_document_translator_direct_save", False):
+        return
+
+    def direct_save(
+        pdf,
+        output_path,
+        translation_config,
+        garbage=1,
+        deflate=True,
+        clean=True,
+        deflate_fonts=True,
+        linear=False,
+        timeout=120,
+        tag="",
+    ):
+        pdf.save(
+            output_path,
+            garbage=garbage,
+            deflate=deflate,
+            clean=False,
+            deflate_fonts=deflate_fonts,
+            linear=linear,
+        )
+        return False
+
+    PDFCreater.save_pdf_with_timeout = staticmethod(direct_save)
+    PDFCreater._document_translator_direct_save = True
+
+
+def _install_translation_stats_event() -> None:
+    """Emit aggregate BabelDOC fallback counters without exposing document text."""
+    from babeldoc.format.pdf.document_il.midend.il_translator_llm_only import ILTranslatorLLMOnly
+
+    if getattr(ILTranslatorLLMOnly, "_document_translator_stats_event", False):
+        return
+    original = ILTranslatorLLMOnly.translate
+
+    def translate_with_stats(self, docs, *args, **kwargs):
+        try:
+            return original(self, docs, *args, **kwargs)
+        finally:
+            print(
+                json.dumps(
+                    {
+                        "type": "translation_stats",
+                        "successful_paragraphs": self.ok_count,
+                        "fallback_paragraphs": self.fallback_count,
+                        "translated_paragraphs": self.total_count,
+                    },
+                    ensure_ascii=False,
+                ),
+                flush=True,
+            )
+
+    ILTranslatorLLMOnly.translate = translate_with_stats
+    ILTranslatorLLMOnly._document_translator_stats_event = True
+
+
+def _install_large_semantic_batches() -> None:
+    """Raise BabelDOC's very small default page-batch thresholds.
+
+    BabelDOC 0.18 splits ordinary page content after 200 tokens or six
+    paragraphs.  For a three-page policy document that turns a single page
+    into many independent gateway calls and makes provider latency dominate
+    the job.  Its BatchParagraph path already carries a stable ID for every
+    paragraph and validates the returned mapping, so increasing the bounded
+    semantic batch does not weaken result integrity.
+    """
+    from babeldoc.format.pdf.document_il.midend import il_translator_llm_only as module
+    from babeldoc.format.pdf.high_level import ILTranslatorLLMOnly as high_level_translator
+
+    translator = module.ILTranslatorLLMOnly
+    if getattr(translator, "_document_translator_large_batches", False):
+        return
+
+    batch_paragraph = module.BatchParagraph
+    is_cid = module.is_cid_paragraph
+    is_numeric = module.is_pure_numeric_paragraph
+    is_placeholder = module.is_placeholder_only_paragraph
+
+    def process_page(
+        self,
+        page,
+        executor,
+        pbar=None,
+        tracker=None,
+        executor2=None,
+        translated_ids=None,
+    ):
+        self.translation_config.raise_if_cancelled()
+        if getattr(page, "page_number", None) in _SKIP_TRANSLATION_PAGES:
+            # BabelDOC's IL stores only horizontal/vertical text orientation;
+            # preserve arbitrary-angle drawing pages as source content rather
+            # than flattening their labels into misplaced horizontal text.
+            for paragraph in page.pdf_paragraph:
+                if pbar:
+                    pbar.advance(1)
+            return
+        page_font_map = {font.font_id: font for font in page.pdf_font}
+        page_xobj_font_map = {}
+        for xobj in page.pdf_xobject:
+            page_xobj_font_map[xobj.xobj_id] = page_font_map.copy()
+            for font in xobj.pdf_font:
+                page_xobj_font_map[xobj.xobj_id][font.font_id] = font
+
+        paragraphs = []
+        total_token_count = 0
+        for paragraph in page.pdf_paragraph:
+            if id(paragraph) in translated_ids:
+                continue
+            if paragraph.debug_id is None or paragraph.unicode is None:
+                continue
+            if (
+                is_cid(paragraph)
+                or len(paragraph.unicode) < self.translation_config.min_text_length
+                or is_numeric(paragraph)
+                or is_placeholder(paragraph)
+            ):
+                if pbar:
+                    pbar.advance(1)
+                continue
+
+            total_token_count += self.calc_token_count(paragraph.unicode)
+            paragraphs.append(paragraph)
+            translated_ids.add(id(paragraph))
+            if paragraph.layout_label == "title":
+                self.shared_context_cross_split_part.recent_title_paragraph = (
+                    self.shared_context_cross_split_part.snapshot_title_paragraph(paragraph)
+                )
+
+            # Bounded by both content and item count; this is one semantic
+            # request, never a per-paragraph network loop.
+            if total_token_count > 900 or len(paragraphs) >= 24:
+                self.mid += 1
+                executor.submit(
+                    self.translate_paragraph,
+                    batch_paragraph(paragraphs, [page] * len(paragraphs), tracker),
+                    pbar,
+                    page_font_map,
+                    page_xobj_font_map,
+                    self.translation_config.shared_context_cross_split_part.first_paragraph,
+                    self.translation_config.shared_context_cross_split_part.recent_title_paragraph,
+                    executor2,
+                    priority=1048576 - total_token_count,
+                    paragraph_token_count=total_token_count,
+                    mp_id=self.mid,
+                )
+                paragraphs = []
+                total_token_count = 0
+
+        if paragraphs:
+            self.mid += 1
+            executor.submit(
+                self.translate_paragraph,
+                batch_paragraph(paragraphs, [page] * len(paragraphs), tracker),
+                pbar,
+                page_font_map,
+                page_xobj_font_map,
+                self.translation_config.shared_context_cross_split_part.first_paragraph,
+                self.translation_config.shared_context_cross_split_part.recent_title_paragraph,
+                executor2,
+                priority=1048576 - total_token_count,
+                paragraph_token_count=total_token_count,
+                mp_id=self.mid,
+            )
+
+    translator.process_page = process_page
+    # high_level imports the class directly, so update that reference too.
+    module.ILTranslatorLLMOnly._document_translator_large_batches = True
+    if high_level_translator is not translator:
+        high_level_translator.process_page = process_page
 
 
 def _disable_nested_provider_retries(translator: object) -> None:
@@ -44,13 +234,36 @@ def _disable_nested_provider_retries(translator: object) -> None:
         setattr(translator, name, single_attempt)
 
 
+def _pdf_runtime_limits() -> tuple[int, int]:
+    """Return bounded PDF request rate and worker concurrency.
+
+    The old fixed ``1/1`` settings serialized every paragraph even though
+    the local gateway is threaded.  Keep a conservative default while
+    allowing operators to lower it for a stricter upstream quota.
+    """
+    def bounded(name: str, default: int) -> int:
+        try:
+            return max(1, min(8, int(os.environ.get(name, str(default)))))
+        except (TypeError, ValueError):
+            return default
+
+    qps = bounded("DOCUMENT_TRANSLATOR_PDF_QPS", 6)
+    workers = bounded("DOCUMENT_TRANSLATOR_PDF_WORKERS", 6)
+    return qps, min(qps, workers)
+
+
 async def _translate(payload: dict[str, object]) -> None:
+    global _SKIP_TRANSLATION_PAGES
+    _SKIP_TRANSLATION_PAGES = tuple(
+        int(page) for page in payload.get("skip_translation_pages", ())
+    )
     from pdf2zh_next.config.model import BasicSettings, PDFSettings, SettingsModel, TranslationSettings
     from pdf2zh_next.config.translate_engine_model import OpenAISettings
     from babeldoc.format.pdf.high_level import async_translate as babeldoc_translate
     from pdf2zh_next.high_level import create_babeldoc_config
 
     _install_layout_policy()
+    qps, pool_max_workers = _pdf_runtime_limits()
 
     target_language = str(payload["target_language"])
     settings = SettingsModel(
@@ -63,8 +276,8 @@ async def _translate(payload: dict[str, object]) -> None:
             lang_in=str(payload["source_language"]),
             lang_out=target_language,
             output=str(payload["workdir"]),
-            qps=1,
-            pool_max_workers=1,
+            qps=qps,
+            pool_max_workers=pool_max_workers,
             min_text_length=1,
             no_auto_extract_glossary=True,
             glossaries=payload.get("glossary"),
@@ -89,15 +302,16 @@ async def _translate(payload: dict[str, object]) -> None:
             openai_send_reasoning_effort=False,
         ),
     )
+    from document_translator.providers.translation_prompt import general_translation_instruction
+
     settings.translation.custom_system_prompt = (
-        "Document Translator PDF gateway v5. Translate every paragraph into "
-        f"{target_language}; preserve IDs, codes, numbers, units, placeholders, "
-        "and tags exactly. For a document reference, translate the "
-        "natural-language issuer and reference marker; protect only its "
-        "year, serial number, and ordering. Never copy source-script text "
-        "into a Latin-target result. Preserve boundary whitespace and structural labels; "
-        "the application will enforce the configured target style. Return "
-        "only the required JSON array."
+        general_translation_instruction(str(payload["source_language"]), target_language)
+        + "\n\nPDF batch contract: return only the required JSON array. Preserve every "
+        "stable id and return exactly one output for each input item. Do not "
+        "merge, omit, reorder, summarize, or invent items. Numbers, decimal "
+        "precision, signs, ranges, dates, units, drawing references, identifiers "
+        "and supplied terminology are immutable and must be copied exactly. "
+        "ASCII hyphen-minus U+002D must remain unchanged inside identifiers."
     )
     source = Path(str(payload["source"]))
     settings.validate_settings()
@@ -123,7 +337,14 @@ async def _translate(payload: dict[str, object]) -> None:
 
 def main() -> int:
     try:
-        payload = json.load(sys.stdin)
+        if hasattr(sys.stdout, "reconfigure"):
+            sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        # Read the request as bytes so Windows text-mode stdin cannot
+        # reinterpret backslashes in absolute paths before JSON decoding.
+        raw_request = getattr(sys.stdin, "buffer", sys.stdin).read()
+        if isinstance(raw_request, bytes):
+            raw_request = raw_request.decode("utf-8")
+        payload = json.loads(raw_request)
         asyncio.run(_translate(payload))
         return 0
     except Exception as error:

@@ -33,12 +33,12 @@ from document_translator.services.translation_gateway import (
 )
 
 
-def make_pdf(path, text: str = "Hello PDF", *, fontsize: float = 11):
+def make_pdf(path, text: str = "Hello PDF", *, fontsize: float = 11, fontname: str = "helv"):
     import fitz
 
     document = fitz.open()
     page = document.new_page(width=300, height=400)
-    page.insert_text((40, 50), text, fontsize=fontsize)
+    page.insert_text((40, 50), text, fontsize=fontsize, fontname=fontname)
     document.save(path)
     document.close()
 
@@ -70,6 +70,70 @@ def test_native_pdf_preflight_and_candidate_validation(tmp_path):
     assert preflight.classification == "A"
     assert preflight.page_count == 1
     assert len(validation["candidate_hash"]) == 64
+
+
+@pytest.mark.parametrize("target_language", ["zh", "zh-CN", "Chinese"])
+def test_candidate_validation_records_missing_original_name_as_warning(tmp_path, target_language):
+    source = tmp_path / "source.pdf"
+    candidate = tmp_path / "candidate.pdf"
+    make_pdf(source, "RAVI Rd.", fontsize=8)
+    make_pdf(candidate, "拉维路", fontsize=4, fontname="china-s")
+    preflight = inspect_pdf(source)
+
+    result = validate_candidate(source, candidate, preflight, target_language=target_language)
+    assert result["name_warnings"]
+    assert "RAVI Rd" in result["name_warnings"][0]
+    assert sha256_file(source) == preflight.source_hash
+
+
+@pytest.mark.parametrize("source_text", ["RAVI Rd.\nRAVI Rd.", "RAVI Rd. and RAVI Rd."])
+def test_candidate_validation_preserves_name_occurrence_counts(tmp_path, source_text):
+    source = tmp_path / "source.pdf"
+    candidate = tmp_path / "candidate.pdf"
+    make_pdf(source, source_text)
+    make_pdf(candidate, "RAVI Rd.")
+
+    result = validate_candidate(source, candidate, inspect_pdf(source), target_language="zh")
+    assert any("expected 2, got 1" in warning for warning in result["name_warnings"])
+
+
+@pytest.mark.parametrize(
+    "source_text,candidate_text,target_language",
+    [
+        ("RAVI Rd.", "\nRAVI Rd.", "zh"),
+        ("RAVI Rd.\nRAVI Rd.", "RAVI Rd. and RAVI Rd.", "zh"),
+        ("RAVI\nRd.", "Translated text", "zh"),
+        ("RAVI Rd.", "Translated text", "en"),
+        ("RAVI Rd.", "Translated text", ""),
+    ],
+)
+def test_candidate_validation_allows_retained_names_and_other_targets(
+    tmp_path, source_text, candidate_text, target_language
+):
+    source = tmp_path / "source.pdf"
+    candidate = tmp_path / "candidate.pdf"
+    make_pdf(source, source_text)
+    make_pdf(candidate, candidate_text)
+    preflight = inspect_pdf(source)
+
+    result = validate_candidate(source, candidate, preflight, target_language=target_language)
+
+    assert len(result["candidate_hash"]) == 64
+    assert sha256_file(source) == preflight.source_hash
+
+
+@pytest.mark.parametrize("source_size,candidate_size,accepted", [(8, 4, True), (12, 6, True), (20, 9, False)])
+def test_font_acceptance_uses_corresponding_source_ratio(tmp_path, source_size, candidate_size, accepted):
+    source = tmp_path / "source.pdf"
+    candidate = tmp_path / "candidate.pdf"
+    make_pdf(source, "Original text", fontsize=source_size)
+    make_pdf(candidate, "Translated text", fontsize=candidate_size)
+    if accepted:
+        result = validate_candidate(source, candidate, inspect_pdf(source), target_language="zh")
+        assert result["font_size_ratio_checks"][0]["ratio"] >= 0.5
+    else:
+        with pytest.raises(PdfPreflightError, match="minimum font size ratio"):
+            validate_candidate(source, candidate, inspect_pdf(source), target_language="zh")
 
 
 def test_candidate_validation_rejects_control_characters_and_target_language_residue(tmp_path):
@@ -333,6 +397,31 @@ def test_gateway_splits_only_an_incomplete_babeldoc_batch_and_reassembles_ids():
     parsed = json.loads(result)
     assert [row["id"] for row in parsed] == [0, 1, 2, 3]
     assert calls == [4, 2, 1, 1, 2, 1, 1]
+
+
+@pytest.mark.parametrize("repair_succeeds", [True, False])
+def test_gateway_names_use_one_batch_correction_without_splitting(repair_succeeds):
+    items = [{"id": "road", "input": "RAVI Rd."}, {"id": "place", "input": "SHAREEF COLONY DS"}]
+    request = {"messages": [{"role": "system", "content": "Translate from auto to zh-CN."},
+                            {"role": "user", "content": "## Here is the input:\n" + json.dumps(items)}],
+               "response_format": {"type": "json_object"}}
+    calls = []
+
+    def provider(body):
+        content = next(m["content"] for m in body["messages"] if m["role"] == "user")
+        rows = json.loads(content.split("## Here is the input:")[1])
+        calls.append(rows)
+        return json.dumps([{"id": row["id"], "output": "译文" + ("（" + row["input"] + "）" if repair_succeeds and len(calls) == 2 else "")} for row in reversed(rows)])
+
+    if repair_succeeds:
+        result = json.loads(_structured_answer_with_retry(request, provider))
+        assert [row["id"] for row in result] == ["road", "place"]
+    else:
+        with pytest.raises(RuntimeError, match="PROPER_NAME_MISSING"):
+            _structured_answer_with_retry(request, provider)
+    assert [len(rows) for rows in calls] == [2, 2]
+    assert calls[0][0]["required_names"] == ["RAVI Rd."]
+    assert calls[0][1]["required_names"] == ["SHAREEF COLONY"]
 
 
 def test_high_level_pdf_success_is_published_atomically(tmp_path, monkeypatch):

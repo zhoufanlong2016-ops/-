@@ -16,6 +16,8 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Literal
 
+from ..translation_rules import proper_names, validate_name_retention
+
 
 PdfClass = Literal["A", "B", "C", "D", "E", "F"]
 
@@ -44,6 +46,7 @@ class PdfPreflightError(RuntimeError):
 # BabelDOC's JSON batch parser.
 _CONTROL_CHARACTER_RE = re.compile(r"[\x00-\x08\x0B\x0C\x0E-\x1F]")
 _UNICODE_DASHES = "\u2010\u2011\u2012\u2013\u2014\u2015"
+_UNICODE_DASH_CODES = tuple(f"{ord(char):04X}" for char in _UNICODE_DASHES)
 _IMMUTABLE_IDENTIFIER_RE = re.compile(
     r"(?<![A-Za-z0-9])(?=[A-Za-z0-9-]*\d)"
     r"[A-Za-z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)+(?![A-Za-z0-9])"
@@ -80,12 +83,25 @@ def _font_name_key(value: object) -> str:
     return re.sub(r"[^a-z0-9]+", "", text)
 
 
+def _font_key_related(left: str, right: str) -> bool:
+    """Match BabelDOC's display font name to its rewritten PDF resource name."""
+    if not left or not right:
+        return False
+    if left == right or left in right or right in left:
+        return True
+    # BabelDOC commonly rewrites ``TimesNewRomanPSMT`` as
+    # ``PDFLayout_times``.  A meaningful five-character family fragment is
+    # enough to associate the ToUnicode map without guessing across unrelated
+    # fonts.
+    return any(left[index : index + 5] in right for index in range(max(0, len(left) - 4)))
+
+
 def repair_pdf_text_cmaps(path: str | Path) -> dict[str, object]:
     """Repair BabelDOC's known synthetic-space ToUnicode mappings.
 
-    BabelDOC's embedded TrueType font subsetting can omit the no-outline
-    space glyph.  Depending on the font/cache combination the generated PDF
-    exposes that glyph as U+0001 or U+0003.  Mapping only these observed
+    BabelDOC's embedded font subsetting can omit the no-outline space glyph.
+    Depending on the font/cache combination the generated PDF exposes that
+    glyph as U+0000, U+0001, or U+0003.  Mapping these observed
     synthetic-space codes to U+0020 changes copy/search semantics, not page
     geometry or painted glyphs.  Other control characters remain a hard
     validation error.
@@ -108,7 +124,7 @@ def repair_pdf_text_cmaps(path: str | Path) -> dict[str, object]:
                         chars = span.get("chars", [])
                         counts = {
                             code: sum(1 for char in chars if char.get("c") == chr(code))
-                            for code in (0x0001, 0x0003)
+                            for code in (0x0000, 0x0001, 0x0003)
                         }
                         counts = {code: count for code, count in counts.items() if count}
                         if counts:
@@ -116,9 +132,6 @@ def repair_pdf_text_cmaps(path: str | Path) -> dict[str, object]:
                             existing = controls_by_font.setdefault(key, {})
                             for code, count in counts.items():
                                 existing[code] = existing.get(code, 0) + count
-            if not controls_by_font:
-                continue
-
             for font in page.get_fonts(full=True):
                 if len(font) < 5:
                     continue
@@ -126,7 +139,14 @@ def repair_pdf_text_cmaps(path: str | Path) -> dict[str, object]:
                 resource_key = _font_name_key(font[4])
                 counts = controls_by_font.get(font_key) or controls_by_font.get(resource_key)
                 if not counts:
-                    continue
+                    for span_key, span_counts in controls_by_font.items():
+                        if _font_key_related(span_key, font_key) or _font_key_related(span_key, resource_key):
+                            counts = span_counts
+                            break
+                # Even when no control glyph was observed, inspect the CMap
+                # for Unicode dash mappings. BabelDOC's table/layout fonts can
+                # use a resource name that is not present in rawdict spans.
+                counts = counts or {}
                 cmap_type, cmap_ref = document.xref_get_key(font[0], "ToUnicode")
                 if cmap_type != "xref":
                     continue
@@ -140,7 +160,15 @@ def repair_pdf_text_cmaps(path: str | Path) -> dict[str, object]:
                 repaired_cmap = cmap
                 font_repairs: list[dict[str, object]] = []
                 for code, count in counts.items():
-                    mapping = re.compile(rb"<0{0,3}%X>\s*<([0-9a-fA-F]+)>" % code)
+                    # The CMap codespace declaration also contains
+                    # ``<0000> <FFFF>``.  Never rewrite that declaration when
+                    # repairing CID 0; only match a real mapping entry.
+                    if code == 0:
+                        mapping = re.compile(
+                            rb"(?m)^<0000>\s*<(?!FFFF>)([0-9a-fA-F]+)>"
+                        )
+                    else:
+                        mapping = re.compile(rb"<0{0,3}%X>\s*<([0-9a-fA-F]+)>" % code)
                     match = mapping.search(repaired_cmap)
                     if match and int(match.group(1), 16) == 0x20:
                         continue
@@ -166,6 +194,29 @@ def repair_pdf_text_cmaps(path: str | Path) -> dict[str, object]:
                 if font_repairs:
                     document.update_stream(cmap_xref, repaired_cmap)
                     repairs.extend(font_repairs)
+
+                # BabelDOC can re-encode an ASCII identifier hyphen through a
+                # Unicode dash in the final embedded font CMap even after the
+                # gateway normalized the model response.  Normalize the
+                # mapping at the PDF boundary as well; this changes text-layer
+                # semantics only and leaves painted glyph geometry intact.
+                dash_repairs: list[dict[str, object]] = []
+                for dash_code in _UNICODE_DASH_CODES:
+                    dash_mapping = re.compile(
+                        rb"(<[0-9a-fA-F]+>)\s*<" + dash_code.encode("ascii") + rb">"
+                    )
+                    repaired_cmap, count = dash_mapping.subn(rb"\1<002D>", repaired_cmap)
+                    if count:
+                        dash_repairs.append(
+                            {
+                                "font": str(font[4]),
+                                "mapping": f"U+{dash_code}->U+002D",
+                                "control_count": count,
+                            }
+                        )
+                if dash_repairs:
+                    document.update_stream(cmap_xref, repaired_cmap)
+                    repairs.extend(dash_repairs)
 
         if not repairs:
             return {"repaired_fonts": 0, "repairs": []}
@@ -372,9 +423,37 @@ def validate_candidate(
         page_text = "\n".join(page.get_text("text") for page in candidate_doc)
         source_doc = fitz.open(source_path)
         try:
-            source_text = "\n".join(page.get_text("text") for page in source_doc)
+            source_page_texts = [page.get_text("text") for page in source_doc]
+            source_text = "\n".join(source_page_texts)
+            source_spans_by_page = [
+                [span for block in page.get_text("dict").get("blocks", [])
+                 for line in block.get("lines", []) for span in line.get("spans", [])
+                 if str(span.get("text", "")).strip() and float(span.get("size", 0)) > 0]
+                for page in source_doc
+            ]
         finally:
             source_doc.close()
+        name_warnings: list[str] = []
+        for page_number, (source_page_text, candidate_page) in enumerate(
+            zip(source_page_texts, candidate_doc), 1
+        ):
+            # Name spelling is advisory at the PDF acceptance layer. The
+            # project rule does not require Chinese + English side-by-side;
+            # an approved Chinese rendering or the original English spelling
+            # are both acceptable. Keep the diagnostic so a reviewer can see
+            # what was not retained, but do not reject an otherwise sound PDF.
+            name_source = "\n;\n".join(
+                line for line in source_page_text.splitlines() if proper_names(line)
+            )
+            name_errors = validate_name_retention(
+                name_source, candidate_page.get_text("text"), "auto", target_language
+            )
+            if name_errors:
+                name_warnings.extend(
+                    f"page {page_number}: {error.split(';', 1)[0]}; "
+                    "Chinese-only rendering is permitted; bilingual English retention is not required"
+                    for error in name_errors
+                )
         unsafe_controls = control_characters(page_text)
         if unsafe_controls:
             raise PdfPreflightError("candidate text contains control characters: " + ", ".join(unsafe_controls))
@@ -404,24 +483,37 @@ def validate_candidate(
         if missing_identifiers:
             raise PdfPreflightError("candidate changed immutable identifiers: " + ", ".join(missing_identifiers[:12]))
         observed_font_sizes: list[float] = []
-        for page in candidate_doc:
+        font_ratio_checks = []
+        for page_index, page in enumerate(candidate_doc):
             for block in page.get_text("dict").get("blocks", []):
                 for line in block.get("lines", []):
                     for span in line.get("spans", []):
                         if span.get("text", "").strip():
                             try:
                                 observed_font_sizes.append(float(span["size"]))
+                                source_spans = source_spans_by_page[page_index]
+                                if not source_spans:
+                                    raise PdfPreflightError("cannot verify font size: source page has no text reference")
+                                origin = span.get("origin", span["bbox"][:2])
+                                # Translation changes glyph width and line wrapping.
+                                # Match in page coordinates by baseline origin,
+                                # never against a document-wide minimum font.
+                                original = min(source_spans, key=lambda value: (
+                                    float(value.get("origin", value["bbox"][:2])[0]) - float(origin[0])
+                                ) ** 2 + (
+                                    float(value.get("origin", value["bbox"][:2])[1]) - float(origin[1])
+                                ) ** 2)
+                                source_size = float(original["size"])
+                                ratio = float(span["size"]) / source_size
+                                font_ratio_checks.append({"page": page_index + 1, "source_font_size": source_size,
+                                    "candidate_font_size": float(span["size"]), "ratio": ratio})
+                                if ratio + 1e-6 < 0.5:
+                                    raise PdfPreflightError(
+                                        f"candidate below minimum font size ratio on page {page_index + 1}: "
+                                        f"{float(span['size']):g} pt < 50% of source {source_size:g} pt")
                             except (KeyError, TypeError, ValueError):
                                 continue
         minimum_observed_font_size = min(observed_font_sizes) if observed_font_sizes else None
-        if (
-            minimum_observed_font_size is not None
-            and minimum_observed_font_size + 1e-6 < minimum_font_size
-        ):
-            raise PdfPreflightError(
-                "candidate contains text below minimum font size "
-                f"{minimum_font_size:g} pt: {minimum_observed_font_size:g} pt"
-            )
         latin_targets = {"en", "en-us", "en-gb", "english"}
         # A mixed Chinese/Latin document reference is not an immutable literal:
         # only its numeric identity is protected.  Count every remaining CJK
@@ -476,6 +568,13 @@ def validate_candidate(
                 value for value in mixed_immutable_identifiers if value in candidate_mixed_by_compact
             ],
             "minimum_font_size": minimum_font_size,
+            "font_size_acceptance_policy": "candidate >= 0.5 * corresponding source",
+            "name_acceptance_policy": (
+                "Chinese rendering or original English spelling accepted; "
+                "Chinese + English bilingual output is not required"
+            ),
+            "name_warnings": name_warnings,
+            "font_size_ratio_checks": font_ratio_checks,
             "minimum_observed_font_size": minimum_observed_font_size,
             "visual_review_required": preflight.visual_review_required,
             "layout_contract": layout_validation,

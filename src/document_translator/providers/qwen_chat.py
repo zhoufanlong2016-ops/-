@@ -20,6 +20,7 @@ from document_translator.services.glossary import Glossary
 from document_translator.translation_rules import protect_for_translation, restore_after_translation
 
 from .translation_prompt import PROMPT_VERSION, compile_translation_policy, matched_glossary_entries
+from document_translator.translation_rules import source_name_constraints
 
 
 _ENDPOINT = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
@@ -83,6 +84,8 @@ class QwenChatProvider:
         try:
             return self._translate_batch_once(units)
         except QwenChatError as exc:
+            if "PROPER_NAME_MISSING" in str(exc):
+                raise  # Exhausted the bounded naming correction; fail the batch.
             if exc.code not in {"BATCH_MAPPING_INVALID", "BATCH_VALIDATION_FAILED"} or len(units) == 1:
                 raise
             midpoint = len(units) // 2
@@ -111,7 +114,7 @@ class QwenChatProvider:
                 f"{unit_id}: {'; '.join(errors)}" for unit_id, errors in correction.items()
             )
         protected = {unit.id: protect_for_translation(unit.source_text, unit.protected_tokens) for unit in units}
-        items = [{"id": unit.id, "text": protected[unit.id].text} for unit in units]
+        items = [{"id": unit.id, "text": protected[unit.id].text, "required_names": source_name_constraints(unit.source_text, unit.source_language, unit.target_language)} for unit in units]
         system = policy.instruction + terminology + correction_text + "\nReturn JSON only: {\"items\":[{\"id\":string,\"translation\":string}]}"
         body = {
             "model": self.config.model,

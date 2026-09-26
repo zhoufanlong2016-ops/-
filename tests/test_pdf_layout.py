@@ -16,6 +16,18 @@ from document_translator.services.pdf_layout import (
 )
 
 
+def test_arbitrary_angle_drawing_is_not_reclassified_as_prose(tmp_path):
+    path = tmp_path / "drawing.pdf"
+    doc = fitz.open()
+    page = doc.new_page()
+    page.insert_text((80, 80), "Drawing legend:", fontsize=14)
+    origin = fitz.Point(150, 150)
+    page.insert_text(origin, "Pipe route", morph=(origin, fitz.Matrix(30)))
+    doc.save(path)
+    doc.close()
+    assert build_layout_contracts(path) == ()
+
+
 def test_chinese_ordinals_and_structural_parser_are_document_neutral() -> None:
     assert chinese_numeral_to_int("七") == 7
     assert chinese_numeral_to_int("二十一") == 21

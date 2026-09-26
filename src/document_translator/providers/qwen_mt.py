@@ -21,6 +21,7 @@ from document_translator.services.glossary import Glossary
 from document_translator.translation_rules import protect_for_translation, restore_after_translation
 
 from .translation_prompt import PROMPT_VERSION, compile_translation_policy, matched_glossary_entries
+from document_translator.translation_rules import source_name_constraints, validate_name_retention
 
 
 _COMPATIBLE_ENDPOINT = "https://dashscope.aliyuncs.com/compatible-mode/v1"
@@ -148,7 +149,15 @@ class QwenMTProvider:
             validation_status="needs_review" if residual_source_script else "valid",
         )
         if validate_result_for_unit(unit, result):
-            repaired, repair_requests = self._translate_source_gaps(api_key, payload, unit)
+            if validate_name_retention(unit.source_text, result.translation, unit.source_language, unit.target_language):
+                strict_payload = dict(payload)
+                strict_payload["translation_options"] = {
+                    **translation_options,
+                    "domains": policy.qwen_domain + " AUTOMATIC CORRECTION: " + "; ".join(validate_result_for_unit(unit, result)),
+                }
+                repaired, repair_requests = self._request_translation(api_key, strict_payload)
+            else:
+                repaired, repair_requests = self._translate_source_gaps(api_key, payload, unit)
             repaired = self._repair_anonymous_name_marker(repaired, unit)
             request_count += repair_requests
             result = result.model_copy(update={
@@ -306,9 +315,8 @@ class QwenMTProvider:
             for unit in units
         }
         batch_terms = list(policy.required_terms)
-        if self._glossary is not None:
-            for unit in units[1:]:
-                batch_terms.extend((entry.source, entry.target) for entry in matched_glossary_entries(unit, self._glossary))
+        for unit in units[1:]:
+            batch_terms.extend(compile_translation_policy(unit, self._glossary).required_terms)
         batch_terms = list(dict.fromkeys(batch_terms))
         if batch_terms:
             policy = policy.__class__(instruction=policy.instruction + "\n" + "\n".join(f"{s} -> {t}" for s, t in batch_terms), qwen_domain=policy.qwen_domain + " Use these exact terms: " + "; ".join(f"{s}={t}" for s, t in batch_terms), required_terms=tuple(batch_terms))
@@ -331,7 +339,10 @@ class QwenMTProvider:
         translation_options: dict[str, object] = {
             "source_lang": self._qwen_language(first.source_language),
             "target_lang": self._qwen_language(first.target_language),
-            "domains": policy.qwen_domain,
+            "domains": policy.qwen_domain + "\nPer-item required_names (retain in the corresponding marker):\n" + "\n".join(
+                f"[[TRB:{index:06d}]] {unit.id}: {source_name_constraints(unit.source_text, unit.source_language, unit.target_language)!r}"
+                for index, unit in enumerate(units)
+            ),
         }
         # The batch path must use the same structured term intervention as
         # translate_unit().  Putting terms only in the free-text domain hint

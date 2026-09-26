@@ -11,7 +11,7 @@ import httpx
 
 from document_translator.core import TranslationResult, TranslationUnit, sha256_text, validate_glossary_terms, validate_result_for_unit
 from document_translator.services.glossary import Glossary
-from document_translator.translation_rules import protect_for_translation, restore_after_translation
+from document_translator.translation_rules import protect_for_translation, restore_after_translation, source_name_constraints
 
 from .translation_prompt import PROMPT_VERSION, compile_translation_policy, matched_glossary_entries
 
@@ -96,6 +96,8 @@ class OpenAIProvider:
         try:
             return self._translate_batch_once(units)
         except OpenAIProviderError as exc:
+            if "PROPER_NAME_MISSING" in str(exc):
+                raise  # One batch correction is enough; do not retry names item by item.
             # A provider may truncate or omit an item in an otherwise valid
             # large response.  Split only this integrity-failing batch, never
             # the normal request path, and keep semantic units intact.
@@ -117,7 +119,7 @@ class OpenAIProvider:
         # markers: mature translation APIs do not guarantee that arbitrary
         # placeholders are echoed. Immutable literals are checked
         # deterministically after the response instead.
-        items = [{"id": unit.id, "text": unit.source_text} for unit in units]
+        items = [{"id": unit.id, "text": unit.source_text, "required_names": source_name_constraints(unit.source_text, unit.source_language, unit.target_language)} for unit in units]
         schema={"type":"object","properties":{"items":{"type":"array","items":{"type":"object","properties":{"id":{"type":"string"},"translation":{"type":"string"}},"required":["id","translation"],"additionalProperties":False}}},"required":["items"],"additionalProperties":False}
         policy = compile_translation_policy(first, self._glossary)
         terms_by_id = {
@@ -147,7 +149,7 @@ class OpenAIProvider:
             rows=json.loads(self._output_text(response.json()))["items"]
         except (httpx.HTTPError, ValueError, KeyError, TypeError) as exc: raise OpenAIProviderError("BATCH_FAILED","OpenAI batch request failed") from exc
         mapped={row["id"]:row["translation"] for row in rows}
-        if len(mapped)!=len(units) or set(mapped)!={u.id for u in units}: raise OpenAIProviderError("BATCH_MAPPING_INVALID","OpenAI batch IDs are incomplete")
+        if len(rows)!=len(units) or len(mapped)!=len(units) or set(mapped)!={u.id for u in units}: raise OpenAIProviderError("BATCH_MAPPING_INVALID","OpenAI batch IDs are incomplete or duplicated")
         results=[]
         invalid: dict[str, list[str]] = {}
         for unit in units:

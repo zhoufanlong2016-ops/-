@@ -5,6 +5,7 @@ import re
 from typing import Iterable
 
 from .models import TranslationResult, TranslationUnit, sha256_text
+from document_translator.translation_rules import validate_name_retention, validate_translation_residue
 
 
 def validate_placeholders(source_text: str, translation: str, protected_tokens: list[str]) -> list[str]:
@@ -45,6 +46,8 @@ def validate_result_for_unit(unit: TranslationUnit, result: TranslationResult) -
     if result.result_hash != sha256_text(result.translation):
         errors.append("RESULT_HASH_MISMATCH")
     errors.extend(validate_placeholders(unit.source_text, result.translation, unit.protected_tokens))
+    errors.extend(validate_name_retention(unit.source_text, result.translation, unit.source_language, unit.target_language))
+    errors.extend(validate_translation_residue(unit.source_text, result.translation, unit.source_language, unit.target_language))
     return errors
 
 

@@ -7,9 +7,11 @@ import pytest
 
 import document_translator.services.babeldoc_pdf as module
 from document_translator.services.babeldoc_pdf import (
+    _expand_long_table_cells,
     _normalise_table_response,
     _translate_and_patch_tables,
 )
+from document_translator.services.pdf_table import PdfTableCell
 from document_translator.services.pdf_pipeline import inspect_pdf, repair_pdf_text_cmaps, validate_candidate
 
 
@@ -44,8 +46,32 @@ class _Response:
         return self._body
 
 
+@pytest.mark.parametrize("branch", ["table", "rotated"])
+@pytest.mark.parametrize("retain_name", [True, False])
+def test_pdf_branches_validate_names_even_with_external_gateway(monkeypatch, branch, retain_name):
+    calls = []
+    def fake_urlopen(request, *, timeout):
+        payload = json.loads(request.data)
+        calls.append(payload)
+        rows = json.loads(payload["messages"][1]["content"].split("## Here is the input:")[1])
+        assert rows[0]["required_names"] == ["RAVI Rd."]
+        output = "拉维路（RAVI Rd.）" if retain_name else "拉维路"
+        return _Response({"choices": [{"message": {"content": json.dumps([{"id": "a", "output": output}])}}]})
+    monkeypatch.setattr(module, "urlopen", fake_urlopen)
+    method = module._post_table_translation_batch if branch == "table" else module._post_rotated_translation_batch
+    kwargs = dict(gateway_url="http://local.invalid/v1", model="fake", source_language="en", target_language="zh-CN", items=[{"id": "a", "input": "RAVI Rd."}])
+    if retain_name:
+        method(**kwargs)
+        assert len(calls) == 1
+    else:
+        with pytest.raises(RuntimeError, match="PROPER_NAME_MISSING"):
+            method(**kwargs)
+        assert len(calls) == (1 if branch == "table" else 2)
+
+
 def test_table_response_requires_explicit_output_and_rejects_duplicates() -> None:
     assert _normalise_table_response([{"id": "a", "output": "第一行\\n第二行"}]) == {"a": "第一行\n第二行"}
+    assert _normalise_table_response([{"id": "a", "output": "IG‑541\x00"}]) == {"a": "IG-541"}
     with pytest.raises(RuntimeError, match="no output"):
         _normalise_table_response([{"id": "a", "input": "原文"}])
     with pytest.raises(RuntimeError, match="duplicate"):
@@ -53,6 +79,27 @@ def test_table_response_requires_explicit_output_and_rejects_duplicates() -> Non
             {"id": "a", "output": "一"},
             {"id": "a", "output": "二"},
         ])
+
+
+def test_long_cell_parts_are_sent_in_separate_bounded_requests() -> None:
+    cell = PdfTableCell(
+        id="cell-1",
+        page_number=1,
+        table_number=1,
+        row=1,
+        column=1,
+        rect=(0, 0, 100, 100),
+        text="word " * 1000,
+    )
+    groups, parts = _expand_long_table_cells(
+        (cell,),
+        4500,
+        maximum_text_chars=3000,
+    )
+
+    assert len(parts["cell-1"]) == 2
+    assert [len(group) for group in groups] == [1, 1]
+    assert all(sum(len(item["input"]) + 96 for item in group) <= 4500 for group in groups)
 
 
 def test_table_route_batches_cells_once_and_validates_final_candidate(tmp_path, monkeypatch):
@@ -94,8 +141,8 @@ def test_table_route_batches_cells_once_and_validates_final_candidate(tmp_path, 
         minimum_font_size=6,
     )
 
-    assert len(calls) == 2
-    assert [len(batch) for batch in calls] == [1, 2]
+    assert len(calls) == 1
+    assert [len(batch) for batch in calls] == [3]
     assert run["status"] == "patched"
     assert output.is_file()
     repaired = output.with_name("repaired.pdf")

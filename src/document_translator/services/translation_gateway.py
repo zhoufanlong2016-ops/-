@@ -20,6 +20,8 @@ from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
+from document_translator.translation_rules import source_name_constraints, validate_name_retention, validate_translation_residue, auto_correct_translation, rule_protected_tokens
+from document_translator.core.validation import validate_placeholders
 
 from .pdf_pipeline import (
     normalize_unicode_dashes,
@@ -140,6 +142,12 @@ class _Handler(BaseHTTPRequestHandler):
             self._send(502, {"error": "upstream translation failed", "error_type": "UPSTREAM_FAILED"})
 
     def _handle_gpt(self, config: GatewayConfig, key: str, request_body: dict[str, Any]) -> None:
+        # Translation batches do not need chain-of-thought.  Set the
+        # model-aware low-cost default when the caller did not provide one.
+        request_body = dict(request_body)
+        model_name = config.model.casefold()
+        if model_name.startswith("gpt-5") and not request_body.get("reasoning_effort"):
+            request_body["reasoning_effort"] = "none"
         answer = _structured_answer_with_retry(
             request_body,
             lambda body: self._gpt_upstream_request(config, key, body),
@@ -150,6 +158,7 @@ class _Handler(BaseHTTPRequestHandler):
         # DashScope's general Qwen models expose the same Chat Completions
         # contract.  Sanitize every string before sending so control bytes in
         # extracted PDF text cannot invalidate a JSON batch.
+        request_body = _with_name_constraints(request_body)
         self._audit_request("qwen", request_body)
         upstream_request = _sanitize_json(request_body)
         upstream_request["model"] = config.model
@@ -593,6 +602,7 @@ def _structured_answer_with_retry(
     We therefore validate IDs at the gateway and recursively bisect the same
     semantic items only when the mapping is incomplete.
     """
+    request_body = _with_name_constraints(request_body)
     response_format = request_body.get("response_format")
     prompt = _last_user_text(request_body)
     contract = _extract_babeldoc_batch(prompt)
@@ -609,7 +619,11 @@ def _structured_answer_with_retry(
         )
 
     if contract is None:
-        return translate_once(request_body, first_response)
+        answer = translate_once(request_body, first_response)
+        source_language, target_language = _request_languages(request_body)
+        return auto_correct_translation(
+            _last_user_text(request_body), answer, source_language, target_language
+        )
 
     prefix, items = contract
     return _structured_batch_retry(
@@ -634,6 +648,7 @@ def _structured_batch_retry(
     first_response: dict[str, Any] | None,
     depth: int,
     max_depth: int,
+    rule_correction: bool = False,
 ) -> str:
     body = _replace_last_user_message(
         request_body,
@@ -651,13 +666,41 @@ def _structured_batch_retry(
     parsed = _repair_structured_boundaries(_parse_structured_items(normalised), items)
     expected_ids = [str(item["id"]) for item in items]
     if _structured_items_match(parsed, expected_ids, expected_items=items):
+        source_language, target_language = _request_languages(request_body)
+        by_id = {str(item["id"]): item for item in parsed}
+        errors = []
+        for item in items:
+            source = item.get("input", item.get("source", ""))
+            row = by_id[str(item["id"])]
+            output = row.get("output", row.get("translation", row.get("input", "")))
+            # Check prose, not numeric/style attributes in BabelDOC's markup.
+            source = _TAG_TOKEN_RE.sub("", source)
+            output = _TAG_TOKEN_RE.sub("", output)
+            output = auto_correct_translation(source, output, source_language, target_language)
+            row["output"] = output
+            defects = validate_name_retention(source, output, source_language, target_language)
+            defects.extend(validate_translation_residue(source, output, source_language, target_language))
+            defects.extend(validate_placeholders(source, output, rule_protected_tokens(source)))
+            errors.extend(f"{item['id']}: {defect}" for defect in defects)
+        if errors:
+            if rule_correction:
+                raise GatewayError("STRUCTURED_OUTPUT_VALIDATION_FAILED", "; ".join(errors))
+            corrected = dict(request_body)
+            corrected["messages"] = [*request_body["messages"], {
+                "role": "system", "content": "AUTOMATIC CORRECTION: retain original English names and protected literals in their own items. " + "; ".join(errors),
+            }]
+            return _structured_batch_retry(
+                corrected, prefix=prefix, items=items, call=call,
+                response_format=response_format, first_response=None,
+                depth=depth, max_depth=max_depth, rule_correction=True,
+            )
         return json.dumps(
             _order_structured_items(parsed, expected_ids),
             ensure_ascii=False,
             separators=(",", ":"),
         )
 
-    if len(items) <= 1 or depth >= max_depth:
+    if rule_correction or len(items) <= 1 or depth >= max_depth:
         raise GatewayError(
             "STRUCTURED_OUTPUT_MAPPING_INVALID",
             "provider response did not contain every BabelDOC batch item",
@@ -713,6 +756,28 @@ def _extract_babeldoc_batch(prompt: str) -> tuple[str, list[dict[str, Any]]] | N
     ):
         return None
     return prefix, parsed
+
+
+def _request_languages(request_body: dict[str, Any]) -> tuple[str, str]:
+    for message in request_body.get("messages", []):
+        match = re.search(r"Translate from ([\w-]+) to ([\w-]+)", _message_text(message.get("content", "")), re.I)
+        if match:
+            return match.group(1), match.group(2)
+    return "auto", "zh"
+
+
+def _with_name_constraints(request_body: dict[str, Any]) -> dict[str, Any]:
+    contract = _extract_babeldoc_batch(_last_user_text(request_body))
+    if contract is None:
+        return request_body
+    prefix, items = contract
+    source_language, target_language = _request_languages(request_body)
+    constrained = []
+    for item in items:
+        source = item.get("input", item.get("source", ""))
+        names = source_name_constraints(_TAG_TOKEN_RE.sub("", source), source_language, target_language)
+        constrained.append({**item, "required_names": names} if names else item)
+    return _replace_last_user_message(request_body, prefix + json.dumps(constrained, ensure_ascii=False, indent=2))
 
 
 def _replace_last_user_message(payload: dict[str, Any], content: str) -> dict[str, Any]:

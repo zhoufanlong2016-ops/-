@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from types import SimpleNamespace
 from zipfile import ZipFile
 from xml.etree import ElementTree as ET
 
 from document_translator.services.pptx_translation import PptxTranslationService
 from document_translator.services.pptx_layout import PptxLayoutService
+from document_translator.core import TranslationResult, sha256_text
+import pytest
 
 
 A = "http://schemas.openxmlformats.org/drawingml/2006/main"
@@ -25,7 +26,68 @@ class _Provider:
 
     def translate_batch(self, units):
         self.units = list(units)
-        return [SimpleNamespace(translation=self.translation) for _ in units]
+        return [TranslationResult(
+            unit_id=unit.id, translation=self.translation, provider="fake", model="fake",
+            prompt_version="test", glossary_version="none", source_hash=sha256_text(unit.source_text),
+            result_hash=sha256_text(self.translation), request_count=1, validation_status="valid",
+        ) for unit in units]
+
+
+def _pending_names():
+    from document_translator.core import DocumentFormat, DocumentLocation, TranslationUnit, generate_unit_id
+    pending = []
+    for index, text in enumerate(("RAVI Rd.", "SHAREEF COLONY DS")):
+        paragraph = ET.fromstring(f'<a:p xmlns:a="{A}"><a:r><a:t>{text}</a:t></a:r></a:p>')
+        data = dict(document_hash="a" * 64, format=DocumentFormat.PPTX,
+                    location=DocumentLocation(part="slide1", object_id=str(index)),
+                    source_language="en", target_language="zh-CN", source_text=text, protected_tokens=[])
+        pending.append((paragraph, paragraph.findall(f".//{{{A}}}t"), TranslationUnit(id=generate_unit_id(**data), **data)))
+    return pending
+
+
+def test_pptx_reorders_by_stable_id_before_xml_mutation():
+    class Provider(_Provider):
+        def translate_batch(self, units):
+            results = []
+            for unit in units:
+                self.translation = "译文（" + unit.source_text + "）"
+                results.extend(super().translate_batch([unit]))
+            return results[::-1]
+    pending = _pending_names()
+    PptxTranslationService(Provider(""))._apply_batch(pending)
+    assert [nodes[0].text for _, nodes, _ in pending] == ["译文（RAVI Rd.）", "译文（SHAREEF COLONY DS）"]
+
+
+@pytest.mark.parametrize("defect", ["duplicate", "unknown", "source_hash", "result_hash", "name", "protected"])
+def test_pptx_invalid_result_leaves_entire_batch_xml_untouched(defect):
+    pending = _pending_names()
+    if defect == "protected":
+        p, nodes, unit = pending[1]
+        unit = unit.model_copy(update={"source_text": "SHAREEF COLONY DS 5%", "protected_tokens": ["5%"]})
+        pending[1] = (p, nodes, unit)
+    before = [ET.tostring(p) for p, _, _ in pending]
+
+    class Provider(_Provider):
+        def translate_batch(self, units):
+            results = []
+            for unit in units:
+                self.translation = "译文（" + unit.source_text + "）"
+                results.extend(super().translate_batch([unit]))
+            last = results[1]
+            if defect == "duplicate":
+                results[1] = results[0]
+            elif defect == "unknown":
+                results[1] = last.model_copy(update={"unit_id": "unknown"})
+            elif defect in {"source_hash", "result_hash"}:
+                results[1] = last.model_copy(update={defect: "0" * 64})
+            else:
+                text = "译文" if defect == "name" else last.translation.replace("5%", "6%")
+                results[1] = last.model_copy(update={"translation": text, "result_hash": sha256_text(text)})
+            return results
+
+    with pytest.raises(ValueError):
+        PptxTranslationService(Provider(""))._apply_batch(pending)
+    assert [ET.tostring(p) for p, _, _ in pending] == before
 
 
 def test_english_to_chinese_pptx_is_not_filtered_and_uses_cjk_font(tmp_path) -> None:

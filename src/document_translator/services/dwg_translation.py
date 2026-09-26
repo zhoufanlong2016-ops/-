@@ -19,6 +19,7 @@ from document_translator.core import (
 )
 
 from .markdown_translation import UnitTranslationProvider
+from document_translator.translation_rules import rule_protected_tokens
 
 
 class DwgTranslationServiceError(RuntimeError):
@@ -142,7 +143,7 @@ class DwgTranslationService:
         source_language: str,
         target_language: str,
     ) -> TranslationUnit:
-        protected_tokens = [sequence.token for sequence in item.protected_sequences]
+        protected_tokens = rule_protected_tokens(item.source_text, [sequence.token for sequence in item.protected_sequences])
         location = DocumentLocation(
             part=item.space,
             object_id=item.handle,

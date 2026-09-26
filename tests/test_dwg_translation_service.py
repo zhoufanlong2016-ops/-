@@ -35,6 +35,23 @@ class BrokenMTextProvider(FakeProvider):
         return result.model_copy(update={"translation": "missing tokens", "result_hash": sha256_text("missing tokens")})
 
 
+def test_dwg_combines_cad_sequences_and_engineering_protection(tmp_path):
+    _, exported = _write_export(tmp_path, mtext=True)
+    item = exported.items[0]
+    text = item.source_text + " RAVI Rd. 600 mm 5%"
+    item = item.model_copy(update={"source_text": text})
+    service = DwgTranslationService(FakeProvider())
+    unit = service._unit_from_item(exported, item, "en", "zh-CN")
+    assert {seq.token for seq in item.protected_sequences} <= set(unit.protected_tokens)
+    assert {"600 mm", "5%"} <= set(unit.protected_tokens)
+    result = FakeProvider().translate_unit(unit)
+    service._validate_provider_result(unit, result)
+    for translation in (result.translation.replace("600 mm", "650 mm"), result.translation.replace("RAVI Rd.", "拉维路")):
+        invalid = result.model_copy(update={"translation": translation, "result_hash": sha256_text(translation)})
+        with pytest.raises(DwgTranslationServiceError, match="PLACEHOLDER_MISMATCH|PROPER_NAME_MISSING"):
+            service._validate_provider_result(unit, invalid)
+
+
 def _metadata() -> dwg.TextMetadata:
     return dwg.TextMetadata(
         position=dwg.PointData(x=0.0, y=0.0, z=0.0), normal=dwg.PointData(x=0.0, y=0.0, z=1.0),

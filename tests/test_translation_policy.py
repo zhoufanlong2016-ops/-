@@ -1,5 +1,18 @@
-from document_translator.providers.translation_prompt import compile_translation_policy
+from document_translator.providers.translation_prompt import compile_translation_policy, general_translation_instruction
 from tests.test_qwen_mt_provider import make_unit
+
+
+def test_named_glossary_does_not_create_conflicting_native_terms():
+    from tests.test_translation_rules import _named_unit
+    from document_translator.services import Glossary, GlossaryEntry
+    from document_translator.core import validate_result_for_unit
+    from tests.test_translation_rules import _named_result
+    unit = _named_unit(text="Ravi Road")
+    glossary = Glossary(entries=(GlossaryEntry(source="Ravi Road", target="拉维路"),), version="test")
+    policy = compile_translation_policy(unit, glossary)
+    assert [target for source, target in policy.required_terms if source == "Ravi Road"] == ["拉维路"]
+    assert validate_result_for_unit(unit, _named_result(unit, "拉维路"))
+    assert validate_result_for_unit(unit, _named_result(unit, "拉维路（Ravi Road）")) == []
 
 
 def test_compiled_policy_is_shared_by_prompt_and_qwen_options() -> None:
@@ -8,7 +21,11 @@ def test_compiled_policy_is_shared_by_prompt_and_qwen_options() -> None:
     policy = compile_translation_policy(unit)
 
     assert "Engineering and contract terminology" in policy.instruction
-    assert "Preserve every number with its unit" in policy.qwen_domain
+    shared = general_translation_instruction(unit.source_language, unit.target_language)
+    assert policy.instruction.startswith(shared)
+    assert policy.qwen_domain == shared
+    assert "Never swap a number and its unit or identifier." in shared
+    assert "reproduce it exactly, in the same count and binding with adjacent values or units." in shared
 
 
 def test_policy_does_not_convert_chinese_section_ordinals_to_arabic_digits() -> None:

@@ -355,6 +355,11 @@ def _prepare_dwg_import(args: argparse.Namespace) -> int:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
+    # Keep CLI status/error paths readable when the GUI launches this process
+    # on Windows, whose inherited console encoding may be a legacy code page.
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8", errors="replace")
     parser = _parser()
     args = parser.parse_args(argv)
     try:

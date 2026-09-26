@@ -15,6 +15,16 @@ from document_translator.services.pdf_table import (
 from document_translator.services.pdf_table import _normalise_render_text
 
 
+def test_table_mapping_rejects_name_loss_before_render():
+    from document_translator.services.pdf_table import PdfTable, PdfTableCell, validate_pdf_table_translations
+    cell = PdfTableCell("c", 1, 1, 1, 1, (0, 0, 100, 100), "ZAFAR ALI ROAD DS")
+    table = PdfTable(1, 1, (0, 0, 100, 100), 1, 1, (cell,))
+    for validate, source in ((validate_table_translations, table), (validate_pdf_table_translations, (table,))):
+        with pytest.raises(PdfTableMappingError, match="PROPER_NAME_MISSING"):
+            validate(source, {"c": "扎法尔阿里路下游"})
+        assert validate(source, {"c": "扎法尔阿里路（ZAFAR ALI ROAD）下游"})["c"]
+
+
 def _fontfile() -> Path:
     for candidate in (Path(r"C:\Windows\Fonts\NotoSans-Regular.ttf"), Path(r"C:\Windows\Fonts\arial.ttf")):
         if candidate.is_file():
@@ -131,3 +141,26 @@ def test_render_fails_if_translation_cannot_fit_at_floor_and_does_not_publish(tm
             initial_font_size=6,
         )
     assert not destination.exists()
+
+
+def test_render_allows_short_header_in_compact_cell(tmp_path):
+    source = tmp_path / "compact-header.pdf"
+    destination = tmp_path / "compact-header-translated.pdf"
+    _make_table_pdf(source, narrow=True)
+    table = extract_pdf_tables(source)[0]
+    translations = {
+        cell.id: ("序号" if cell.row == 1 and cell.column == 1 else ("值" if not cell.is_empty else ""))
+        for cell in table.cells
+    }
+
+    report = render_table_translations(
+        source,
+        destination,
+        translations,
+        fontfile=_fontfile(),
+        minimum_font_size=6,
+        initial_font_size=6,
+    )
+
+    assert report.rendered_cell_count == 3
+    assert destination.exists()

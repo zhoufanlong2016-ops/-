@@ -380,6 +380,7 @@ def normalize_cell_translations(
 def validate_table_translations(
     table: PdfTable,
     translations: Mapping[str, str] | Iterable[PdfTableTranslation | Mapping[str, str] | Sequence[str]],
+    *, source_language: str = "auto", target_language: str = "zh",
 ) -> dict[str, str]:
     """Require exactly one translation for every logical cell in ``table``."""
 
@@ -394,6 +395,7 @@ def validate_table_translations(
         raise PdfTableMappingError("unknown cell translation IDs: " + ", ".join(extra))
     for cell in table.cells:
         translated = result[cell.id]
+        _validate_cell_names(cell, translated, source_language, target_language)
         if cell.is_empty and translated.strip():
             raise PdfTableMappingError(f"empty source cell {cell.id} cannot receive non-empty translation")
         if not cell.is_empty and not translated.strip():
@@ -404,6 +406,7 @@ def validate_table_translations(
 def validate_pdf_table_translations(
     tables: Iterable[PdfTable],
     translations: Mapping[str, str] | Iterable[PdfTableTranslation | Mapping[str, str] | Sequence[str]],
+    *, source_language: str = "auto", target_language: str = "zh",
 ) -> dict[str, str]:
     """Validate one complete mapping covering all supplied tables."""
 
@@ -422,11 +425,19 @@ def validate_pdf_table_translations(
     for cell_id in expected_ids:
         cell = cell_map[cell_id]
         translated = result[cell_id]
+        _validate_cell_names(cell, translated, source_language, target_language)
         if cell.is_empty and translated.strip():
             raise PdfTableMappingError(f"empty source cell {cell_id} cannot receive non-empty translation")
         if not cell.is_empty and not translated.strip():
             raise PdfTableMappingError(f"non-empty source cell {cell_id} has an empty translation")
     return result
+
+
+def _validate_cell_names(cell: PdfTableCell, translated: str, source_language: str, target_language: str) -> None:
+    from document_translator.translation_rules import validate_name_retention
+    errors = validate_name_retention(cell.text, translated, source_language, target_language)
+    if errors:
+        raise PdfTableMappingError(f"{cell.id}: " + "; ".join(errors))
 
 
 def _inset_rect(fitz: Any, rect: tuple[float, float, float, float], padding: float) -> Any:
@@ -435,6 +446,22 @@ def _inset_rect(fitz: Any, rect: tuple[float, float, float, float], padding: flo
     if inset.width <= 0 or inset.height <= 0:
         raise PdfTableFitError("table cell has no usable area after padding")
     return inset
+
+
+def _cell_fit_padding(rect: Any, text: str, padding: float) -> float:
+    """Keep short/narrow table labels from losing their whole fit margin.
+
+    A fixed 2pt inset is appropriate for prose cells, but it consumes most of
+    a compact header cell (for example ``序号``).  Preserve a small readable
+    margin while allowing the glyphs to use the actual cell geometry.
+    """
+    if padding <= 0:
+        return 0.0
+    width = max(0.0, float(rect.x1 - rect.x0))
+    height = max(0.0, float(rect.y1 - rect.y0))
+    if len(text.strip()) <= 4 or width < 36.0 or height < 24.0:
+        return min(padding, 0.5)
+    return padding
 
 
 def _span_rects_for_cell(page: Any, cell_rect: Any, *, bottom_tolerance: float = 0.0) -> list[Any]:
@@ -674,7 +701,11 @@ def render_table_translations(
                 # stale fragment (for example a clipped table header) survives
                 # the overlay.  ``graphics=0`` keeps the original grid lines.
                 redactions_by_page.setdefault(page_number, []).append(cell_rect)
-                fit_rect = _inset_rect(fitz, cell.rect, padding)
+                fit_rect = _inset_rect(
+                    fitz,
+                    cell.rect,
+                    _cell_fit_padding(cell_rect, translated, padding),
+                )
                 fitted_sizes[cell.id] = _fit_textbox(
                     fit_page,
                     fit_rect,
@@ -703,7 +734,12 @@ def render_table_translations(
                 if not translated.strip():
                     continue
                 assert cell.rect is not None
-                fit_rect = _inset_rect(fitz, cell.rect, padding)
+                cell_rect = fitz.Rect(cell.rect)
+                fit_rect = _inset_rect(
+                    fitz,
+                    cell.rect,
+                    _cell_fit_padding(cell_rect, translated, padding),
+                )
                 result = page.insert_textbox(
                     fit_rect,
                     translated,

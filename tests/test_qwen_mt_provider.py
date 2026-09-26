@@ -54,14 +54,14 @@ def test_translate_success_uses_compatible_endpoint_auth_and_no_leakage(monkeypa
     assert "reference_translation" not in sent
     assert "translation_options" in sent
     assert "K12+340" in sent and "600 mm" in sent and "BS EN 752" in sent
-    assert "Engineering and contract terminology" not in sent
+    assert "Engineering and contract terminology" in sent
     payload = json.loads(sent)
     assert payload["messages"][0]["content"] == unit.source_text
     assert [message["role"] for message in payload["messages"]] == ["user"]
     assert payload["enable_thinking"] is False
     assert "max_tokens" not in payload
     assert payload["stream"] is False
-    assert "Preserve every number with its unit" in payload["translation_options"]["domains"]
+    assert "Preserve numbers" in payload["translation_options"]["domains"]
     assert list(tmp_path.iterdir()) == []
     assert result.glossary_version == "none"
 

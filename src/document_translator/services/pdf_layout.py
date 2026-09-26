@@ -479,6 +479,16 @@ def build_layout_contracts(source_path: str | Path) -> tuple[LayoutContract, ...
     try:
         for page_number, page in enumerate(source, 1):
             payload = page.get_text("dict")
+            # Arbitrary-angle drawing pages use the rotation-aware writeback
+            # path. Prose roles (for example labels ending in a colon) must
+            # not rematch and reposition unrelated drawing annotations.
+            if any(
+                abs(float(line.get("dir", (1, 0))[0])) > 0.01
+                and abs(float(line.get("dir", (1, 0))[1])) > 0.01
+                for block in payload.get("blocks", [])
+                for line in block.get("lines", [])
+            ):
+                continue
             content_bounds = _content_bounds(page)
             raw: list[LayoutContract] = []
             for block_index, block in enumerate(payload.get("blocks", [])):
@@ -621,8 +631,16 @@ def _font_file(
 
     name = font_name.casefold()
     if _CJK_RE.search(text):
+        # Windows' Noto Sans SC OTF is a variable/collection font that
+        # PyMuPDF can embed with a mismatched glyph/CMap subset. Prefer the
+        # verified static BabelDOC CN TTF assets for layout overlays.
+        cache_fonts = Path.home() / ".cache" / "babeldoc" / "fonts"
+        static_cjk = (
+            cache_fonts / ("SourceHanSansCN-Bold.ttf" if "bold" in name else "SourceHanSansCN-Regular.ttf"),
+            cache_fonts / "SourceHanSansCN-Regular.ttf",
+        )
         candidates = (
-            r"C:\Windows\Fonts\Noto Sans SC (TrueType).otf",
+            *(str(path) for path in static_cjk),
             r"C:\Windows\Fonts\simhei.ttf",
             r"C:\Windows\Fonts\msyh.ttc",
         )
@@ -679,7 +697,9 @@ def _font_file(
             family = _font_name_key(fitz.Font(fontfile=candidate).name)
         except Exception:
             family = _font_name_key(path.stem)
-        if family not in existing_families:
+        # The static BabelDOC font may already be present in the candidate;
+        # the caller still supplies a unique PDFLayout_* resource name.
+        if family not in existing_families or path.parent == cache_fonts:
             return candidate
     return None
 
@@ -1135,7 +1155,7 @@ def validate_layout_contract(
             alignment_error = abs(center - contract.center_x)
             if contract.alignment == 1 and alignment_error > max(8.0, page.rect.width * 0.025):
                 failures.append(f"page {contract.page_number}: {contract.role} center drift {alignment_error:.2f}pt")
-            if selected["font_size"] + 1e-6 < minimum_font_size:
+            if selected["font_size"] + 1e-6 < contract.source_font_size * 0.5:
                 failures.append(f"page {contract.page_number}: {contract.role} below minimum font size")
             if contract.one_line_preferred and len(selected["lines"]) != 1:
                 failures.append(f"page {contract.page_number}: {contract.role} wrapped unexpectedly")

@@ -11,6 +11,7 @@ import xml.etree.ElementTree as ET
 from document_translator.core import DocumentFormat, DocumentLocation, TranslationUnit, generate_unit_id, sha256_text
 from document_translator.font_policy import CJK_FONT, latin_font_for
 from document_translator.translation_rules import rule_protected_tokens
+from document_translator.core import TranslationResult, validate_result_for_unit
 
 _A_NS = "http://schemas.openxmlformats.org/drawingml/2006/main"
 _A_T = f"{{{_A_NS}}}t"
@@ -65,7 +66,6 @@ class PptxTranslationService:
                                               protected_tokens=rule_protected_tokens(text), style_signature="", context_before="", context_after="")
                             unit = TranslationUnit(id=generate_unit_id(**data_model), **data_model)
                             pending_all.append((paragraph, nodes, unit))
-                        self._apply_target_font_to_unchanged_latin(root, target_language)
                         entries.append((info, root))
                     elif re.fullmatch(r"ppt/diagrams/data\d+\.xml", info.filename):
                         root = ET.fromstring(data)
@@ -89,6 +89,8 @@ class PptxTranslationService:
                 translated = len(pending_all)
             with ZipFile(tmp, "w", ZIP_DEFLATED) as zout:
                 for info, value in entries:
+                    if isinstance(value, ET.Element) and re.fullmatch(r"ppt/slides/slide\d+\.xml", info.filename):
+                        self._apply_target_font_to_unchanged_latin(value, target_language)
                     data = ET.tostring(value, encoding="utf-8", xml_declaration=True) if isinstance(value, ET.Element) else value
                     zout.writestr(info, data)
         temp_path.replace(destination)
@@ -99,9 +101,21 @@ class PptxTranslationService:
         results = self.provider.translate_batch(units) if hasattr(self.provider, "translate_batch") else [self.provider.translate_unit(u) for u in units]
         if len(results) != len(pending):
             raise ValueError("batch translation count mismatch")
-        for (paragraph, nodes, _unit), result in zip(pending, results):
+        if any(not isinstance(result, TranslationResult) for result in results):
+            raise ValueError("invalid batch translation result type")
+        mapped = {result.unit_id: result for result in results}
+        if len(mapped) != len(results) or set(mapped) != {unit.id for unit in units}:
+            raise ValueError("batch translation ID mismatch or duplicate IDs")
+        # Validate the entire batch before changing any text or formatting.
+        for unit in units:
+            result = mapped[unit.id]
+            errors = validate_result_for_unit(unit, result)
+            if errors:
+                raise ValueError("invalid batch translation: " + "; ".join(errors))
             if not result.translation.strip():
                 raise ValueError("empty batch translation")
+        for paragraph, nodes, _unit in pending:
+            result = mapped[_unit.id]
             translated = self._preserve_edge_whitespace(_unit.source_text, result.translation)
             nodes[0].text = translated.replace("\u2011", "-").replace("\u2014", "-")
             for node in nodes[1:]:
