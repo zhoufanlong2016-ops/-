@@ -2,7 +2,12 @@ from pathlib import Path
 
 import pytest
 
-from document_translator.gui import build_cli_command, default_destination, detect_format
+from document_translator.gui import PROVIDER_MODELS, build_cli_command, default_destination, detect_format
+
+
+def test_gui_exposes_only_the_three_recommended_qwen_models() -> None:
+    assert PROVIDER_MODELS["qwen"] == ("qwen3.7-plus", "qwen3.8-flash", "qwen3.8-max")
+    assert "qwen-mt" not in PROVIDER_MODELS
 
 
 def test_detect_format_and_destination(tmp_path: Path) -> None:

@@ -17,10 +17,15 @@ from document_translator.core import (
     validate_result_for_unit,
 )
 from document_translator.services.glossary import Glossary
-from document_translator.translation_rules import protect_for_translation, restore_after_translation
+from document_translator.translation_rules import (
+    auto_correct_translation,
+    protect_for_translation,
+    restore_after_translation,
+)
 
 from .translation_prompt import PROMPT_VERSION, compile_translation_policy, matched_glossary_entries
 from document_translator.translation_rules import source_name_constraints
+from .batch_limits import split_semantic_batches
 
 
 _ENDPOINT = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
@@ -34,12 +39,12 @@ class QwenChatConfig:
     # General Qwen models differ in how reliably they emit every JSON item;
     # keep the default conservative so one omitted item cannot invalidate a
     # long document batch.
-    batch_input_characters: int = 512
+    batch_input_characters: int = 0
 
     def __post_init__(self) -> None:
         if not self.model.strip() or self.model.casefold().startswith("qwen-mt"):
             raise ValueError("Qwen Chat requires a non-Qwen-MT model")
-        if not self.api_key_env.strip() or self.timeout <= 0 or self.batch_input_characters < 512:
+        if not self.api_key_env.strip() or self.timeout <= 0 or self.batch_input_characters < 0:
             raise ValueError("Qwen Chat configuration is invalid")
 
 
@@ -66,17 +71,8 @@ class QwenChatProvider:
     def translate_batch(self, units: list[TranslationUnit]) -> list[TranslationResult]:
         if not units:
             return []
-        batches: list[list[TranslationUnit]] = [[]]
-        size = 0
-        for unit in units:
-            cost = len(unit.source_text) + 64
-            if batches[-1] and size + cost > self.config.batch_input_characters:
-                batches.append([])
-                size = 0
-            batches[-1].append(unit)
-            size += cost
         results: list[TranslationResult] = []
-        for batch in batches:
+        for batch in split_semantic_batches(units, model=self.config.model, explicit_limit=self.config.batch_input_characters, overhead=64):
             results.extend(self._translate_with_split(batch))
         return results
 
@@ -84,14 +80,16 @@ class QwenChatProvider:
         try:
             return self._translate_batch_once(units)
         except QwenChatError as exc:
-            if "PROPER_NAME_MISSING" in str(exc):
-                raise  # Exhausted the bounded naming correction; fail the batch.
-            if exc.code not in {"BATCH_MAPPING_INVALID", "BATCH_VALIDATION_FAILED"} or len(units) == 1:
+            # Content-quality validation issues (residual English, untranslated
+            # dates, missing proper names, ...) no longer raise here: they are
+            # returned as validation_status="needs_review" results so one imperfect
+            # unit cannot abort translation for the rest of the document.
+            # What remains here is transport/mapping failures.
+            if exc.code != "BATCH_MAPPING_INVALID":
                 raise
-            midpoint = len(units) // 2
-            return self._translate_with_split(units[:midpoint]) + self._translate_with_split(units[midpoint:])
+            return self._translate_batch_once(units, mapping_retry=True)
 
-    def _translate_batch_once(self, units: list[TranslationUnit], *, correction: dict[str, list[str]] | None = None) -> list[TranslationResult]:
+    def _translate_batch_once(self, units: list[TranslationUnit], *, correction: dict[str, list[str]] | None = None, mapping_retry: bool = False) -> list[TranslationResult]:
         key = os.getenv(self.config.api_key_env)
         if not key or not key.strip():
             raise QwenChatError("API_KEY_MISSING", "DashScope API key is not configured")
@@ -109,6 +107,8 @@ class QwenChatProvider:
             f"- {source} -> {target}" for source, target in batch_terms
         ) if batch_terms else ""
         correction_text = ""
+        if mapping_retry:
+            correction_text = "\n\nPROTOCOL CORRECTION. Return exactly one translation for every requested ID, with no omissions, duplicates, reordering, commentary, or markdown."
         if correction:
             correction_text = "\n\nAUTOMATIC CORRECTION. Fix every listed defect and return the same IDs.\n" + "\n".join(
                 f"{unit_id}: {'; '.join(errors)}" for unit_id, errors in correction.items()
@@ -150,6 +150,8 @@ class QwenChatProvider:
                 text = restore_after_translation(text, protected[unit.id])
             except ValueError as exc:
                 invalid[unit.id] = [f"PROTECTED_PLACEHOLDER_RESTORE_FAILED: {exc}"]
+            else:
+                text = auto_correct_translation(unit.source_text, text, unit.source_language, unit.target_language)
             result = TranslationResult(unit_id=unit.id, translation=text, provider=self.provider_name, model=self.config.model, prompt_version=self.prompt_version, glossary_version=self.glossary_version, source_hash=sha256_text(unit.source_text), result_hash=sha256_text(text), request_count=1, validation_status="valid")
             errors = [*validate_result_for_unit(unit, result), *validate_glossary_terms(unit.source_text, text, terms_by_id[unit.id])]
             if errors:
@@ -157,7 +159,21 @@ class QwenChatProvider:
             results.append(result)
         if invalid:
             if correction is not None:
-                raise QwenChatError("BATCH_VALIDATION_FAILED", "; ".join(f"{key}: {value}" for key, value in invalid.items()))
+                # One automatic-correction retry has already run and the unit
+                # is still imperfect. Keep the best-effort translation rather
+                # than aborting the whole batch/document: flag it as a
+                # warning so the caller can surface it in the report instead
+                # of losing every other correctly translated unit.
+                marked: list[TranslationResult] = []
+                for result in results:
+                    unit_errors = invalid.get(result.unit_id)
+                    if unit_errors:
+                        result = result.model_copy(update={
+                            "validation_status": "needs_review",
+                            "error": "; ".join(unit_errors),
+                        })
+                    marked.append(result)
+                return marked
             repaired = self._translate_batch_once([unit for unit in units if unit.id in invalid], correction=invalid)
             repaired_by_id = {item.unit_id: item for item in repaired}
             return [repaired_by_id.get(item.unit_id, item) for item in results]

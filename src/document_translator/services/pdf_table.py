@@ -1,13 +1,13 @@
 """Vector-table extraction and cell-level PDF translation rendering.
 
-The regular BabelDOC path is deliberately not used for tables by this module.
+The regular paragraph path is deliberately not used for tables by this module.
 PyMuPDF's table finder supplies the geometry, while the caller supplies a
 stable-ID translation mapping.  Text is removed with text-only redactions and
 the translated text is written back inside the original cell rectangles.  A
 cell which cannot fit at the configured readable-font floor fails closed.
 
 The public functions are intentionally independent of the translation
-provider so they can be used to patch a BabelDOC candidate after the provider
+provider so they can be used to patch a rendered candidate after the provider
 has returned a validated batch.
 """
 
@@ -151,6 +151,7 @@ class PdfTableRenderReport:
     rendered_cell_count: int
     font_sizes: tuple[tuple[str, float], ...]
     drawing_counts: tuple[tuple[int, int, int], ...]
+    restored_link_count: int = 0
 
     @property
     def font_size_map(self) -> dict[str, float]:
@@ -282,6 +283,50 @@ def _table_cells(table: Any, page_number: int, table_number: int) -> tuple[PdfTa
     return tuple(result)
 
 
+def _merge_phantom_rows(
+    cells: tuple[PdfTableCell, ...], row_count: int, column_count: int
+) -> tuple[PdfTableCell, ...]:
+    """Fold a row whose real content sits in exactly one column back into
+    the nearest real cell above it in that same column.
+
+    PyMuPDF's vector-table finder (``strategy="lines_strict"``) treats any
+    sufficiently long, thin line as a row divider -- including a
+    hyperlink's own decorative underline, which happens to run almost
+    the full width of one text column. That turns one genuine multi-line
+    reply into several one-column "rows": every OTHER column in such a
+    row comes back as a merged-cell placeholder (``rect=None``), because
+    nothing in the source actually divides them there. A genuine table
+    row -- or a genuine rowspan's own starting row -- always has its own
+    content, or a deliberate placeholder, in more than a single column;
+    this signature (exactly one real column, everything else a
+    placeholder) is specific enough to fold safely without ever touching
+    an intentional table structure.
+    """
+    from dataclasses import replace
+
+    by_row: dict[int, list[PdfTableCell]] = {}
+    for cell in cells:
+        by_row.setdefault(cell.row, []).append(cell)
+
+    active: dict[int, str] = {}
+    merged: dict[str, PdfTableCell] = {cell.id: cell for cell in cells}
+    for row in range(1, row_count + 1):
+        real = [cell for cell in by_row.get(row, ()) if cell.rect is not None]
+        if len(real) == 1 and column_count > 1 and real[0].column in active:
+            phantom = real[0]
+            target = merged[active[phantom.column]]
+            assert target.rect is not None and phantom.rect is not None
+            merged_text = target.text + ("\n" + phantom.text if phantom.text.strip() else "")
+            merged_rect = (target.rect[0], target.rect[1], target.rect[2], phantom.rect[3])
+            merged[target.id] = replace(target, text=merged_text, rect=merged_rect)
+            merged[phantom.id] = replace(phantom, text="")
+            continue
+        for cell in real:
+            active[cell.column] = cell.id
+
+    return tuple(merged[cell.id] for cell in cells)
+
+
 def extract_tables_from_document(document: Any, *, page_numbers: Iterable[int] | None = None) -> tuple[PdfTable, ...]:
     """Extract vector tables from an open PyMuPDF document.
 
@@ -302,6 +347,7 @@ def extract_tables_from_document(document: Any, *, page_numbers: Iterable[int] |
         for table_number, table in enumerate(page_tables, 1):
             rect = _rect_tuple(getattr(table, "bbox", None), allow_none=False)
             cells = _table_cells(table, page_number, table_number)
+            cells = _merge_phantom_rows(cells, int(table.row_count), int(table.col_count))
             tables.append(
                 PdfTable(
                     page_number=page_number,
@@ -333,7 +379,7 @@ def normalize_cell_translations(
 
     A mapping is accepted for already-validated responses.  A sequence may
     contain ``PdfTableTranslation``, ``{"id": ..., "text": ...}``
-    (``output`` and ``translation`` are also accepted for the BabelDOC
+    (``output`` and ``translation`` are also accepted for the structured
     response shape), or two-item ``(id, text)`` entries; this is the form that
     exposes duplicate IDs and therefore should be used directly on provider
     responses.
@@ -583,6 +629,106 @@ def _cell_alignment(
     return value
 
 
+def _links_for_cell(page_links: list[dict], cell_rect: Any) -> list[dict]:
+    """Return URI links whose centre falls inside this cell's rectangle."""
+    matches: list[dict] = []
+    for link in page_links:
+        if link.get("kind") != 2:  # 2 == fitz.LINK_URI; internal/goto links carry no external URI to preserve
+            continue
+        rect = link.get("from")
+        if rect is None:
+            continue
+        center_x = (rect.x0 + rect.x1) / 2
+        center_y = (rect.y0 + rect.y1) / 2
+        if cell_rect.x0 - 0.5 <= center_x <= cell_rect.x1 + 0.5 and cell_rect.y0 - 0.5 <= center_y <= cell_rect.y1 + 0.5:
+            matches.append(link)
+    return matches
+
+
+def _underline_rects_in_cell(page: Any, cell_rect: Any, *, edge_margin: float = 2.0) -> list[Any]:
+    """Find thin decorative lines sitting INSIDE a cell, not on its border.
+
+    A hyperlink is commonly styled with its own underline drawn as a
+    separate thin filled rectangle rather than a native PDF text
+    decoration, so it survives a ``graphics=0`` redaction untouched --
+    and then sits at whatever position the ORIGINAL, differently-laid-
+    out text put it, cutting across the middle of the REFLOWED
+    translation and looking like the paragraph was split into pieces.
+
+    This only runs for a cell _links_for_cell() already confirmed held a
+    hyperlink, so matching every thin interior line in that one cell
+    (there can be more than one, one per originally-underlined wrapped
+    line) is safe -- requiring real clearance from all four of the
+    cell's own edges is what keeps it from ever matching a genuine table
+    border, which sits exactly at the cell boundary by construction. The
+    candidate this runs against may have reflowed the page from its own
+    source coordinates (an earlier block's translation changing a row's
+    height, say), so cell_rect -- this cell's OWN geometry on the
+    document actually being edited -- is the only rectangle that is
+    guaranteed to align with what is on the page now.
+    """
+    found: list[Any] = []
+    for drawing in page.get_drawings():
+        rect = drawing.get("rect")
+        if rect is None:
+            continue
+        height = float(rect.y1 - rect.y0)
+        width = float(rect.x1 - rect.x0)
+        if height > 2.0 or width < 2.0:
+            continue
+        if not (cell_rect.x0 - 1.0 <= rect.x0 and rect.x1 <= cell_rect.x1 + 1.0):
+            continue
+        if not (cell_rect.y0 + edge_margin <= rect.y0 and rect.y1 <= cell_rect.y1 - edge_margin):
+            continue
+        # Inset 1.5pt off each end before redacting: this decoration's own
+        # endpoints commonly sit exactly ON the cell's left/right edge --
+        # the same x-coordinate the column's vertical grid line runs
+        # along -- and graphics=2 removes ANY graphic overlapping the
+        # redaction rectangle, not just one fully contained in it, so an
+        # untouched rect here could also sweep away that vertical border.
+        # A pure underline is drawn with zero height (y0 == y1): PyMuPDF's
+        # own overlap test for graphics=2 does not register any overlap
+        # against a degenerate, zero-area rectangle, so redacting the
+        # exact drawing rect removes nothing at all even though it was
+        # correctly identified here -- pad the height by half a point so
+        # the redaction rectangle has genuine area to intersect against.
+        x0 = rect.x0 + 1.5 if width > 3.0 else rect.x0
+        x1 = rect.x1 - 1.5 if width > 3.0 else rect.x1
+        inset = rect.__class__(x0, rect.y0 - 0.5, x1, rect.y1 + 0.5)
+        found.append(inset)
+    return found
+
+
+def _resolve_cell_font(
+    fontfile: str | Path | Mapping[str, str | Path] | Callable[[PdfTableCell, str], str | Path],
+    cell: PdfTableCell,
+    translated: str,
+) -> Path:
+    """Resolve the font file to render one cell's translated text with.
+
+    Mirrors _cell_alignment's shape: a plain path applies to every cell
+    (this module's original, table-wide behaviour), while a mapping or a
+    callable lets the caller choose a different font per cell. A single
+    fixed font cannot express this project's own Latin/CJK-aware font
+    policy (document_translator.services.pdf_layout._font_file) -- an
+    untranslated English identifier or place name left inside an
+    otherwise-Chinese table should not necessarily be drawn with a CJK
+    font file just because the rest of the table needs one.
+    """
+    if callable(fontfile):
+        value = fontfile(cell, translated)
+    elif isinstance(fontfile, Mapping):
+        value = fontfile.get(cell.id)
+        if value is None:
+            raise ValueError(f"no font mapped for cell {cell.id}")
+    else:
+        value = fontfile
+    path = Path(value).resolve()
+    if not path.is_file():
+        raise FileNotFoundError(f"embedded font file does not exist: {path}")
+    return path
+
+
 def _atomic_save(document: Any, destination: Path) -> None:
     fd, temporary_name = tempfile.mkstemp(prefix=".pdf-table-", suffix=".pdf", dir=str(destination.parent))
     os.close(fd)
@@ -610,13 +756,14 @@ def render_table_translations(
     translations: Mapping[str, str] | Iterable[PdfTableTranslation | Mapping[str, str] | Sequence[str]],
     *,
     tables: Iterable[PdfTable] | None = None,
-    fontfile: str | Path,
+    fontfile: str | Path | Mapping[str, str | Path] | Callable[[PdfTableCell, str], str | Path],
     minimum_font_size: float = 6.0,
     initial_font_size: float = 10.0,
     font_step: float = 0.5,
     padding: float = 2.0,
     align: int | Mapping[str, int] | Callable[[PdfTableCell], int] = 0,
     page_numbers: Iterable[int] | None = None,
+    page_links: Mapping[int, list[dict]] | None = None,
 ) -> PdfTableRenderReport:
     """Render complete table translations into a new PDF.
 
@@ -624,6 +771,21 @@ def render_table_translations(
     called with ``images=0, graphics=0`` so table lines and other vector
     graphics remain untouched.  All cells are validated and all text boxes
     are fit-checked before the output is published.
+
+    ``fontfile`` accepts a single path (applied to every cell, this
+    module's original behaviour), a mapping keyed by cell ID, or a
+    ``(cell, translated_text) -> path`` callable -- the same per-cell
+    resolution shape ``align`` already uses -- so a caller can apply this
+    project's Latin/CJK-aware font policy instead of one fixed font for
+    the whole table.
+
+    ``page_links`` overrides this page's ``get_links()`` result (one-based
+    page number to that page's link list) for callers rendering onto a
+    document that is not the original the links were authored in -- for
+    example a candidate a different pipeline stage already re-rendered
+    from the source, whose own render step dropped every link annotation
+    it never touched itself, in an ORIGINAL layout whose page geometry
+    still matches the source the links were captured from.
     """
 
     fitz = _fitz()
@@ -635,9 +797,10 @@ def render_table_translations(
         raise FileExistsError(f"destination already exists: {destination}")
     if not destination.parent.exists():
         raise FileNotFoundError(f"destination directory does not exist: {destination.parent}")
-    font_path = Path(fontfile)
-    if not font_path.is_file():
-        raise FileNotFoundError(f"embedded font file does not exist: {font_path}")
+    if not (
+        isinstance(fontfile, (str, Path)) or isinstance(fontfile, Mapping) or callable(fontfile)
+    ):
+        raise ValueError("fontfile must be a path, a cell-ID mapping, or a callable")
     if minimum_font_size <= 0:
         raise ValueError("minimum_font_size must be positive")
     if initial_font_size < minimum_font_size:
@@ -664,9 +827,6 @@ def render_table_translations(
         if not table_list:
             raise PdfTableExtractionError("no vector tables found in selected pages")
         mapping = validate_pdf_table_translations(table_list, translations)
-        font_path = font_path.resolve()
-        font_path_text = str(font_path)
-        alias = _font_alias(font_path)
 
         cells_by_page: dict[int, list[PdfTableCell]] = {}
         last_row_cell_ids: set[str] = set()
@@ -677,12 +837,32 @@ def render_table_translations(
             )
 
         # Plan redactions and fit sizes without mutating the source document.
+        # font_by_cell/alias_by_path resolve per cell rather than once for
+        # the whole table, so a caller's font policy (Latin vs CJK, source
+        # font family) can differ cell by cell; _font_alias() already keys
+        # the alias by the font FILE's own hash, so two different resolved
+        # fonts never collide under one PDF font resource name.
         redactions_by_page: dict[int, list[Any]] = {}
         fitted_sizes: dict[str, float] = {}
         source_drawing_counts: dict[int, int] = {}
+        font_by_cell: dict[str, Path] = {}
+        alias_by_path: dict[Path, str] = {}
+        # A cell that held a hyperlink loses it outright once the cell's
+        # text is redacted: apply_redactions drops any link annotation
+        # overlapping the redacted area, and nothing about a plain text
+        # rewrite restores it. Capture every page's links up front (before
+        # anything is touched) so each one can be re-attached, pointing at
+        # the same URI, once its cell's translation is in place.
+        decoration_redactions_by_page: dict[int, list[Any]] = {}
+        links_by_cell: dict[str, list[dict]] = {}
+        page_links_by_page: dict[int, list[dict]] = {}
         for page_number, cells in cells_by_page.items():
             page = document[page_number - 1]
             source_drawing_counts[page_number] = len(page.get_drawings())
+            page_links_by_page[page_number] = (
+                list(page_links[page_number]) if page_links is not None and page_number in page_links
+                else list(page.get_links())
+            )
             fit_page = temporary_fit_doc.new_page(width=page.rect.width, height=page.rect.height)
             for cell in cells:
                 translated = _normalise_render_text(mapping[cell.id])
@@ -695,12 +875,23 @@ def render_table_translations(
                     # keep the guard next to rendering for integrators that
                     # construct PdfTable objects themselves.
                     raise PdfTableMappingError(f"empty source cell cannot be rendered: {cell.id}")
+                cell_font = _resolve_cell_font(fontfile, cell, translated)
+                font_by_cell[cell.id] = cell_font
+                if cell_font not in alias_by_path:
+                    alias_by_path[cell_font] = _font_alias(cell_font)
+                cell_alias = alias_by_path[cell_font]
                 cell_rect = fitz.Rect(cell.rect)
-                # BabelDOC may repartition a cell's text spans while preserving
+                # A renderer may repartition a cell's text spans while preserving
                 # the page geometry.  Redact the complete cell rectangle so no
                 # stale fragment (for example a clipped table header) survives
                 # the overlay.  ``graphics=0`` keeps the original grid lines.
                 redactions_by_page.setdefault(page_number, []).append(cell_rect)
+                matched_links = _links_for_cell(page_links_by_page[page_number], cell_rect)
+                if matched_links:
+                    links_by_cell[cell.id] = matched_links
+                    decoration_redactions_by_page.setdefault(page_number, []).extend(
+                        _underline_rects_in_cell(page, cell_rect)
+                    )
                 fit_rect = _inset_rect(
                     fitz,
                     cell.rect,
@@ -710,8 +901,8 @@ def render_table_translations(
                     fit_page,
                     fit_rect,
                     translated,
-                    fontfile=font_path_text,
-                    fontname=alias,
+                    fontfile=str(cell_font),
+                    fontname=cell_alias,
                     initial_font_size=initial_font_size,
                     minimum_font_size=minimum_font_size,
                     font_step=font_step,
@@ -719,14 +910,28 @@ def render_table_translations(
                 )
             fit_page = None
 
+        removed_decoration_counts: dict[int, int] = {}
+        restored_link_count = 0
         for page_number, cells in cells_by_page.items():
             page = document[page_number - 1]
+            # Remove only the specific decorations identified above -- a
+            # separate, narrower redaction pass with graphics=2 so this
+            # never touches the table's own border lines, which are left
+            # to the graphics=0 pass immediately below exactly as before.
+            decoration_rects = decoration_redactions_by_page.get(page_number, [])
+            if decoration_rects:
+                for box in decoration_rects:
+                    page.add_redact_annot(box, fill=None)
+                page.apply_redactions(images=0, graphics=2, text=0)
+            removed_decoration_counts[page_number] = len(decoration_rects)
+
             rectangles = redactions_by_page.get(page_number, [])
             if rectangles:
                 for box in rectangles:
                     page.add_redact_annot(box, fill=None)
                 page.apply_redactions(images=0, graphics=0, text=0)
-            if len(page.get_drawings()) != source_drawing_counts[page_number]:
+            expected_drawings = source_drawing_counts[page_number] - removed_decoration_counts[page_number]
+            if len(page.get_drawings()) != expected_drawings:
                 raise PdfTableError(f"vector graphics changed while redacting page {page_number}")
 
             for cell in cells:
@@ -734,6 +939,8 @@ def render_table_translations(
                 if not translated.strip():
                     continue
                 assert cell.rect is not None
+                cell_font = font_by_cell[cell.id]
+                cell_alias = alias_by_path[cell_font]
                 cell_rect = fitz.Rect(cell.rect)
                 fit_rect = _inset_rect(
                     fitz,
@@ -743,8 +950,8 @@ def render_table_translations(
                 result = page.insert_textbox(
                     fit_rect,
                     translated,
-                    fontname=alias,
-                    fontfile=font_path_text,
+                    fontname=cell_alias,
+                    fontfile=str(cell_font),
                     fontsize=fitted_sizes[cell.id],
                     align=_cell_alignment(align, cell),
                     overlay=True,
@@ -753,6 +960,12 @@ def render_table_translations(
                     raise PdfTableFitError(
                         f"cell {cell.id} no longer fits at {fitted_sizes[cell.id]:g}pt during rendering"
                     )
+                # The whole reflowed cell becomes the new clickable area:
+                # a translation rarely keeps the exact same wrapped-line
+                # boundaries the original link rectangle was drawn for.
+                for link in links_by_cell.get(cell.id, []):
+                    page.insert_link({"kind": link.get("kind", 2), "from": cell_rect, "uri": link.get("uri", "")})
+                    restored_link_count += 1
 
         _atomic_save(document, destination)
     finally:
@@ -764,18 +977,22 @@ def render_table_translations(
     try:
         if output.page_count != source_page_count:
             raise PdfTableError("rendered PDF page count changed")
-        font_pages = {
-            page_number
-            for page_number in cells_by_page
-            if any(cell_id.startswith(f"pdf:p{page_number}:") for cell_id in fitted_sizes)
-        }
+        # Every alias actually used on a page must be embedded there --
+        # a table can legitimately draw more than one font per page now
+        # (a Latin-only cell next to a Chinese one), so this checks the
+        # full set rendered on that page, not one fixed alias.
+        aliases_by_page: dict[int, set[str]] = {}
+        for cell_id, cell_font in font_by_cell.items():
+            page_number = int(cell_id.split(":")[1][1:])
+            aliases_by_page.setdefault(page_number, set()).add(alias_by_path[cell_font])
         drawing_counts: list[tuple[int, int, int]] = []
         for page_number in range(1, output.page_count + 1):
             page = output[page_number - 1]
             drawings = len(page.get_drawings())
             images = len(page.get_images(full=True))
             source_images = source_image_counts[page_number - 1]
-            if page_number in source_drawing_counts and drawings != source_drawing_counts[page_number]:
+            expected_published_drawings = source_drawing_counts.get(page_number, drawings) - removed_decoration_counts.get(page_number, 0)
+            if page_number in source_drawing_counts and drawings != expected_published_drawings:
                 raise PdfTableError(f"published vector graphics changed on page {page_number}")
             if images < source_images:
                 raise PdfTableError(f"published images decreased on page {page_number}")
@@ -785,10 +1002,12 @@ def render_table_translations(
             if int(page.rotation) != source_page_rotations[page_number - 1]:
                 raise PdfTableError(f"published page rotation changed on page {page_number}")
             drawing_counts.append((page_number, drawings, images))
-            if page_number in font_pages and not any(
-                len(font) > 4 and font[4] == alias for font in page.get_fonts(full=True)
-            ):
-                raise PdfTableError(f"embedded font was not found on page {page_number}")
+            required_aliases = aliases_by_page.get(page_number)
+            if required_aliases:
+                embedded = {font[4] for font in page.get_fonts(full=True) if len(font) > 4}
+                missing = required_aliases - embedded
+                if missing:
+                    raise PdfTableError(f"embedded font was not found on page {page_number}")
     finally:
         output.close()
 
@@ -799,6 +1018,7 @@ def render_table_translations(
         rendered_cell_count=len(fitted_sizes),
         font_sizes=tuple(fitted_sizes.items()),
         drawing_counts=tuple(drawing_counts),
+        restored_link_count=restored_link_count,
     )
 
 

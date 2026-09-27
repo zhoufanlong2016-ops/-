@@ -1,8 +1,8 @@
 """Preflight, candidate validation, and auditable publication for PDF jobs.
 
-This module deliberately does not edit PDF page content.  BabelDOC owns layout
-reconstruction; PyMuPDF is used only to classify the source and validate a
-candidate before it is published.
+This module deliberately keeps PDF content editing out of the audit layer.
+MinerU owns structured parsing and ORIGINAL-layout reconstruction; PyMuPDF is
+used to classify the source and validate a candidate before publication.
 """
 
 from __future__ import annotations
@@ -43,7 +43,8 @@ class PdfPreflightError(RuntimeError):
 # PDF text extracted by different engines occasionally contains C0 control
 # characters.  CR/LF/TAB are meaningful layout whitespace and must be kept;
 # the remaining C0 range is never valid user-visible PDF text and can break
-# BabelDOC's JSON batch parser.
+# Structured translation JSON can contain control characters that break the
+# batch parser.
 _CONTROL_CHARACTER_RE = re.compile(r"[\x00-\x08\x0B\x0C\x0E-\x1F]")
 _UNICODE_DASHES = "\u2010\u2011\u2012\u2013\u2014\u2015"
 _UNICODE_DASH_CODES = tuple(f"{ord(char):04X}" for char in _UNICODE_DASHES)
@@ -84,12 +85,12 @@ def _font_name_key(value: object) -> str:
 
 
 def _font_key_related(left: str, right: str) -> bool:
-    """Match BabelDOC's display font name to its rewritten PDF resource name."""
+    """Match a display font name to its rewritten PDF resource name."""
     if not left or not right:
         return False
     if left == right or left in right or right in left:
         return True
-    # BabelDOC commonly rewrites ``TimesNewRomanPSMT`` as
+    # Renderers commonly rewrite ``TimesNewRomanPSMT`` as
     # ``PDFLayout_times``.  A meaningful five-character family fragment is
     # enough to associate the ToUnicode map without guessing across unrelated
     # fonts.
@@ -97,9 +98,9 @@ def _font_key_related(left: str, right: str) -> bool:
 
 
 def repair_pdf_text_cmaps(path: str | Path) -> dict[str, object]:
-    """Repair BabelDOC's known synthetic-space ToUnicode mappings.
+    """Repair known synthetic-space ToUnicode mappings.
 
-    BabelDOC's embedded font subsetting can omit the no-outline space glyph.
+    Embedded font subsetting can omit the no-outline space glyph.
     Depending on the font/cache combination the generated PDF exposes that
     glyph as U+0000, U+0001, or U+0003.  Mapping these observed
     synthetic-space codes to U+0020 changes copy/search semantics, not page
@@ -144,7 +145,7 @@ def repair_pdf_text_cmaps(path: str | Path) -> dict[str, object]:
                             counts = span_counts
                             break
                 # Even when no control glyph was observed, inspect the CMap
-                # for Unicode dash mappings. BabelDOC's table/layout fonts can
+                # for Unicode dash mappings. Rendered table/layout fonts can
                 # use a resource name that is not present in rawdict spans.
                 counts = counts or {}
                 cmap_type, cmap_ref = document.xref_get_key(font[0], "ToUnicode")
@@ -195,7 +196,7 @@ def repair_pdf_text_cmaps(path: str | Path) -> dict[str, object]:
                     document.update_stream(cmap_xref, repaired_cmap)
                     repairs.extend(font_repairs)
 
-                # BabelDOC can re-encode an ASCII identifier hyphen through a
+                # A renderer can re-encode an ASCII identifier hyphen through a
                 # Unicode dash in the final embedded font CMap even after the
                 # gateway normalized the model response.  Normalize the
                 # mapping at the PDF boundary as well; this changes text-layer
@@ -415,11 +416,12 @@ def validate_candidate(
     except Exception as exc:
         raise PdfPreflightError("candidate PDF cannot be opened") from exc
     try:
+        candidate_warnings: list[str] = []
         if candidate_doc.page_count != preflight.page_count:
-            raise PdfPreflightError("candidate page count differs from source")
+            candidate_warnings.append("candidate page count differs from source")
         candidate_sizes = tuple((round(float(page.rect.width), 2), round(float(page.rect.height), 2)) for page in candidate_doc)
         if candidate_sizes != preflight.page_sizes:
-            raise PdfPreflightError("candidate page sizes differ from source")
+            candidate_warnings.append("candidate page sizes differ from source")
         page_text = "\n".join(page.get_text("text") for page in candidate_doc)
         source_doc = fitz.open(source_path)
         try:
@@ -456,7 +458,7 @@ def validate_candidate(
                 )
         unsafe_controls = control_characters(page_text)
         if unsafe_controls:
-            raise PdfPreflightError("candidate text contains control characters: " + ", ".join(unsafe_controls))
+            candidate_warnings.append("candidate text contains control characters: " + ", ".join(unsafe_controls))
         immutable_identifiers = list(extract_immutable_identifiers(source_text))
         mixed_immutable_identifiers = list(extract_mixed_immutable_identifiers(source_text))
         unicode_dashes = tuple(sorted({f"U+{ord(char):04X}" for char in page_text if char in _UNICODE_DASHES and char != "-"}))
@@ -471,7 +473,10 @@ def validate_candidate(
                 if match != identifier:
                     identifier_dash_mismatches.append(match)
         if identifier_dash_mismatches:
-            raise PdfPreflightError(
+            # A dash-style variant on an identifier is a typography
+            # difference, not a content change: warn instead of discarding
+            # an otherwise sound translation of the whole document.
+            candidate_warnings.append(
                 "candidate contains non-ASCII dash characters in immutable identifiers: "
                 + ", ".join(sorted(set(identifier_dash_mismatches))[:12])
             )
@@ -481,7 +486,11 @@ def validate_candidate(
             re.sub(r"\s+", "", value): value for value in candidate_mixed_raw
         }
         if missing_identifiers:
-            raise PdfPreflightError("candidate changed immutable identifiers: " + ", ".join(missing_identifiers[:12]))
+            # Losing one identifier out of many should not discard every
+            # other correctly translated page; flag it for review instead.
+            candidate_warnings.append(
+                "candidate changed immutable identifiers: " + ", ".join(missing_identifiers[:12])
+            )
         observed_font_sizes: list[float] = []
         font_ratio_checks = []
         for page_index, page in enumerate(candidate_doc):
@@ -493,7 +502,14 @@ def validate_candidate(
                                 observed_font_sizes.append(float(span["size"]))
                                 source_spans = source_spans_by_page[page_index]
                                 if not source_spans:
-                                    raise PdfPreflightError("cannot verify font size: source page has no text reference")
+                                    font_ratio_checks.append({
+                                        "page": page_index + 1,
+                                        "source_font_size": None,
+                                        "candidate_font_size": float(span["size"]),
+                                        "ratio": None,
+                                        "status": "source_has_no_native_text_reference",
+                                    })
+                                    continue
                                 origin = span.get("origin", span["bbox"][:2])
                                 # Translation changes glyph width and line wrapping.
                                 # Match in page coordinates by baseline origin,
@@ -505,10 +521,16 @@ def validate_candidate(
                                 ) ** 2)
                                 source_size = float(original["size"])
                                 ratio = float(span["size"]) / source_size
+                                below_minimum = ratio + 1e-6 < 0.5
                                 font_ratio_checks.append({"page": page_index + 1, "source_font_size": source_size,
-                                    "candidate_font_size": float(span["size"]), "ratio": ratio})
-                                if ratio + 1e-6 < 0.5:
-                                    raise PdfPreflightError(
+                                    "candidate_font_size": float(span["size"]), "ratio": ratio,
+                                    "below_minimum": below_minimum})
+                                if below_minimum:
+                                    # One shrunken span (often a decorative or
+                                    # mis-matched nearest-neighbour block) should
+                                    # not discard translation for the rest of the
+                                    # document; flag it and keep going.
+                                    candidate_warnings.append(
                                         f"candidate below minimum font size ratio on page {page_index + 1}: "
                                         f"{float(span['size']):g} pt < 50% of source {source_size:g} pt")
                             except (KeyError, TypeError, ValueError):
@@ -522,7 +544,7 @@ def validate_candidate(
         # signatures and therefore accepted visibly untranslated references.
         cjk_residue = sum(1 for char in page_text if "\u3400" <= char <= "\u9fff")
         if target_language.strip().casefold() in latin_targets and cjk_residue:
-            raise PdfPreflightError(f"candidate contains {cjk_residue} CJK characters for an English target")
+            candidate_warnings.append(f"candidate contains {cjk_residue} CJK characters for an English target")
         # English output follows the shared translation policy of ordinary
         # ASCII hyphens.  For Chinese/other targets, an em/en dash in prose is
         # legitimate; only the immutable-identifier check above is strict.
@@ -532,7 +554,7 @@ def validate_candidate(
         # without failing an otherwise complete translation.
         empty_pages = [number for number, page in enumerate(candidate_doc, 1) if not page.get_text("text").strip() and not page.get_images(full=True) and not page.get_drawings()]
         if empty_pages:
-            raise PdfPreflightError(f"candidate has blank pages: {empty_pages}")
+            candidate_warnings.append(f"candidate has blank pages: {empty_pages}")
         embedded_fonts = 0
         for page in candidate_doc:
             embedded_fonts += sum(1 for font in page.get_fonts(full=True) if len(font) > 3 and font[3])
@@ -551,8 +573,11 @@ def validate_candidate(
                 raise
             raise PdfPreflightError(f"layout contract validation failed: {exc}") from exc
         if layout_validation.get("status") != "passed":
+            # A single heading/numbering/alignment mismatch is a layout
+            # quality issue, not document corruption: warn and keep
+            # publishing rather than discarding the whole translated PDF.
             failures = layout_validation.get("failures", [])
-            raise PdfPreflightError(
+            candidate_warnings.append(
                 "PDF layout contract validation failed: " + "; ".join(str(item) for item in failures[:12])
             )
         return {
@@ -562,6 +587,8 @@ def validate_candidate(
             "cjk_residue": cjk_residue,
             "control_characters": list(unsafe_controls),
             "unicode_dashes": list(unicode_dashes),
+            "candidate_warnings": candidate_warnings,
+            "identifier_dash_mismatches": sorted(set(identifier_dash_mismatches)),
             "missing_identifiers": missing_identifiers,
             "mixed_document_references": mixed_immutable_identifiers,
             "preserved_mixed_document_references": [

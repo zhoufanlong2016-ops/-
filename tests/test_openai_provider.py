@@ -95,3 +95,36 @@ def test_batch_glossary_failure_is_repaired_as_a_second_batch(monkeypatch) -> No
     assert result.translation == "Source text"
     assert len(calls) == 2
     assert "AUTOMATIC CORRECTION" in calls[1].content.decode()
+
+
+def test_batch_validation_failure_after_retry_is_marked_for_review(monkeypatch) -> None:
+    monkeypatch.setenv("OPENAI_API_KEY", "test")
+    data = unit().model_dump()
+    data.update(
+        source_text="LINE X Y",
+        source_language="en",
+        target_language="zh-CN",
+        protected_tokens=[],
+    )
+    data["id"] = generate_unit_id(**{key: value for key, value in data.items() if key not in {"id", "status"}})
+    failing_unit = TranslationUnit.model_validate(data)
+    calls: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls.append(request)
+        body = json.dumps({"items": [{"id": failing_unit.id, "translation": "LINE X Y"}]})
+        return httpx.Response(
+            200,
+            json={"output": [{"type": "message", "content": [{"type": "output_text", "text": body}]}]},
+            request=request,
+        )
+
+    result = OpenAIProvider(
+        OpenAIConfig(model="gpt-5.6-luna"),
+        client=httpx.Client(transport=httpx.MockTransport(handler)),
+    ).translate_batch([failing_unit])[0]
+
+    assert result.validation_status == "needs_review"
+    assert result.error is not None
+    assert "UNTRANSLATED_ENGLISH" in result.error
+    assert len(calls) == 2

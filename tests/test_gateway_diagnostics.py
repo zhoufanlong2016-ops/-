@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 from io import BytesIO
+import json
+import threading
 from types import MethodType
+from types import SimpleNamespace
 from urllib.error import HTTPError
 
 from document_translator.services.translation_gateway import (
@@ -56,7 +59,7 @@ def test_qwen_gateway_disables_thinking_and_streaming(monkeypatch) -> None:
 
     captured: dict[str, object] = {}
 
-    def fake_request_json(_endpoint, _key, payload):
+    def fake_request_json(_endpoint, _key, payload, **_kwargs):
         captured.update(payload)
         return {"choices": [{"message": {"content": "done"}}]}
 
@@ -76,6 +79,142 @@ def test_qwen_gateway_disables_thinking_and_streaming(monkeypatch) -> None:
     assert captured["enable_thinking"] is False
     assert captured["reasoning_effort"] == "none"
     assert captured["stream"] is False
+
+
+def test_structured_qwen_repair_calls_share_one_total_deadline(monkeypatch) -> None:
+    import document_translator.services.translation_gateway as module
+
+    deadlines: list[float | None] = []
+    responses = iter([
+        {"choices": [{"message": {"content": '[{"id":"road","output":"道路"}]'}}]},
+        {"choices": [{"message": {"content": '[{"id":"road","output":"RAVI Rd. 道路"}]'}}]},
+    ])
+
+    def fake_request_json(_endpoint, _key, payload, *, deadline=None):
+        deadlines.append(deadline)
+        return next(responses)
+
+    monkeypatch.setattr(module, "_request_json", fake_request_json)
+    sent: list[tuple[int, object]] = []
+    handler = object.__new__(_Handler)
+    handler._audit_request = MethodType(lambda _self, _provider, _body: None, handler)
+    handler._audit_result = MethodType(lambda _self, *_args, **_kwargs: None, handler)
+    handler._send = MethodType(lambda _self, status, payload: sent.append((status, payload)), handler)
+    config = GatewayConfig.from_provider(provider="qwen", model="qwen3.8-flash")
+    prompt = "## Here is the input:\n" + json.dumps([{"id": "road", "input": "RAVI Rd."}])
+
+    handler._handle_qwen(
+        config,
+        "secret",
+        {
+            "messages": [{"role": "user", "content": prompt}],
+            "response_format": {"type": "json_object"},
+        },
+    )
+
+    assert len(deadlines) == 2
+    assert deadlines[0] == deadlines[1]
+    assert sent[0][0] == 200
+
+
+def test_local_validation_audit_records_only_rule_categories(tmp_path) -> None:
+    audit_path = tmp_path / "gateway-events.jsonl"
+    handler = object.__new__(_Handler)
+    handler.gateway_request_id = "gateway-request-test"
+    handler.server = SimpleNamespace(
+        gateway_audit_path=str(audit_path), gateway_audit_lock=threading.Lock()
+    )
+    request_body = {
+        "model": "qwen3.8-flash",
+        "messages": [{"role": "user", "content": "confidential document text"}],
+    }
+
+    handler._audit_validation(
+        "qwen",
+        request_body,
+        phase="initial",
+        errors=[
+            "row-1: PROPER_NAME_MISSING: PRIVATE_PLACE expected 1, got 0",
+            "row-2: PLACEHOLDER_MISMATCH: [[SECRET_01]] expected 1, got 0",
+        ],
+    )
+
+    record = json.loads(audit_path.read_text(encoding="utf-8"))
+    assert record["gateway_request_id"] == "gateway-request-test"
+    assert record["validator"] == "document_translator.translation_rules"
+    assert record["decision_maker"] == "local_validation_rules"
+    assert record["corrector"] == "selected_provider_model"
+    assert record["corrector_model"] == "qwen3.8-flash"
+    assert record["correction_action"] == "request_one_batch_correction"
+    assert record["failure_categories"] == {
+        "PROPER_NAME_MISSING": 1,
+        "PLACEHOLDER_MISMATCH": 1,
+    }
+    assert "PRIVATE_PLACE" not in audit_path.read_text(encoding="utf-8")
+    assert "SECRET_01" not in audit_path.read_text(encoding="utf-8")
+
+
+def test_correction_call_is_identified_as_same_provider_correction() -> None:
+    import document_translator.services.translation_gateway as module
+
+    correction = {
+        "messages": [
+            {"role": "user", "content": "translate"},
+            {"role": "system", "content": "AUTOMATIC CORRECTION: retain required names"},
+        ]
+    }
+    assert module._request_phase(correction) == "correction"
+    assert module._request_phase({"messages": [{"role": "user", "content": "translate"}]}) == "translation"
+
+
+def test_upstream_request_fails_immediately_after_shared_deadline(monkeypatch) -> None:
+    import document_translator.services.translation_gateway as module
+
+    called = False
+
+    def fake_urlopen(*_args, **_kwargs):
+        nonlocal called
+        called = True
+        raise AssertionError("expired deadline must not start another network call")
+
+    monkeypatch.setattr(module, "urlopen", fake_urlopen)
+
+    try:
+        module._request_json(
+            "https://example.test", "secret", {"x": 1}, deadline=module.time.monotonic() - 1
+        )
+    except GatewayError as error:
+        assert error.code == "UPSTREAM_DEADLINE_EXCEEDED"
+        assert error.status == 504
+    else:  # pragma: no cover - expired work must fail closed
+        raise AssertionError("expected total-deadline failure")
+
+    assert called is False
+
+
+def test_upstream_socket_timeout_at_deadline_is_reported_as_deadline(monkeypatch) -> None:
+    import document_translator.services.translation_gateway as module
+
+    clock = [10.0]
+    monkeypatch.setattr(module.time, "monotonic", lambda: clock[0])
+    monkeypatch.setattr(module, "_MAX_UPSTREAM_ATTEMPTS", 1)
+
+    def fake_urlopen(_request, *, timeout):
+        assert timeout == 1.0
+        clock[0] = 11.0
+        raise TimeoutError("socket timed out")
+
+    monkeypatch.setattr(module, "urlopen", fake_urlopen)
+
+    try:
+        module._request_json(
+            "https://example.test", "secret", {"x": 1}, deadline=11.0
+        )
+    except GatewayError as error:
+        assert error.code == "UPSTREAM_DEADLINE_EXCEEDED"
+        assert error.status == 504
+    else:  # pragma: no cover - exhausting the deadline must be explicit
+        raise AssertionError("expected total-deadline failure")
 
 
 def test_qwen_gateway_rejects_non_chat_upstream_body(monkeypatch) -> None:
@@ -100,14 +239,3 @@ def test_qwen_gateway_rejects_non_chat_upstream_body(monkeypatch) -> None:
         raise AssertionError("expected GatewayError")
     assert sent == []
 
-
-def test_pdf_worker_removes_babeldoc_unbounded_rate_limit_retry() -> None:
-    from babeldoc.translator.translator import OpenAITranslator
-    from document_translator.pdf_worker import _disable_nested_provider_retries
-
-    _disable_nested_provider_retries(OpenAITranslator)
-
-    for name in ("do_translate", "do_llm_translate"):
-        method = getattr(OpenAITranslator, name)
-        assert getattr(method, "_document_translator_single_attempt", False) is True
-        assert not hasattr(method, "__wrapped__")

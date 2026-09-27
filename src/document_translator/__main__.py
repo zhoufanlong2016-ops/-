@@ -21,7 +21,7 @@ from .services import (
     XlsxTranslationService,
     Glossary,
     MarkdownTranslationService,
-    BabelDocPdfTranslationService,
+    MinerUPdfTranslationService,
     TranslationCache,
     load_glossary,
     write_docx_comparison_report,
@@ -46,12 +46,12 @@ def _parser() -> argparse.ArgumentParser:
     translate.add_argument(
         "--provider",
         choices=("qwen-mt", "qwen", "openai"),
-        default="qwen-mt",
-        help="translation provider (default: qwen-mt)",
+        default="qwen",
+        help="translation provider (default: qwen)",
     )
     translate.add_argument(
         "--model",
-        help="provider model (default: qwen-mt-plus)",
+        help="provider model (default: qwen3.8-flash)",
     )
     translate.add_argument("--cache", type=Path, metavar="PATH", help="explicit SQLite cache path")
     translate.add_argument("--glossary", type=Path, metavar="PATH", help="local CSV/XLSX terminology file")
@@ -63,7 +63,7 @@ def _parser() -> argparse.ArgumentParser:
     docx.add_argument("destination", type=Path, metavar="DESTINATION")
     docx.add_argument("--source-language", required=True)
     docx.add_argument("--target-language", required=True)
-    docx.add_argument("--provider", choices=("qwen-mt", "qwen", "openai"), default="qwen-mt")
+    docx.add_argument("--provider", choices=("qwen-mt", "qwen", "openai"), default="qwen")
     docx.add_argument("--model")
     docx.add_argument("--max-attempts", type=int, default=3, help="provider attempts per paragraph")
     docx.add_argument("--comparison-report", type=Path, metavar="PATH", help="write source/translation/hash audit JSON")
@@ -73,8 +73,8 @@ def _parser() -> argparse.ArgumentParser:
     pptx.add_argument("destination", type=Path)
     pptx.add_argument("--source-language", required=True)
     pptx.add_argument("--target-language", required=True)
-    pptx.add_argument("--provider", choices=("qwen-mt", "qwen", "openai"), default="qwen-mt")
-    pptx.add_argument("--model", default="qwen-mt-plus")
+    pptx.add_argument("--provider", choices=("qwen-mt", "qwen", "openai"), default="qwen")
+    pptx.add_argument("--model", default="qwen3.8-flash")
     pptx.add_argument("--glossary", type=Path)
     pptx.add_argument("--layout-report", type=Path, metavar="PATH", help="write PowerPoint layout audit JSON")
     pptx.add_argument("--minimum-font-size", type=float, default=8.0, help="minimum readable font size in points")
@@ -84,19 +84,19 @@ def _parser() -> argparse.ArgumentParser:
     xlsx.add_argument("destination", type=Path, metavar="DESTINATION")
     xlsx.add_argument("--source-language", required=True)
     xlsx.add_argument("--target-language", required=True)
-    xlsx.add_argument("--provider", choices=("qwen-mt", "qwen", "openai"), default="qwen-mt")
+    xlsx.add_argument("--provider", choices=("qwen-mt", "qwen", "openai"), default="qwen")
     xlsx.add_argument("--model")
     xlsx.add_argument("--glossary", type=Path, metavar="PATH", help="local CSV/XLSX terminology file")
     xlsx.add_argument("--max-attempts", type=int, default=3, help="provider attempts per cell")
     xlsx.add_argument("--include-hidden-sheets", action="store_true")
-    pdf = subparsers.add_parser("translate-pdf", help="translate PDF through the BabelDOC layout-preserving worker")
+    pdf = subparsers.add_parser("translate-pdf", help="translate PDF through MinerU 4 ORIGINAL layout rendering")
     pdf.add_argument("source", type=Path); pdf.add_argument("destination", type=Path)
     pdf.add_argument("--source-language", required=True); pdf.add_argument("--target-language", required=True)
     pdf.add_argument("--provider", choices=("qwen", "gpt"), default="qwen")
     pdf.add_argument("--model", required=True, help="approved provider model for this PDF job")
     pdf.add_argument("--glossary", type=Path); pdf.add_argument("--style-profile", type=Path, metavar="PATH", help="JSON PDF structural/numbering style profile")
     pdf.add_argument("--minimum-font-size", type=float, default=6.0)
-    pdf.add_argument("--gateway-base-url", help="local OpenAI-compatible Translation Gateway URL")
+    pdf.add_argument("--mineru-tier", choices=("flash", "basic", "standard", "advanced"), default="flash")
     pdf.add_argument("--report", type=Path, metavar="PATH", help="write the PDF preflight and candidate validation report")
     pdf.add_argument("--allow-cad-pdf", action="store_true", help="allow a class-C drawing-style PDF after confirming no source DWG is available")
     pdf.add_argument("--allow-complex-pdf", action="store_true", help="allow a class-B PDF after confirming that full visual review will be performed")
@@ -111,7 +111,7 @@ def _parser() -> argparse.ArgumentParser:
     dwg_import.add_argument("command_script", type=Path, metavar="COMMAND_SCRIPT")
     dwg_import.add_argument("--source-language", required=True)
     dwg_import.add_argument("--target-language", required=True)
-    dwg_import.add_argument("--provider", choices=("qwen-mt", "qwen", "openai"), default="qwen-mt")
+    dwg_import.add_argument("--provider", choices=("qwen-mt", "qwen", "openai"), default="qwen")
     dwg_import.add_argument("--model")
     dwg_import.add_argument("--glossary", type=Path, metavar="PATH")
     dwg_import.add_argument("--max-attempts", type=int, default=3)
@@ -146,9 +146,11 @@ def _provider_for(args: argparse.Namespace, client: httpx.Client, glossary: Glos
         config = QwenMTConfig(model=args.model if args.model is not None else "qwen-mt-plus")
         return QwenMTProvider(config, client=client, glossary=glossary)
     if args.provider == "qwen":
-        if args.model is None:
-            raise ValueError("--model is required with provider qwen")
-        return QwenChatProvider(QwenChatConfig(model=args.model), client=client, glossary=glossary)
+        return QwenChatProvider(
+            QwenChatConfig(model=args.model if args.model is not None else "qwen3.8-flash"),
+            client=client,
+            glossary=glossary,
+        )
 
 
 
@@ -297,17 +299,22 @@ def _translate_pdf(args: argparse.Namespace) -> int:
         glossary = _DEFAULT_ZH_EN_GLOSSARY
     else:
         glossary = _DEFAULT_EN_ZH_ENGINEERING_GLOSSARY
-    output, preflight, report = BabelDocPdfTranslationService().translate_file(
-        args.source, args.destination, source_language=args.source_language,
-        target_language=args.target_language, provider=args.provider,
-        model=args.model, glossary=glossary if glossary.exists() else None,
-        style_profile=args.style_profile,
-        report_path=args.report, allow_cad_pdf=args.allow_cad_pdf,
-        allow_complex_pdf=args.allow_complex_pdf,
-        minimum_font_size=args.minimum_font_size,
-        gateway_base_url=args.gateway_base_url,
-    )
-    print(f"translated PDF with BabelDOC; class={preflight.classification}; output={output}; report={report}")
+    glossary_obj = load_glossary(glossary) if glossary.exists() else None
+    with httpx.Client() as client:
+        if args.provider == "gpt":
+            provider = OpenAIProvider(OpenAIConfig(model=args.model), client=client, glossary=glossary_obj)
+        else:
+            provider = QwenChatProvider(QwenChatConfig(model=args.model), client=client, glossary=glossary_obj)
+        output, preflight, report = MinerUPdfTranslationService(
+            provider, tier=args.mineru_tier
+        ).translate_file(
+            args.source, args.destination, source_language=args.source_language,
+            target_language=args.target_language, style_profile=args.style_profile,
+            report_path=args.report, allow_cad_pdf=args.allow_cad_pdf,
+            allow_complex_pdf=args.allow_complex_pdf,
+            minimum_font_size=args.minimum_font_size,
+        )
+    print(f"translated PDF with MinerU 4 ORIGINAL layout; class={preflight.classification}; output={output}; report={report}")
     return 0
 
 

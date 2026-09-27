@@ -147,6 +147,8 @@ def test_auto_corrects_deterministic_labels_and_ordinal_dates():
     assert auto_correct_translation("17th December 2025", "17th2025年12月", "en", "zh-CN") == "2025年12月17日"
     assert auto_correct_translation("3rd Set of Clarifications", "3rd 澄清文件集", "en", "zh-CN") == "3rd 澄清文件集"
     assert auto_correct_translation("December, 2025", "12月，2025", "en", "zh-CN") == "2025年12月"
+    assert auto_correct_translation("17th December 2025", "2025 12 17", "en", "zh-CN") == "2025年12月17日"
+    assert auto_correct_translation("17th December 2025", "17 12 2025", "en", "zh-CN") == "2025年12月17日"
 
 
 def _named_unit(format_name="md", text="RAVI Rd."):
@@ -232,8 +234,9 @@ def test_provider_name_policy_parity_and_bounded_batch_repair(monkeypatch, provi
     if repair_succeeds:
         assert "SHAREEF COLONY" in method(units)[1].translation
     else:
-        with pytest.raises(RuntimeError, match="PROPER_NAME_MISSING"):
-            method(units)
+        result = method(units)
+        assert result[1].validation_status == "needs_review"
+        assert result[1].error is not None and "PROPER_NAME_MISSING" in result[1].error
     assert len(calls) == 2
     shared = general_translation_instruction("en", "zh-CN")
     if provider_name == "qwen_mt":

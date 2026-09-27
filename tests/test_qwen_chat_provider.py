@@ -53,3 +53,33 @@ def test_qwen_chat_accepts_qwen_max_and_rejects_mt(monkeypatch) -> None:
         pass
     else:
         raise AssertionError("Qwen-MT models must use QwenMTProvider")
+
+
+def test_qwen_chat_marks_persistent_validation_failure_for_review(monkeypatch) -> None:
+    calls = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls.append(request)
+        item = json.loads(request.content)["messages"][1]
+        item_id = json.loads(item["content"])["items"][0]["id"]
+        body = {"items": [{"id": item_id, "translation": "LINE X Y"}]}
+        return httpx.Response(
+            200,
+            json={"choices": [{"message": {"content": json.dumps(body)}}]},
+            request=request,
+        )
+
+    monkeypatch.setenv("DASHSCOPE_API_KEY", "test-secret")
+    data = make_unit().model_dump()
+    data["source_text"] = "LINE X Y"
+    data["protected_tokens"] = []
+    data["id"] = generate_unit_id(**{key: value for key, value in data.items() if key not in {"id", "status"}})
+    result = QwenChatProvider(
+        QwenChatConfig(model="qwen-plus"),
+        client=httpx.Client(transport=httpx.MockTransport(handler)),
+    ).translate_batch([TranslationUnit.model_validate(data)])[0]
+
+    assert result.validation_status == "needs_review"
+    assert result.error is not None
+    assert "UNTRANSLATED_ENGLISH" in result.error
+    assert len(calls) == 2

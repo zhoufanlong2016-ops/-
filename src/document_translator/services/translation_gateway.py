@@ -1,4 +1,4 @@
-"""Explicit-provider gateway used by the BabelDOC PDF worker.
+"""Explicit-provider gateway for structured PDF translation batches.
 
 The worker speaks the OpenAI-compatible Chat Completions protocol.  This
 small local gateway owns credentials and adapts that protocol to the selected
@@ -14,6 +14,7 @@ import os
 import re
 import threading
 import time
+import uuid
 from dataclasses import dataclass
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -33,6 +34,7 @@ from .pdf_pipeline import (
 _MAX_REQUEST_BYTES = 16 * 1024 * 1024
 _MAX_UPSTREAM_ATTEMPTS = 2
 _UPSTREAM_TIMEOUT_SECONDS = 60
+_GATEWAY_REQUEST_TIMEOUT_SECONDS = 120
 _TRANSIENT_UPSTREAM_STATUS = frozenset({408, 425, 429, 500, 502, 503, 504})
 
 
@@ -69,14 +71,14 @@ class GatewayConfig:
             raise ValueError("--model is required for PDF translation")
         if provider == "qwen":
             # Qwen-MT is a raw single-message machine-translation endpoint;
-            # BabelDOC's PDF LLM path requires a JSON array batch.  General
+            # The PDF LLM path requires a JSON array batch. General
             # Qwen models (qwen-plus/qwen-max and compatible variants) support
             # the structured chat contract used here.
             if model.casefold().startswith("qwen-mt"):
                 raise ValueError(
                     "PDF Qwen translation requires a general Qwen model "
                     "(for example qwen-plus or qwen-max); qwen-mt models do "
-                    "not support BabelDOC's structured batch contract"
+                    "not support the structured PDF batch contract"
                 )
             return cls(
                 "qwen",
@@ -111,6 +113,7 @@ class _Handler(BaseHTTPRequestHandler):
             return
 
         config: GatewayConfig = self.server.gateway_config
+        self.gateway_request_id = uuid.uuid4().hex
         key = os.environ.get(config.credential_env)
         if not key or not key.strip():
             self._send(500, {"error": f"gateway credential {config.credential_env} is not configured"})
@@ -148,9 +151,14 @@ class _Handler(BaseHTTPRequestHandler):
         model_name = config.model.casefold()
         if model_name.startswith("gpt-5") and not request_body.get("reasoning_effort"):
             request_body["reasoning_effort"] = "none"
+        deadline = time.monotonic() + _GATEWAY_REQUEST_TIMEOUT_SECONDS
+        validation_body = {**request_body, "model": config.model}
         answer = _structured_answer_with_retry(
             request_body,
-            lambda body: self._gpt_upstream_request(config, key, body),
+            lambda body: self._gpt_upstream_request(config, key, body, deadline=deadline),
+            audit_validation=lambda phase, errors: self._audit_validation(
+                "gpt", validation_body, phase=phase, errors=errors
+            ),
         )
         self._send(200, _chat_completion(config.model, answer))
 
@@ -173,8 +181,45 @@ class _Handler(BaseHTTPRequestHandler):
         upstream_request["reasoning_effort"] = "none"
         upstream_request["stream"] = False
         started = time.monotonic()
+        deadline = started + _GATEWAY_REQUEST_TIMEOUT_SECONDS
+        validation_body = {**request_body, "model": config.model}
         try:
-            response = _request_json(config.endpoint, key, upstream_request)
+            upstream_started = time.monotonic()
+            try:
+                response = _request_json(
+                    config.endpoint, key, upstream_request, deadline=deadline
+                )
+            except GatewayError as error:
+                self._audit_result(
+                    "qwen", request_body,
+                    elapsed_ms=round((time.monotonic() - upstream_started) * 1000),
+                    outcome="error", error_type=error.code, stage="translation_upstream",
+                )
+                raise
+            self._audit_result(
+                "qwen", request_body,
+                elapsed_ms=round((time.monotonic() - upstream_started) * 1000),
+                outcome="ok", response_type="chat_completion", stage="translation_upstream",
+            )
+            response = _sanitize_json(response)
+            if request_body.get("response_format"):
+                normalised = _structured_answer_with_retry(
+                    request_body,
+                    lambda body: self._qwen_upstream_request(
+                        config, key, body, deadline=deadline
+                    ),
+                    first_response=response,
+                    audit_validation=lambda phase, errors: self._audit_validation(
+                        "qwen", validation_body, phase=phase, errors=errors
+                    ),
+                )
+                response = _replace_chat_response_content(response, normalised)
+            else:
+                # Do not pass a provider body with a missing/invalid message
+                # through to the PDF renderer. It otherwise waits for a usable text
+                # result and appears as a long worker stall instead of a bounded
+                # gateway failure.
+                _chat_response_content(response)
         except GatewayError as error:
             self._audit_result(
                 "qwen",
@@ -184,31 +229,23 @@ class _Handler(BaseHTTPRequestHandler):
                 error_type=error.code,
             )
             raise
-        response = _sanitize_json(response)
-        if request_body.get("response_format"):
-            normalised = _structured_answer_with_retry(
-                request_body,
-                lambda body: self._qwen_upstream_request(config, key, body),
-                first_response=response,
-            )
-            response = _replace_chat_response_content(response, normalised)
-        else:
-            # Do not pass a provider body with a missing/invalid message
-            # through to BabelDOC.  It otherwise waits for a usable text
-            # result and appears as a long worker stall instead of a bounded
-            # gateway failure.
-            _chat_response_content(response)
         self._audit_result(
             "qwen",
             request_body,
             elapsed_ms=round((time.monotonic() - started) * 1000),
             outcome="ok",
             response_type="chat_completion",
+            stage="gateway_validation",
         )
         self._send(200, response)
 
     def _gpt_upstream_request(
-        self, config: GatewayConfig, key: str, request_body: dict[str, Any]
+        self,
+        config: GatewayConfig,
+        key: str,
+        request_body: dict[str, Any],
+        *,
+        deadline: float | None = None,
     ) -> str:
         self._audit_request("gpt", request_body)
         return _responses_output_text(
@@ -216,22 +253,45 @@ class _Handler(BaseHTTPRequestHandler):
                 config.endpoint,
                 key,
                 _messages_to_responses(request_body, model=config.model),
+                deadline=deadline,
             )
         )
 
     def _qwen_upstream_request(
-        self, config: GatewayConfig, key: str, request_body: dict[str, Any]
+        self,
+        config: GatewayConfig,
+        key: str,
+        request_body: dict[str, Any],
+        *,
+        deadline: float | None = None,
     ) -> str:
         self._audit_request("qwen", request_body)
-        return _chat_response_content(
-            _sanitize_json(
-                _request_json(
-                    config.endpoint,
-                    key,
-                    _sanitize_json(request_body),
+        phase = _request_phase(request_body)
+        started = time.monotonic()
+        try:
+            answer = _chat_response_content(
+                _sanitize_json(
+                    _request_json(
+                        config.endpoint,
+                        key,
+                        _sanitize_json(request_body),
+                        deadline=deadline,
+                    )
                 )
             )
+        except GatewayError as error:
+            self._audit_result(
+                "qwen", request_body,
+                elapsed_ms=round((time.monotonic() - started) * 1000),
+                outcome="error", error_type=error.code, stage=f"{phase}_upstream",
+            )
+            raise
+        self._audit_result(
+            "qwen", request_body,
+            elapsed_ms=round((time.monotonic() - started) * 1000),
+            outcome="ok", response_type="chat_completion", stage=f"{phase}_upstream",
         )
+        return answer
 
     def _audit_request(self, provider: str, request_body: dict[str, Any]) -> None:
         server = getattr(self, "server", None)
@@ -240,7 +300,7 @@ class _Handler(BaseHTTPRequestHandler):
             return
         try:
             prompt = _last_user_text(request_body)
-            contract = _extract_babeldoc_batch(prompt)
+            contract = _extract_structured_batch(prompt)
             batch_count = len(contract[1]) if contract is not None else None
             marker_found = "## Here is the input:" in prompt
             prompt_length = len(prompt)
@@ -249,6 +309,10 @@ class _Handler(BaseHTTPRequestHandler):
             marker_found = False
             prompt_length = None
         record = {
+            "event": "model_request",
+            "timestamp_unix_ms": time.time_ns() // 1_000_000,
+            "gateway_request_id": getattr(self, "gateway_request_id", None),
+            "phase": _request_phase(request_body),
             "provider": provider,
             "model": request_body.get("model"),
             "batch_count": batch_count,
@@ -274,6 +338,7 @@ class _Handler(BaseHTTPRequestHandler):
         outcome: str,
         response_type: str | None = None,
         error_type: str | None = None,
+        stage: str = "gateway_request",
     ) -> None:
         server = getattr(self, "server", None)
         audit_path = getattr(server, "gateway_audit_path", None)
@@ -281,6 +346,9 @@ class _Handler(BaseHTTPRequestHandler):
             return
         record: dict[str, object] = {
             "event": "upstream_result",
+            "timestamp_unix_ms": time.time_ns() // 1_000_000,
+            "gateway_request_id": getattr(self, "gateway_request_id", None),
+            "stage": stage,
             "provider": provider,
             "model": request_body.get("model"),
             "elapsed_ms": elapsed_ms,
@@ -290,6 +358,44 @@ class _Handler(BaseHTTPRequestHandler):
             record["response_type"] = response_type
         if error_type:
             record["error_type"] = error_type
+        try:
+            with server.gateway_audit_lock:
+                path = Path(audit_path)
+                path.parent.mkdir(parents=True, exist_ok=True)
+                with path.open("a", encoding="utf-8") as stream:
+                    stream.write(json.dumps(record, ensure_ascii=False) + "\n")
+        except OSError:
+            return
+
+    def _audit_validation(
+        self,
+        provider: str,
+        request_body: dict[str, Any],
+        *,
+        phase: str,
+        errors: list[str],
+    ) -> None:
+        server = getattr(self, "server", None)
+        audit_path = getattr(server, "gateway_audit_path", None)
+        if not audit_path:
+            return
+        categories = _validation_category_counts(errors)
+        record = {
+            "event": "local_validation",
+            "timestamp_unix_ms": time.time_ns() // 1_000_000,
+            "gateway_request_id": getattr(self, "gateway_request_id", None),
+            "validator": "document_translator.translation_rules",
+            "decision_maker": "local_validation_rules",
+            "phase": phase,
+            "provider": provider,
+            "model": request_body.get("model"),
+            "passed": not errors,
+            "item_count": _batch_item_count(request_body),
+            "failure_categories": categories,
+            "correction_action": "request_one_batch_correction" if errors and phase == "initial" else None,
+            "corrector": "selected_provider_model" if errors and phase == "initial" else None,
+            "corrector_model": request_body.get("model") if errors and phase == "initial" else None,
+        }
         try:
             with server.gateway_audit_lock:
                 path = Path(audit_path)
@@ -354,9 +460,25 @@ class TranslationGateway:
             self.thread.join(timeout=5)
 
 
-def _request_json(endpoint: str, api_key: str, payload: dict[str, Any]) -> dict[str, Any]:
+def _request_json(
+    endpoint: str,
+    api_key: str,
+    payload: dict[str, Any],
+    *,
+    deadline: float | None = None,
+) -> dict[str, Any]:
     body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
     for attempt in range(_MAX_UPSTREAM_ATTEMPTS):
+        timeout = _UPSTREAM_TIMEOUT_SECONDS
+        if deadline is not None:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise GatewayError(
+                    "UPSTREAM_DEADLINE_EXCEEDED",
+                    "translation batch exceeded its total upstream time limit",
+                    status=504,
+                )
+            timeout = min(timeout, remaining)
         request = Request(
             endpoint,
             data=body,
@@ -364,14 +486,24 @@ def _request_json(endpoint: str, api_key: str, payload: dict[str, Any]) -> dict[
             headers={"Content-Type": "application/json", "Authorization": f"Bearer {api_key}"},
         )
         try:
-            with urlopen(request, timeout=_UPSTREAM_TIMEOUT_SECONDS) as response:
+            with urlopen(request, timeout=timeout) as response:
                 decoded = json.loads(response.read().decode("utf-8"))
         except HTTPError as exc:
             # Keep the status for diagnostics but discard the response body,
             # which may echo document content or provider request details.
             if exc.code in _TRANSIENT_UPSTREAM_STATUS and attempt + 1 < _MAX_UPSTREAM_ATTEMPTS:
                 retry_after = exc.headers.get("Retry-After") if exc.headers else None
-                time.sleep(_retry_delay(retry_after, attempt))
+                delay = _retry_delay(retry_after, attempt)
+                if deadline is not None:
+                    remaining = deadline - time.monotonic()
+                    if remaining <= 0:
+                        raise GatewayError(
+                            "UPSTREAM_DEADLINE_EXCEEDED",
+                            "translation batch exceeded its total upstream time limit",
+                            status=504,
+                        ) from exc
+                    delay = min(delay, remaining)
+                time.sleep(delay)
                 continue
             upstream_code, request_id = _safe_upstream_diagnostics(exc)
             suffix = f" ({upstream_code})" if upstream_code else ""
@@ -383,8 +515,24 @@ def _request_json(endpoint: str, api_key: str, payload: dict[str, Any]) -> dict[
             ) from exc
         except (URLError, TimeoutError, OSError) as exc:
             if attempt + 1 < _MAX_UPSTREAM_ATTEMPTS:
-                time.sleep(_retry_delay(None, attempt))
+                delay = _retry_delay(None, attempt)
+                if deadline is not None:
+                    remaining = deadline - time.monotonic()
+                    if remaining <= 0:
+                        raise GatewayError(
+                            "UPSTREAM_DEADLINE_EXCEEDED",
+                            "translation batch exceeded its total upstream time limit",
+                            status=504,
+                        ) from exc
+                    delay = min(delay, remaining)
+                time.sleep(delay)
                 continue
+            if deadline is not None and deadline - time.monotonic() <= 0:
+                raise GatewayError(
+                    "UPSTREAM_DEADLINE_EXCEEDED",
+                    "translation batch exceeded its total upstream time limit",
+                    status=504,
+                ) from exc
             raise GatewayError("UPSTREAM_NETWORK", "upstream network request failed") from exc
         except (UnicodeDecodeError, json.JSONDecodeError, TypeError) as exc:
             raise GatewayError("UPSTREAM_INVALID_JSON", "upstream returned invalid JSON") from exc
@@ -576,7 +724,7 @@ def _normalise_answer(answer: str, *, source_text: str, response_format: object)
     except (TypeError, json.JSONDecodeError) as exc:
         raise GatewayError(
             "STRUCTURED_OUTPUT_INVALID",
-            "provider did not return valid JSON for the BabelDOC batch",
+            "provider did not return valid JSON for the structured PDF batch",
         ) from exc
     parsed = _sanitize_json(parsed)
     # Restore protected identifiers inside JSON string values, not in the raw
@@ -592,20 +740,22 @@ def _structured_answer_with_retry(
     *,
     first_response: dict[str, Any] | None = None,
     max_depth: int = 8,
+    audit_validation: Any | None = None,
 ) -> str:
-    """Translate a BabelDOC JSON batch and split only on mapping failure.
+    """Translate a structured PDF JSON batch with one bounded protocol correction.
 
-    BabelDOC 0.6.x sends a final prompt containing a JSON array of paragraph
+    The PDF adapter sends a final prompt containing a JSON array of paragraph
     items.  A provider can legally return valid JSON yet omit items when the
-    completion is truncated.  Passing that response through makes BabelDOC
+    completion is truncated. Passing that response through makes the PDF
     fall back to the original paragraph (including any parser control bytes).
-    We therefore validate IDs at the gateway and recursively bisect the same
-    semantic items only when the mapping is incomplete.
+    We therefore validate IDs at the gateway.  A malformed mapping receives
+    one same-size protocol correction; it is not recursively bisected because
+    bisection multiplies requests and hides the provider's real failure.
     """
     request_body = _with_name_constraints(request_body)
     response_format = request_body.get("response_format")
     prompt = _last_user_text(request_body)
-    contract = _extract_babeldoc_batch(prompt)
+    contract = _extract_structured_batch(prompt)
 
     def translate_once(body: dict[str, Any], raw_response: dict[str, Any] | None = None) -> str:
         if raw_response is None:
@@ -635,6 +785,8 @@ def _structured_answer_with_retry(
         first_response=first_response,
         depth=0,
         max_depth=max_depth,
+        audit_validation=audit_validation,
+        mapping_retry=False,
     )
 
 
@@ -649,6 +801,8 @@ def _structured_batch_retry(
     depth: int,
     max_depth: int,
     rule_correction: bool = False,
+    mapping_retry: bool = False,
+    audit_validation: Any | None = None,
 ) -> str:
     body = _replace_last_user_message(
         request_body,
@@ -673,7 +827,7 @@ def _structured_batch_retry(
             source = item.get("input", item.get("source", ""))
             row = by_id[str(item["id"])]
             output = row.get("output", row.get("translation", row.get("input", "")))
-            # Check prose, not numeric/style attributes in BabelDOC's markup.
+            # Check prose, not numeric/style attributes in the PDF markup.
             source = _TAG_TOKEN_RE.sub("", source)
             output = _TAG_TOKEN_RE.sub("", output)
             output = auto_correct_translation(source, output, source_language, target_language)
@@ -682,17 +836,36 @@ def _structured_batch_retry(
             defects.extend(validate_translation_residue(source, output, source_language, target_language))
             defects.extend(validate_placeholders(source, output, rule_protected_tokens(source)))
             errors.extend(f"{item['id']}: {defect}" for defect in defects)
+        if audit_validation is not None:
+            audit_validation("correction" if rule_correction else "initial", errors)
         if errors:
             if rule_correction:
                 raise GatewayError("STRUCTURED_OUTPUT_VALIDATION_FAILED", "; ".join(errors))
             corrected = dict(request_body)
+            candidate_json = json.dumps(
+                _order_structured_items(parsed, expected_ids),
+                ensure_ascii=False,
+                separators=(",", ":"),
+            )
+            defect_lines = "\n".join(f"- {error}" for error in errors)
             corrected["messages"] = [*request_body["messages"], {
-                "role": "system", "content": "AUTOMATIC CORRECTION: retain original English names and protected literals in their own items. " + "; ".join(errors),
+                "role": "system",
+                "content": (
+                    "AUTOMATIC CORRECTION. Correct the candidate translation below "
+                    "according to the original input and the listed validation failures. "
+                    "Preserve the same stable IDs and item count. Change only the "
+                    "reported defects; keep all other correct translation. Preserve "
+                    "numbers, units, codes, tags, and placeholders exactly. Return "
+                    "only the corrected JSON array with each item containing id and output.\n\n"
+                    "VALIDATION FAILURES:\n" + defect_lines +
+                    "\n\nCANDIDATE OUTPUT TO CORRECT:\n" + candidate_json
+                ),
             }]
             return _structured_batch_retry(
                 corrected, prefix=prefix, items=items, call=call,
                 response_format=response_format, first_response=None,
                 depth=depth, max_depth=max_depth, rule_correction=True,
+                audit_validation=audit_validation, mapping_retry=mapping_retry,
             )
         return json.dumps(
             _order_structured_items(parsed, expected_ids),
@@ -700,47 +873,37 @@ def _structured_batch_retry(
             separators=(",", ":"),
         )
 
-    if rule_correction or len(items) <= 1 or depth >= max_depth:
+    if rule_correction or mapping_retry or len(items) <= 1 or depth >= max_depth:
         raise GatewayError(
             "STRUCTURED_OUTPUT_MAPPING_INVALID",
-            "provider response did not contain every BabelDOC batch item",
+            "provider response did not contain every structured batch item",
         )
 
-    midpoint = len(items) // 2
-    left = _structured_batch_retry(
-        request_body,
+    correction = dict(request_body)
+    correction["messages"] = [*request_body.get("messages", []), {
+        "role": "system",
+        "content": (
+            "PROTOCOL CORRECTION. The previous response did not return every "
+            "requested item. Return exactly one object for every requested ID, "
+            "with no omissions, duplicates, reordering, commentary, or markdown. "
+            "Keep the same IDs and translate each input independently."
+        ),
+    }]
+    return _structured_batch_retry(
+        correction,
         prefix=prefix,
-        items=items[:midpoint],
+        items=items,
         call=call,
         response_format=response_format,
         first_response=None,
-        depth=depth + 1,
+        depth=depth,
         max_depth=max_depth,
-    )
-    right = _structured_batch_retry(
-        request_body,
-        prefix=prefix,
-        items=items[midpoint:],
-        call=call,
-        response_format=response_format,
-        first_response=None,
-        depth=depth + 1,
-        max_depth=max_depth,
-    )
-    combined = _parse_structured_items(left) + _parse_structured_items(right)
-    if not _structured_items_match(combined, expected_ids, expected_items=items):
-        raise GatewayError(
-            "STRUCTURED_OUTPUT_MAPPING_INVALID",
-            "provider response could not be reassembled by stable IDs",
-        )
-    return json.dumps(
-        _order_structured_items(combined, expected_ids),
-        ensure_ascii=False,
-        separators=(",", ":"),
+        mapping_retry=True,
+        audit_validation=audit_validation,
     )
 
 
-def _extract_babeldoc_batch(prompt: str) -> tuple[str, list[dict[str, Any]]] | None:
+def _extract_structured_batch(prompt: str) -> tuple[str, list[dict[str, Any]]] | None:
     marker = "## Here is the input:"
     marker_position = prompt.rfind(marker)
     if marker_position < 0:
@@ -758,6 +921,48 @@ def _extract_babeldoc_batch(prompt: str) -> tuple[str, list[dict[str, Any]]] | N
     return prefix, parsed
 
 
+def _request_phase(request_body: dict[str, Any]) -> str:
+    """Classify model calls without recording prompt contents."""
+    messages = request_body.get("messages")
+    if isinstance(messages, list):
+        for message in messages:
+            if not isinstance(message, dict) or message.get("role") != "system":
+                continue
+            try:
+                content = _message_text(message.get("content"))
+                if "AUTOMATIC CORRECTION:" in content:
+                    return "correction"
+                if "PROTOCOL CORRECTION." in content:
+                    return "protocol_correction"
+            except ValueError:
+                continue
+    return "translation"
+
+
+def _batch_item_count(request_body: dict[str, Any]) -> int | None:
+    try:
+        contract = _extract_structured_batch(_last_user_text(request_body))
+    except (TypeError, ValueError):
+        return None
+    return len(contract[1]) if contract is not None else None
+
+
+def _validation_category_counts(errors: list[str]) -> dict[str, int]:
+    """Return safe rule codes only; never persist source/output fragments."""
+    allowed = (
+        "PROPER_NAME_MISSING",
+        "UNTRANSLATED_ENGLISH",
+        "DATE_ORDINAL_UNTRANSLATED",
+        "DATE_MONTH_UNTRANSLATED",
+        "PLACEHOLDER_MISMATCH",
+    )
+    counts: dict[str, int] = {}
+    for error in errors:
+        category = next((code for code in allowed if code in error), "OTHER_VALIDATION_FAILURE")
+        counts[category] = counts.get(category, 0) + 1
+    return counts
+
+
 def _request_languages(request_body: dict[str, Any]) -> tuple[str, str]:
     for message in request_body.get("messages", []):
         match = re.search(r"Translate from ([\w-]+) to ([\w-]+)", _message_text(message.get("content", "")), re.I)
@@ -767,7 +972,7 @@ def _request_languages(request_body: dict[str, Any]) -> tuple[str, str]:
 
 
 def _with_name_constraints(request_body: dict[str, Any]) -> dict[str, Any]:
-    contract = _extract_babeldoc_batch(_last_user_text(request_body))
+    contract = _extract_structured_batch(_last_user_text(request_body))
     if contract is None:
         return request_body
     prefix, items = contract
@@ -799,7 +1004,7 @@ def _parse_structured_items(text: str) -> list[dict[str, Any]]:
     except json.JSONDecodeError as exc:
         raise GatewayError(
             "STRUCTURED_OUTPUT_INVALID",
-            "provider did not return valid JSON for the BabelDOC batch",
+            "provider did not return valid JSON for the structured PDF batch",
         ) from exc
     if isinstance(parsed, dict) and ("output" in parsed or "input" in parsed):
         parsed = [parsed]
@@ -901,7 +1106,7 @@ def _order_structured_items(items: list[dict[str, Any]], expected_ids: list[str]
 
 
 def _strip_json_wrappers(text: str) -> str:
-    """Accept wrappers BabelDOC itself knows how to remove before JSON parse."""
+    """Accept common wrappers before JSON parsing."""
     value = text.strip()
     if value.startswith("<json>"):
         value = value[6:]

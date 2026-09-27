@@ -30,8 +30,7 @@ SUPPORTED_FORMATS = {
 }
 
 PROVIDER_MODELS = {
-    "qwen-mt": ("qwen-mt-plus", "qwen-mt-flash"),
-    "qwen": ("qwen3.8-max", "qwen3.7-plus", "qwen-plus", "qwen-max"),
+    "qwen": ("qwen3.7-plus", "qwen3.8-flash", "qwen3.8-max"),
     "openai": ("gpt-5.6-luna", "gpt-5.6-terra"),
 }
 LANGUAGE_CODES = {"中文": "zh", "英文": "en"}
@@ -151,7 +150,7 @@ class TranslationApp:
         self.root.minsize(760, 560)
         self.files: list[Path] = []
         self.provider = tk.StringVar(value="qwen")
-        self.model = tk.StringVar(value="qwen3.8-max")
+        self.model = tk.StringVar(value="qwen3.8-flash")
         self.source_language = tk.StringVar(value="中文")
         self.target_language = tk.StringVar(value="英文")
         self.glossary = tk.StringVar()

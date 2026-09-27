@@ -21,6 +21,7 @@ from document_translator.services.glossary import Glossary
 from document_translator.translation_rules import protect_for_translation, restore_after_translation
 
 from .translation_prompt import PROMPT_VERSION, compile_translation_policy, matched_glossary_entries
+from .batch_limits import split_semantic_batches
 from document_translator.translation_rules import source_name_constraints, validate_name_retention
 
 
@@ -41,7 +42,7 @@ class QwenMTConfig:
     # Qwen-MT is a translation endpoint rather than a structured JSON batch
     # endpoint.  Keep synthetic ID envelopes small enough that the model can
     # reproduce every boundary reliably.
-    batch_input_characters: int = 512
+    batch_input_characters: int = 0
 
     def __post_init__(self) -> None:
         if self.model not in _ALLOWED_MODELS:
@@ -52,8 +53,8 @@ class QwenMTConfig:
             raise ValueError("timeout must be positive")
         if not 1 <= self.requests_per_minute <= 60:
             raise ValueError("requests_per_minute must be between 1 and 60")
-        if self.batch_input_characters < 512:
-            raise ValueError("batch_input_characters must be at least 512")
+        if self.batch_input_characters < 0:
+            raise ValueError("batch_input_characters must not be negative")
 
 
 class QwenMTError(RuntimeError):
@@ -283,13 +284,11 @@ class QwenMTProvider:
         """Translate semantic units in stable-ID batches; never network-loop per unit."""
         if not units:
             return []
-        batches: list[list[TranslationUnit]] = [[]]
-        size = 0
-        for unit in units:
-            cost = len(unit.source_text) + 32
-            if batches[-1] and size + cost > self.config.batch_input_characters:
-                batches.append([]); size = 0
-            batches[-1].append(unit); size += cost
+        batches = split_semantic_batches(
+            units, model=self.config.model,
+            explicit_limit=self.config.batch_input_characters,
+            overhead=32,
+        )
         results: list[TranslationResult] = []
         for index, batch in enumerate(batches, start=1):
             print(f"qwen-mt batch {index}/{len(batches)}: units={len(batch)} chars={sum(len(unit.source_text) for unit in batch)}", flush=True)
@@ -387,7 +386,19 @@ class QwenMTProvider:
             results.append(result)
         if invalid:
             if correction_requirements is not None:
-                raise QwenMTError("BATCH_VALIDATION_FAILED", "; ".join(f"{key}: {value}" for key, value in invalid.items()))
+                if any(
+                    error.startswith("PROTECTED_PLACEHOLDER_RESTORE_FAILED:")
+                    for errors in invalid.values()
+                    for error in errors
+                ):
+                    raise QwenMTError("BATCH_VALIDATION_FAILED", "; ".join(f"{key}: {value}" for key, value in invalid.items()))
+                return [
+                    item.model_copy(update={
+                        "validation_status": "needs_review",
+                        "error": "; ".join(invalid[item.unit_id]),
+                    }) if item.unit_id in invalid else item
+                    for item in results
+                ]
             repair_units = [unit for unit in units if unit.id in invalid]
             repaired = self._translate_id_batch(repair_units, correction_requirements=invalid)
             repaired_by_id = {result.unit_id: result for result in repaired}

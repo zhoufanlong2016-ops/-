@@ -94,7 +94,7 @@ def instruction_for(unit: TranslationUnit) -> str:
 def general_translation_instruction(source_language: str, target_language: str) -> str:
     """Return the shared policy for routes that do not own a TranslationUnit.
 
-    PDF/BabelDOC has its own batch envelope, but it must not have its own
+    PDF structured parsing has its own batch envelope, but it must not have its own
     linguistic rules.  Keeping this function beside ``instruction_for`` makes
     the provider and PDF prompts byte-for-byte consistent on the requirements
     that affect meaning and protected literals.
@@ -114,7 +114,8 @@ def general_translation_instruction(source_language: str, target_language: str) 
         "Use an authoritative Chinese name for a country, place, institution, project, or company when one is supplied; "
         "otherwise transliterate people and places or preserve an unverified company, brand, product, or software name instead of inventing a literal translation. "
         "Keep defined contract terms, obligation strength, conditions, exceptions, responsibility, approvals, notices, claims, and time limits unchanged in legal effect. "
-        "Preserve numbers, decimal precision, signs, ranges, currency values, dates, times, time zones, units, standards, drawing references, identifiers, protected tokens, and formatting markers. "
+        "Preserve numbers, decimal precision, signs, ranges, currency values, the numeric day/month/year and time-of-day values inside dates and times, time zones, units, standards, drawing references, identifiers, protected tokens, and formatting markers. "
+        "For English-to-Chinese output, fully localize each date's ordinal suffix and month name into Chinese numeral format: for example, '17th December 2025' becomes '2025年12月17日', not a mix of English and Chinese. Never leave an English ordinal suffix (st/nd/rd/th) or English month name in Chinese output. "
         "Never swap a number and its unit or identifier. Do not convert units or currencies unless explicitly requested; if conversion is requested, retain the source value. "
         "When Chinese section or list ordinals such as 一、二、三、四、第一 are not Arabic digits in the source, do not introduce Arabic numerals for them; preserve them as words or Roman numerals so they cannot collide with protected page numbers or identifiers. "
         "Keep acronyms, model numbers, formulas, URLs, file paths, codes, and CAD/Office formatting markers unchanged. "

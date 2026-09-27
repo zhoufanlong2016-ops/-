@@ -25,7 +25,7 @@ from .pptx_layout import PptxLayoutOutcome, PptxLayoutService
 from .xlsx_translation import XlsxTranslationOutcome, XlsxTranslationService, XlsxTranslationServiceError
 from .dwg_translation import DwgTranslationOutcome, DwgTranslationService, DwgTranslationServiceError
 from .pdf_translation import PdfTranslationOutcome, PdfTranslationService
-from .babeldoc_pdf import BabelDocPdfTranslationService
+from .mineru_pdf import MinerUPdfTranslationService
 from .translation_gateway import TranslationGateway
 
 __all__ = [
@@ -57,6 +57,6 @@ __all__ = [
     "DwgTranslationServiceError",
     "PdfTranslationOutcome",
     "PdfTranslationService",
-    "BabelDocPdfTranslationService",
+    "MinerUPdfTranslationService",
     "TranslationGateway",
 ]

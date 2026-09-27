@@ -271,6 +271,31 @@ def test_batch_glossary_failure_is_repaired_as_a_second_batch(monkeypatch) -> No
     assert "AUTOMATIC CORRECTION" in calls[1]["messages"][0]["content"]
 
 
+def test_batch_validation_failure_after_retry_is_marked_for_review(monkeypatch) -> None:
+    unit = make_unit()
+    glossary = Glossary(entries=(GlossaryEntry(source="valve", target="闃€闂?"),), version="glossary-v1")
+    calls = []
+    text = "鍦?K12+340 鎸?BS EN 752 瀹夎 600 mm 璁惧 [[TOKEN_1]]銆?"
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls.append(request)
+        return httpx.Response(
+            200,
+            json={"choices": [{"message": {"content": f"[[TRB:000000]]\n{text}\n[[/TRB:000000]]"}}]},
+            request=request,
+        )
+
+    monkeypatch.setenv("DASHSCOPE_API_KEY", "test-secret")
+    result = QwenMTProvider(
+        client=httpx.Client(transport=httpx.MockTransport(handler)), glossary=glossary,
+    ).translate_batch([unit])[0]
+
+    assert result.validation_status == "needs_review"
+    assert result.error is not None
+    assert "GLOSSARY_TERM_MISSING" in result.error
+    assert len(calls) == 2
+
+
 def test_single_unit_batch_accepts_raw_qwen_translation(monkeypatch) -> None:
     unit = make_unit()
 

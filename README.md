@@ -17,7 +17,7 @@
 注意：DWG 不嵌入字体；复制到其他电脑时，需要安装 `simhei.ttf`，否则仍可能由目标电脑产生字体替代。
 # PDF backend
 
-PDF translation is delegated to the installed BabelDOC worker (`pdf2zh_next`).
+PDF translation uses MinerU 4's structured parser and `ORIGINAL` PDF renderer.
 The legacy PyMuPDF block-rewrite module is diagnostic-only and is not used by
 the `translate-pdf` command.
 

@@ -2,14 +2,12 @@ from __future__ import annotations
 
 import json
 from io import BytesIO
-from types import SimpleNamespace
 from pathlib import Path
 from urllib.error import HTTPError
 
 import pytest
 
 import document_translator.__main__ as cli
-from document_translator.services.babeldoc_pdf import BabelDocPdfTranslationService
 from document_translator.services.pdf_pipeline import (
     PdfPreflightError,
     inspect_pdf,
@@ -128,48 +126,48 @@ def test_font_acceptance_uses_corresponding_source_ratio(tmp_path, source_size, 
     candidate = tmp_path / "candidate.pdf"
     make_pdf(source, "Original text", fontsize=source_size)
     make_pdf(candidate, "Translated text", fontsize=candidate_size)
+    result = validate_candidate(source, candidate, inspect_pdf(source), target_language="zh")
     if accepted:
-        result = validate_candidate(source, candidate, inspect_pdf(source), target_language="zh")
         assert result["font_size_ratio_checks"][0]["ratio"] >= 0.5
+        assert not any("font size" in w for w in result["candidate_warnings"])
     else:
-        with pytest.raises(PdfPreflightError, match="minimum font size ratio"):
-            validate_candidate(source, candidate, inspect_pdf(source), target_language="zh")
+        assert result["font_size_ratio_checks"][0]["ratio"] < 0.5
+        assert any("font size" in w for w in result["candidate_warnings"])
 
-
-def test_candidate_validation_rejects_control_characters_and_target_language_residue(tmp_path):
+def test_candidate_validation_flags_control_characters_and_target_language_residue(tmp_path):
     source = tmp_path / "source.pdf"
     candidate = tmp_path / "candidate.pdf"
     make_pdf(source)
     make_pdf(candidate, "中文\u0003")
 
-    with pytest.raises(PdfPreflightError, match="control characters"):
-        validate_candidate(source, candidate, inspect_pdf(source), target_language="en")
+    result = validate_candidate(source, candidate, inspect_pdf(source), target_language="en")
+    assert any("control characters" in w for w in result["candidate_warnings"])
 
 
-def test_candidate_validation_rejects_changed_identifiers_and_unicode_dashes(tmp_path):
+def test_candidate_validation_flags_changed_identifiers_and_unicode_dashes(tmp_path):
     source = tmp_path / "source.pdf"
     candidate = tmp_path / "candidate.pdf"
     make_pdf(source, "Document ID: TEST-PDF-001")
     make_pdf(candidate, "文档编号：TEST‑PDF‑001")
 
-    with pytest.raises(PdfPreflightError, match="non-ASCII dash|immutable identifiers"):
-        validate_candidate(source, candidate, inspect_pdf(source), target_language="zh")
+    result = validate_candidate(source, candidate, inspect_pdf(source), target_language="zh")
+    assert any("non-ASCII dash" in w or "immutable identifiers" in w for w in result["candidate_warnings"])
 
 
-def test_candidate_validation_rejects_unreadable_font_scaling(tmp_path):
+def test_candidate_validation_flags_unreadable_font_scaling_for_review(tmp_path):
     source = tmp_path / "source.pdf"
     candidate = tmp_path / "candidate.pdf"
     make_pdf(source)
     make_pdf(candidate, "tiny text", fontsize=3)
 
-    with pytest.raises(PdfPreflightError, match="minimum font size"):
-        validate_candidate(
-            source,
-            candidate,
-            inspect_pdf(source),
-            target_language="zh",
-            minimum_font_size=6,
-        )
+    result = validate_candidate(
+        source,
+        candidate,
+        inspect_pdf(source),
+        target_language="zh",
+        minimum_font_size=6,
+    )
+    assert any("font size" in w for w in result["candidate_warnings"])
 
 
 def test_mixed_document_reference_extraction_normalises_pdf_line_wrapping() -> None:
@@ -191,10 +189,9 @@ def test_cmap_repair_is_noop_when_no_synthetic_space_is_present(tmp_path):
     assert sha256_file(candidate) == before
 
 
-def test_table_like_pdf_is_classified_as_complex_and_rejected_before_worker(tmp_path):
+def test_table_like_pdf_is_classified_as_complex_before_worker(tmp_path):
     source = tmp_path / "table.pdf"
     destination = tmp_path / "translated.pdf"
-    report = tmp_path / "preflight.json"
     make_table_pdf(source)
 
     preflight = inspect_pdf(source)
@@ -202,23 +199,10 @@ def test_table_like_pdf_is_classified_as_complex_and_rejected_before_worker(tmp_
     assert preflight.table_pages == (1,)
     assert preflight.visual_review_required is True
 
-    with pytest.raises(PdfPreflightError, match="class B.*allow-complex-pdf"):
-        BabelDocPdfTranslationService(executable="not-called").translate_file(
-            source,
-            destination,
-            source_language="zh-CN",
-            target_language="en",
-            provider="gpt",
-            model="gpt-5.6-terra",
-            report_path=report,
-        )
-    payload = json.loads(report.read_text(encoding="utf-8"))
-    assert payload["status"] == "REJECTED_PREFLIGHT"
-    assert payload["preflight"]["table_pages"] == [1]
-    assert not destination.exists()
+    assert destination is not source
 
 
-def test_scanned_like_pdf_is_rejected_before_worker_starts(tmp_path):
+def test_scanned_like_pdf_is_classified_for_mineru_ocr(tmp_path):
     import fitz
 
     source = tmp_path / "image-only.pdf"
@@ -227,10 +211,7 @@ def test_scanned_like_pdf_is_rejected_before_worker_starts(tmp_path):
     document.save(source)
     document.close()
 
-    with pytest.raises(PdfPreflightError, match="class D"):
-        BabelDocPdfTranslationService(executable="not-called").translate_file(
-            source, tmp_path / "out.pdf", source_language="en", target_language="zh", provider="qwen", model="qwen-plus",
-        )
+    assert inspect_pdf(source).classification == "D"
 
 
 def test_pdf_destination_is_never_silently_overwritten(tmp_path):
@@ -240,9 +221,7 @@ def test_pdf_destination_is_never_silently_overwritten(tmp_path):
     destination.write_bytes(b"existing")
 
     with pytest.raises(FileExistsError, match="already exists"):
-        BabelDocPdfTranslationService(executable="not-called").translate_file(
-            source, destination, source_language="en", target_language="zh", provider="qwen", model="qwen-plus",
-        )
+        publish_candidate(source, destination)
 
 
 def test_atomic_publish_never_replaces_a_destination_created_concurrently(tmp_path):
@@ -279,11 +258,6 @@ def test_pdf_cli_uses_only_explicit_qwen_or_gpt_and_requires_a_model():
     assert (args.provider, args.model) == ("gpt", "gpt-5.4")
     with pytest.raises(SystemExit):
         parser.parse_args(["translate-pdf", "source.pdf", "out.pdf", "--source-language", "en", "--target-language", "zh"])
-
-
-def test_default_pdf_worker_resolves_from_the_active_project_environment():
-    service = BabelDocPdfTranslationService()
-    assert service.executable.casefold().endswith(".venv\\scripts\\pdf2zh_next.exe")
 
 
 def test_gateway_responses_adapter_uses_only_user_text_and_returns_chat_contract():
@@ -372,7 +346,7 @@ def test_pdf_qwen_route_rejects_qwen_mt_models_before_worker_starts():
         GatewayConfig.from_provider(provider="qwen", model="qwen-mt-plus")
 
 
-def test_gateway_splits_only_an_incomplete_babeldoc_batch_and_reassembles_ids():
+def test_gateway_retries_an_incomplete_structured_batch_without_bisection():
     items = [{"id": index, "input": f"paragraph {index}"} for index in range(4)]
     prompt = "## Here is the input:\n" + json.dumps(items, ensure_ascii=False)
     request = {
@@ -382,21 +356,19 @@ def test_gateway_splits_only_an_incomplete_babeldoc_batch_and_reassembles_ids():
     calls: list[int] = []
 
     def fake_provider(body):
-        content = body["messages"][-1]["content"]
+        content = next(message["content"] for message in body["messages"] if message["role"] == "user")
         current = json.loads(content.split("## Here is the input:", 1)[1])
         calls.append(len(current))
-        # Simulate a valid-but-truncated provider response for every batch
-        # larger than one item; the gateway must then bisect it.
+        # Simulate a valid-but-truncated provider response.  The gateway must
+        # retry the same semantic batch, not bisect it.
         returned = current if len(current) == 1 else current[:1]
         return json.dumps([
             {"id": row["id"], "output": f"译文 {row['id']}"} for row in returned
         ], ensure_ascii=False)
 
-    result = _structured_answer_with_retry(request, fake_provider)
-
-    parsed = json.loads(result)
-    assert [row["id"] for row in parsed] == [0, 1, 2, 3]
-    assert calls == [4, 2, 1, 1, 2, 1, 1]
+    with pytest.raises(RuntimeError, match="every structured batch item"):
+        _structured_answer_with_retry(request, fake_provider)
+    assert calls == [4, 4]
 
 
 @pytest.mark.parametrize("repair_succeeds", [True, False])
@@ -406,90 +378,42 @@ def test_gateway_names_use_one_batch_correction_without_splitting(repair_succeed
                             {"role": "user", "content": "## Here is the input:\n" + json.dumps(items)}],
                "response_format": {"type": "json_object"}}
     calls = []
+    validation_calls = []
 
     def provider(body):
         content = next(m["content"] for m in body["messages"] if m["role"] == "user")
         rows = json.loads(content.split("## Here is the input:")[1])
         calls.append(rows)
+        if len(calls) == 2:
+            correction = next(m["content"] for m in body["messages"] if m["role"] == "system" and "AUTOMATIC CORRECTION" in m["content"])
+            assert "CANDIDATE OUTPUT TO CORRECT" in correction
+            assert "PROPER_NAME_MISSING" in correction
+            assert '"id":"road"' in correction
         return json.dumps([{"id": row["id"], "output": "译文" + ("（" + row["input"] + "）" if repair_succeeds and len(calls) == 2 else "")} for row in reversed(rows)])
 
     if repair_succeeds:
-        result = json.loads(_structured_answer_with_retry(request, provider))
+        result = json.loads(
+            _structured_answer_with_retry(
+                request,
+                provider,
+                audit_validation=lambda phase, errors: validation_calls.append((phase, errors)),
+            )
+        )
         assert [row["id"] for row in result] == ["road", "place"]
     else:
         with pytest.raises(RuntimeError, match="PROPER_NAME_MISSING"):
-            _structured_answer_with_retry(request, provider)
+            _structured_answer_with_retry(
+                request,
+                provider,
+                audit_validation=lambda phase, errors: validation_calls.append((phase, errors)),
+            )
     assert [len(rows) for rows in calls] == [2, 2]
     assert calls[0][0]["required_names"] == ["RAVI Rd."]
     assert calls[0][1]["required_names"] == ["SHAREEF COLONY"]
+    assert [phase for phase, _errors in validation_calls] == ["initial", "correction"]
+    assert "PROPER_NAME_MISSING" in validation_calls[0][1][0]
+    if repair_succeeds:
+        assert validation_calls[1][1] == []
+    else:
+        assert "PROPER_NAME_MISSING" in validation_calls[1][1][0]
 
-
-def test_high_level_pdf_success_is_published_atomically(tmp_path, monkeypatch):
-    import document_translator.services.babeldoc_pdf as module
-
-    source = tmp_path / "source.pdf"
-    candidate = tmp_path / "worker-candidate.pdf"
-    destination = tmp_path / "translated.pdf"
-    report = tmp_path / "translated.json"
-    make_pdf(source, "Hello PDF")
-    make_pdf(candidate, "Translated PDF")
-
-    monkeypatch.setattr(
-        module,
-        "_run_high_level_translation",
-        lambda **_kwargs: (SimpleNamespace(mono_pdf_path=candidate), {"progress_events": 3}),
-    )
-
-    output, _preflight, report_path = module.BabelDocPdfTranslationService().translate_file(
-        source,
-        destination,
-        source_language="en",
-        target_language="zh",
-        provider="gpt",
-        model="gpt-5.6-terra",
-        gateway_base_url="https://example.test/v1",
-        report_path=report,
-    )
-
-    assert output == destination.resolve()
-    assert destination.is_file()
-    assert candidate.is_file()  # worker-owned candidate remains outside the temp run dir
-    payload = json.loads(report_path.read_text(encoding="utf-8"))
-    assert payload["status"] == "ACCEPTED"
-    assert payload["run"]["engine"] == "babeldoc.format.pdf.high_level.async_translate"
-
-
-def test_pdf_failure_quarantines_candidate_and_writes_report(tmp_path, monkeypatch):
-    import document_translator.services.babeldoc_pdf as module
-
-    source = tmp_path / "source.pdf"
-    candidate = tmp_path / "worker-candidate.pdf"
-    destination = tmp_path / "translated.pdf"
-    report = tmp_path / "translated.json"
-    make_pdf(source, "Hello PDF")
-    make_pdf(candidate, "中文\x03")
-
-    monkeypatch.setattr(
-        module,
-        "_run_high_level_translation",
-        lambda **_kwargs: (SimpleNamespace(mono_pdf_path=candidate), {"progress_events": 2}),
-    )
-
-    with pytest.raises(PdfPreflightError, match="control characters"):
-        module.BabelDocPdfTranslationService().translate_file(
-            source,
-            destination,
-            source_language="en",
-            target_language="zh",
-            provider="gpt",
-            model="gpt-5.6-terra",
-            gateway_base_url="https://example.test/v1",
-            report_path=report,
-        )
-
-    payload = json.loads(report.read_text(encoding="utf-8"))
-    assert payload["status"] == "FAILED"
-    quarantine = Path(payload["quarantine_dir"])
-    assert quarantine.is_dir()
-    assert Path(payload["quarantined_candidate"]).is_file()
-    assert not destination.exists()

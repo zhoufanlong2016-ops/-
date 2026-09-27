@@ -11,9 +11,15 @@ import httpx
 
 from document_translator.core import TranslationResult, TranslationUnit, sha256_text, validate_glossary_terms, validate_result_for_unit
 from document_translator.services.glossary import Glossary
-from document_translator.translation_rules import protect_for_translation, restore_after_translation, source_name_constraints
+from document_translator.translation_rules import (
+    auto_correct_translation,
+    protect_for_translation,
+    restore_after_translation,
+    source_name_constraints,
+)
 
 from .translation_prompt import PROMPT_VERSION, compile_translation_policy, matched_glossary_entries
+from .batch_limits import split_semantic_batches
 
 
 _ENDPOINT = "https://api.openai.com/v1/responses"
@@ -25,11 +31,12 @@ class OpenAIConfig:
     model: str
     api_key_env: str = "OPENAI_API_KEY"
     timeout: float = 120.0
+    batch_input_characters: int = 0
 
     def __post_init__(self) -> None:
         if self.model not in _ALLOWED_MODELS:
             raise ValueError("unsupported OpenAI translation model")
-        if not self.api_key_env.strip() or self.timeout <= 0:
+        if not self.api_key_env.strip() or self.timeout <= 0 or self.batch_input_characters < 0:
             raise ValueError("OpenAI configuration is invalid")
 
 
@@ -80,6 +87,7 @@ class OpenAIProvider:
             raise OpenAIProviderError("MALFORMED_RESPONSE", "OpenAI response does not contain output text") from exc
         if not translation:
             raise OpenAIProviderError("EMPTY_TRANSLATION", "OpenAI response has empty translation")
+        translation = auto_correct_translation(unit.source_text, translation, unit.source_language, unit.target_language)
         result = TranslationResult(
             unit_id=unit.id, translation=translation, provider=self.provider_name, model=self.config.model,
             prompt_version=self.prompt_version, glossary_version=self.glossary_version,
@@ -93,24 +101,27 @@ class OpenAIProvider:
     def translate_batch(self, units: list[TranslationUnit]) -> list[TranslationResult]:
         if not units:
             return []
-        try:
-            return self._translate_batch_once(units)
-        except OpenAIProviderError as exc:
-            if "PROPER_NAME_MISSING" in str(exc):
-                raise  # One batch correction is enough; do not retry names item by item.
-            # A provider may truncate or omit an item in an otherwise valid
-            # large response.  Split only this integrity-failing batch, never
-            # the normal request path, and keep semantic units intact.
-            if exc.code not in {"BATCH_MAPPING_INVALID", "BATCH_VALIDATION_FAILED"} or len(units) == 1:
-                raise
-            midpoint = len(units) // 2
-            return self.translate_batch(units[:midpoint]) + self.translate_batch(units[midpoint:])
+        results: list[TranslationResult] = []
+        for batch in split_semantic_batches(
+            units, model=self.config.model,
+            explicit_limit=self.config.batch_input_characters,
+        ):
+            try:
+                results.extend(self._translate_batch_once(batch))
+            except OpenAIProviderError as exc:
+                if "PROPER_NAME_MISSING" in str(exc):
+                    raise
+                if exc.code != "BATCH_MAPPING_INVALID":
+                    raise
+                results.extend(self._translate_batch_once(batch, mapping_retry=True))
+        return results
 
     def _translate_batch_once(
         self,
         units: list[TranslationUnit],
         *,
         correction_requirements: dict[str, list[str]] | None = None,
+        mapping_retry: bool = False,
     ) -> list[TranslationResult]:
         key = os.getenv(self.config.api_key_env)
         if not key or not key.strip(): raise OpenAIProviderError("API_KEY_MISSING", "OpenAI API key is not configured")
@@ -136,6 +147,8 @@ class OpenAIProvider:
             f"- {source} -> {target}" for source, target in batch_terms
         ) if batch_terms else ""
         correction = ""
+        if mapping_retry:
+            correction = "\n\nPROTOCOL CORRECTION. Return exactly one translation for every requested ID, with no omissions, duplicates, reordering, commentary, or markdown."
         if correction_requirements:
             correction = "\n\nAUTOMATIC CORRECTION. Return the same IDs and fix every listed defect. " \
                 "Copy each required target term verbatim; do not omit, inflect, paraphrase, or replace it.\n" \
@@ -153,7 +166,7 @@ class OpenAIProvider:
         results=[]
         invalid: dict[str, list[str]] = {}
         for unit in units:
-            text=mapped[unit.id]; result=TranslationResult(unit_id=unit.id,translation=text,provider=self.provider_name,model=self.config.model,prompt_version=self.prompt_version,glossary_version=self.glossary_version,source_hash=sha256_text(unit.source_text),result_hash=sha256_text(text),request_count=1,validation_status="valid")
+            text=mapped[unit.id]; text=auto_correct_translation(unit.source_text, text, unit.source_language, unit.target_language); result=TranslationResult(unit_id=unit.id,translation=text,provider=self.provider_name,model=self.config.model,prompt_version=self.prompt_version,glossary_version=self.glossary_version,source_hash=sha256_text(unit.source_text),result_hash=sha256_text(text),request_count=1,validation_status="valid")
             errors = [
                 *validate_result_for_unit(unit, result),
                 *validate_glossary_terms(unit.source_text, result.translation, terms_by_id[unit.id]),
@@ -163,7 +176,21 @@ class OpenAIProvider:
             results.append(result)
         if invalid:
             if correction_requirements is not None:
-                raise OpenAIProviderError("BATCH_VALIDATION_FAILED", "; ".join(f"{key}: {value}" for key, value in invalid.items()))
+                # One automatic-correction retry has already run and the unit
+                # is still imperfect. Keep the best-effort translation rather
+                # than aborting the whole batch/document: flag it as a
+                # warning so the caller can surface it in the report instead
+                # of losing every other correctly translated unit.
+                marked = []
+                for result in results:
+                    unit_errors = invalid.get(result.unit_id)
+                    if unit_errors:
+                        result = result.model_copy(update={
+                            "validation_status": "needs_review",
+                            "error": "; ".join(unit_errors),
+                        })
+                    marked.append(result)
+                return marked
             repair_units = [unit for unit in units if unit.id in invalid]
             repaired = self._translate_batch_once(repair_units, correction_requirements=invalid)
             repaired_by_id = {result.unit_id: result for result in repaired}

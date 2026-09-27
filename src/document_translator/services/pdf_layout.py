@@ -574,8 +574,16 @@ def build_layout_contracts(source_path: str | Path) -> tuple[LayoutContract, ...
                 while index < len(raw):
                     candidate = raw[index]
                     gap = candidate.bbox[1] - group[-1].bbox[3]
-                    same_band = abs(candidate.center_x - current.center_x) <= page.rect.width * 0.08
-                    if candidate.role != current.role or gap > 8 or not same_band:
+                    same_band = abs(candidate.center_x - current.center_x) <= page.rect.width * 0.05
+                    # A wrapped title keeps one font size across its lines. A
+                    # genuinely separate element (a project/contract reference
+                    # line, a document-edition heading, a description) is
+                    # frequently set in a different size even when it sits hard
+                    # against the previous line with the same centering, so
+                    # font size is also required to agree before folding two
+                    # source blocks into one contract.
+                    same_font = abs(candidate.source_font_size - current.source_font_size) <= 0.5
+                    if candidate.role != current.role or gap > 8 or not same_band or not same_font:
                         break
                     group.append(candidate)
                     index += 1
@@ -624,29 +632,17 @@ def _font_file(
 
     PyMuPDF keys Type0 font resources by the embedded BaseFont family.  Adding
     a second file with the same family (for example, Noto Serif) can make the
-    existing BabelDOC text layer decode with the overlay font's CMap.  Prefer a
+    existing text layer decode with the overlay font's CMap. Prefer a
     different installed family for an overlay and fall back to a built-in
     font at the call site when every candidate family is already present.
     """
 
     name = font_name.casefold()
     if _CJK_RE.search(text):
-        # Windows' Noto Sans SC OTF is a variable/collection font that
-        # PyMuPDF can embed with a mismatched glyph/CMap subset. Prefer the
-        # verified static BabelDOC CN TTF assets for layout overlays.
-        cache_fonts = Path.home() / ".cache" / "babeldoc" / "fonts"
-        static_cjk = (
-            cache_fonts / ("SourceHanSansCN-Bold.ttf" if "bold" in name else "SourceHanSansCN-Regular.ttf"),
-            cache_fonts / "SourceHanSansCN-Regular.ttf",
-        )
-        candidates = (
-            *(str(path) for path in static_cjk),
-            r"C:\Windows\Fonts\simhei.ttf",
-            r"C:\Windows\Fonts\msyh.ttc",
-        )
+        candidates = (r"C:\Windows\Fonts\simhei.ttf", r"C:\Windows\Fonts\msyh.ttc")
     elif "times" in name or ("noto" in name and "serif" in name) or "serif" in name:
         # Times New Roman is a stable serif fallback whose family is normally
-        # absent from BabelDOC's CJK/serif asset set.
+        # absent from the CJK/serif asset set.
         candidates = (
             r"C:\Windows\Fonts\ARIALN.TTF",
             r"C:\Windows\Fonts\times.ttf",
@@ -697,9 +693,7 @@ def _font_file(
             family = _font_name_key(fitz.Font(fontfile=candidate).name)
         except Exception:
             family = _font_name_key(path.stem)
-        # The static BabelDOC font may already be present in the candidate;
-        # the caller still supplies a unique PDFLayout_* resource name.
-        if family not in existing_families or path.parent == cache_fonts:
+        if family not in existing_families:
             return candidate
     return None
 
@@ -727,7 +721,7 @@ def _merge_reflow_candidate_blocks(
 ) -> dict[str, Any]:
     """Collect visual candidate blocks belonging to one semantic contract.
 
-    BabelDOC may retain separate text blocks for source continuation lines.
+    A renderer may retain separate text blocks for source continuation lines.
     The source contract supplies a bounded vertical region, while a new
     structural label terminates the group.  This is intentionally geometric
     and label-based; it does not depend on any document's wording.
@@ -777,7 +771,7 @@ def _merge_reflow_candidate_blocks(
         "indices": tuple(item["index"] for item in selected),
         # Candidate blocks are visual lines, not semantic paragraphs.  Keep
         # them in one reflowable text run so the textbox can use the available
-        # width instead of reproducing BabelDOC's premature hard breaks.
+        # width instead of reproducing premature hard breaks.
         "text": " ".join(item["text"] for item in selected),
         "bbox": (min(box[0] for box in boxes), min(box[1] for box in boxes), max(box[2] for box in boxes), max(box[3] for box in boxes)),
         "font_size": median(item["font_size"] for item in selected),
@@ -950,7 +944,7 @@ def _fit_fontsize(
 
 
 def _normalise_render_text(text: str, *, one_line: bool) -> str:
-    # Some BabelDOC fonts expose an unmapped space glyph as U+0000.  Never
+    # Some PDF fonts expose an unmapped space glyph as U+0000.  Never
     # feed that control byte back into a replacement textbox: PyMuPDF would
     # paint .notdef squares and reintroduce the invalid character into the
     # validated output.  Newlines remain semantic line boundaries.
@@ -958,7 +952,7 @@ def _normalise_render_text(text: str, *, one_line: bool) -> str:
     text = _SOFT_HYPHEN_RE.sub("", text)
     if one_line:
         return _WHITESPACE_RE.sub(" ", text).strip()
-    # BabelDOC emits one block per visual line in many translated PDFs.  For
+    # Renderers may emit one block per visual line. For
     # article prose those newlines are not semantic paragraph boundaries and
     # retaining them needlessly wastes the right side of the source textbox.
     # Structural headings and genuinely multiline display text keep their
@@ -1024,7 +1018,7 @@ def _operation_for(
         preferred_line_count,
     )
     # Preserve candidate style where available; source color is used for source
-    # title contracts because BabelDOC may have split its spans.
+    # title contracts because the renderer may have split its spans.
     color = _rgb(candidate["color"] if contract.role != "centered_text" else contract.source_color)
     return LayoutOperation(contract.page_number, candidate["index"], contract.role, text, rect, fontsize, fontfile, fontname, color, align, one_line, tuple(candidate.get("indices", (candidate["index"],))))
 

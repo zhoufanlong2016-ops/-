@@ -20,15 +20,42 @@ _PROTECTED_PATTERNS = (
     # tolerances, scientific notation, currency and symbol-unit combinations.
     r"\b[A-Za-z0-9&-]+(?:/[A-Za-z0-9&-]+){2,}\b",
     r"\b\d+\+\d+(?:[–-]\d+\+\d+)?\b|\b\d+:\d+\b|[ΦØ]\s*\d+|\bM\d+(?:[×x]\d+)?\b",
-    r"(?<![\w.])[+-]?\d+(?:,\d{3})*(?:\.\d+)*(?:[eE][+-]?\d+)?(?:\s*(?:%|‰|°|㎡|m²|m³|mm|cm|km|m|MPa|kPa|kN|N|kg|kW|MW|W|kV|V|Hz|L|mL|USD|PKR|RMB|CNY))?",
+    # An atomic group stops the engine from retrying a shorter digit run
+    # when the ordinal exclusion below fails on the full run (otherwise
+    # "17th" would backtrack to protecting just "1", still leaving "7th"
+    # glued to the placeholder). A bare ordinal ("17th", "3rd") must stay
+    # out of protection entirely so the whole phrase reaches the model
+    # intact instead of being split into a placeholder plus a stray suffix.
+    # The unit suffix must sit on the SAME line as its number: allowing
+    # \s* (which matches a newline) here let a number at the end of one
+    # wrapped line glue onto a single capital letter starting the next
+    # line whenever that letter also happens to be a unit symbol (V, N,
+    # W, L, m...) -- for example "...Item 72\nVolume-1..." was matching
+    # as "72\nV" ("72 Volts"), consuming the V and silently defeating
+    # the immutable-identifier pattern below for "Volume-1". A real
+    # "number unit" pairing never has a hard line break between them.
+    r"(?<![\w.])[+-]?(?>\d+)(?!(?:st|nd|rd|th)\b)(?:,\d{3})*(?:\.\d+)*(?:[eE][+-]?\d+)?(?:[ \t]*(?:%|‰|°|㎡|m²|m³|mm|cm|km|m|MPa|kPa|kN|N|kg|kW|MW|W|kV|V|Hz|L|mL|USD|PKR|RMB|CNY))?",
     # Standards, document/model numbers and established engineering acronyms
     # are identifiers, not natural-language words.  Do not treat every word
     # written in title-block capitals (for example, "TOTAL TENDER PRICE") as
     # an acronym: doing so makes ordinary English headings untranslatable.
-    r"\b(?:ISO|IEC|ASTM|BS|EN|AASHTO)\s*[A-Z0-9.-]+\b",
+    # A mandatory space plus a digit in the code keeps this from also
+    # matching ordinary English words that start with "EN"/"BS" (for
+    # example "ENVELOPE", "ENGINEERING", "BSSN"): a real standard reference
+    # is always an abbreviation, a space, and a code containing a number.
+    r"\b(?:ISO|IEC|ASTM|BS|EN|AASHTO)\s+[A-Z]*\d[A-Z0-9.-]*\b",
     r"\b(?:EPC|FIDIC|SCADA|ESHS|DAAB|HDPE|RCC|BOQ|BOD|COD|WWTP|STP|PPP|AIIB|CCECC|CRCC)\b",
     r"\b(?:USD|PKR|CNY|RMB|EUR|GBP|AED)\b",
     r"\b[A-Z]{1,4}\d+(?:-[A-Z0-9]+)*\b",
+    # A hyphen-joined compound identifier ("Volume-1", "LW-TD-411") whose
+    # ASCII spelling must survive translation. This mirrors
+    # pdf_pipeline.extract_immutable_identifiers(), which validates the
+    # SAME shape after translation but was never fed into this
+    # PRE-translation protection set -- an identifier that only that
+    # post-hoc check recognised could still reach the model unprotected
+    # and come back translated, so validation only ever caught the
+    # failure after the fact instead of preventing it.
+    r"(?<![A-Za-z0-9])(?=[A-Za-z0-9-]*\d)[A-Za-z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)+(?![A-Za-z0-9])",
 )
 _PROTECTED_RE = re.compile("|".join(f"(?:{item})" for item in _PROTECTED_PATTERNS))
 _EXISTING_PLACEHOLDER_RE = re.compile(r"(?:⟦MD_\d{4}⟧|\[\[[^\]\r\n]+\]\])$")
@@ -52,6 +79,13 @@ _DATE_RE = re.compile(r"\b(?P<day>\d{1,2})(?P<ordinal>st|nd|rd|th)\s+(?P<month>[
 _DATE_MONTHS = frozenset(
     "january february march april may june july august september october november december".split()
 )
+_DATE_MONTH_NUMBERS = {
+    name: index
+    for index, name in enumerate(
+        "january february march april may june july august september october november december".split(),
+        start=1,
+    )
+}
 _DRAWING_QUALIFIERS = frozenset(("ds", "us"))
 
 
@@ -89,13 +123,45 @@ def proper_names(text: str) -> list[str]:
             spans.append((prefix.start(), end))
     # DS is a drawing qualifier only when the whole line is a station label.
     # Keep it translatable, as with existing named roads/colonies followed by DS.
-    for label in re.finditer(r"^[ \t]*(?P<name>[^\r\n]+?)[ \t]+DS[ \t]*\r?$", text, re.M):
+    # The name is optional in the pattern itself: a caption is sometimes
+    # wrapped so far that the DS-suffix line is bare ("SHALIMAR\nDS"),
+    # with the entire name living on the line above.
+    for label in re.finditer(r"^[ \t]*(?:(?P<name>[^\r\n]+?)[ \t]+)?DS[ \t]*\r?$", text, re.M):
         name = label.group("name")
-        words = name.split()
-        if 1 <= len(words) <= 4 and all(
+        words = name.split() if name else []
+        if words and not (len(words) <= 4 and all(
             _NAME_WORD_RE.fullmatch(word) and _is_name_word(word) for word in words
-        ):
-            spans.append(label.span("name"))
+        )):
+            continue
+        if name is not None:
+            start, end = label.span("name")
+        else:
+            start = end = label.start()
+        # A drawing-page pin caption is sometimes wrapped onto the line
+        # above ("CENTER\nPOINT DS"): the DS-suffix line alone names
+        # only its own last word (or, for a bare "DS" line, no word at
+        # all), leaving the wrapped first line as ordinary translatable
+        # English and splitting one place name in two. Extend protection
+        # back across a single preceding line when that whole line is
+        # itself made of name-shaped words.
+        line_start = start
+        while line_start > 0 and text[line_start - 1] in "\r\n":
+            line_start -= 1
+        if name is None:
+            end = line_start
+        prev_start = text.rfind("\n", 0, line_start) + 1
+        prev_line = text[prev_start:line_start]
+        prev_words = prev_line.split()
+        extended = prev_words and len(prev_words) + len(words) <= 4 and all(
+            _NAME_WORD_RE.fullmatch(word) and _is_name_word(word) for word in prev_words
+        )
+        if extended:
+            start = prev_start
+        elif not words:
+            # A bare "DS" line with nothing name-shaped above it is not
+            # a station label at all; leave it alone.
+            continue
+        spans.append((start, end))
     for match in re.finditer(r"\bGulshan(?:-e-|\s+e\s+)[A-Za-z]+(?:-[A-Za-z]+)*\b", text, re.I):
         if not any(left <= match.start() and right >= match.end() for left, right in spans):
             spans.append(match.span())
@@ -146,7 +212,7 @@ def validate_translation_residue(
         or (len(words) <= 8 and source_text.strip().isupper() and "=" in source_text)
     )
     has_date = bool(_DATE_RE.search(source_text))
-    # Long paragraphs are already checked by BabelDOC's paragraph contract;
+    # Long paragraphs are already checked by the structured PDF block contract;
     # residue correction here is reserved for isolated drawing labels and
     # dates so it cannot turn one batch into recursive retries.
     if not is_short_label and not has_date:
@@ -201,6 +267,15 @@ def auto_correct_translation(
             flags=re.I,
         )
     if _DATE_RE.search(source_text) or re.search(r"\d{4}\s*[年年/]\s*\d{1,2}\s*月", corrected):
+        for match in _DATE_RE.finditer(source_text):
+            month_number = _DATE_MONTH_NUMBERS.get(match.group("month").casefold())
+            if month_number is not None:
+                corrected = re.sub(
+                    rf"(?<![A-Za-z]){re.escape(match.group('month'))}(?![A-Za-z])",
+                    f"{month_number}月",
+                    corrected,
+                    flags=re.I,
+                )
         corrected = re.sub(
             r"(?<!\d)(\d{1,2})(?:st|nd|rd|th)(?![A-Za-z])",
             r"\1日",
@@ -212,6 +287,26 @@ def auto_correct_translation(
             r"\2年\3月\1日",
             corrected,
         )
+        corrected = re.sub(
+            r"(?<!\d)(\d{1,2})日\s*(\d{1,2})月\s*(\d{4})(?!\d)",
+            r"\3年\2月\1日",
+            corrected,
+        )
+        for match in _DATE_RE.finditer(source_text):
+            # Some models drop the ordinal suffix and month name entirely,
+            # leaving a bare number sequence (for example "2025 12 17")
+            # with nothing left for the substitutions above to anchor on.
+            # Rebuild the Chinese date directly from the three numbers the
+            # source match already gives us, in either field order.
+            month_number = _DATE_MONTH_NUMBERS.get(match.group("month").casefold())
+            if month_number is None:
+                continue
+            day, year = match.group("day"), match.group("year")
+            target = f"{year}年{month_number}月{day}日"
+            bare_ymd = rf"(?<!\d){re.escape(year)}[\s,/.-]+{month_number}[\s,/.-]+{day}(?!\d)(?!日)"
+            bare_dmy = rf"(?<!\d){day}[\s,/.-]+{month_number}[\s,/.-]+{re.escape(year)}(?!\d)"
+            corrected = re.sub(bare_ymd, target, corrected)
+            corrected = re.sub(bare_dmy, target, corrected)
     corrected = re.sub(
         r"(?<!\d)(\d{1,2})月\s*[，,、]?\s*(\d{4})(?!\d)",
         r"\2年\1月",
