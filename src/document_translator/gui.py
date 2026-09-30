@@ -32,6 +32,7 @@ SUPPORTED_FORMATS = {
 PROVIDER_MODELS = {
     "qwen": ("qwen3.7-plus", "qwen3.8-flash", "qwen3.8-max"),
     "openai": ("gpt-5.6-luna", "gpt-5.6-terra"),
+    "deepseek": ("deepseek-chat", "deepseek-reasoner", "deepseek-flash", "deepseek-v4-pro"),
 }
 LANGUAGE_CODES = {"中文": "zh", "英文": "en"}
 
@@ -75,8 +76,11 @@ def build_cli_command(
         raise ValueError("DWG 需要先通过 AutoCAD CadBridge 导出文本任务，界面暂不直接覆盖源图纸")
     command = commands[suffix]
     if suffix == ".pdf" and provider == "qwen-mt":
-        raise ValueError("PDF 需要选择 qwen（Chat）或 openai，不能使用 qwen-mt 翻译端点")
-    actual_provider = "gpt" if suffix == ".pdf" and provider == "openai" else ("qwen" if suffix == ".pdf" else provider)
+        raise ValueError("PDF 需要选择 qwen（Chat）、openai 或 deepseek，不能使用 qwen-mt 翻译端点")
+    if suffix == ".pdf":
+        actual_provider = {"openai": "gpt", "deepseek": "deepseek"}.get(provider, "qwen")
+    else:
+        actual_provider = provider
     executable_args = [command] if getattr(sys, "frozen", False) else ["-m", "document_translator", command]
     args = [sys.executable, *executable_args, str(source_path), str(destination), "--source-language", source_language, "--target-language", target_language, "--provider", actual_provider, "--model", model]
     if glossary:

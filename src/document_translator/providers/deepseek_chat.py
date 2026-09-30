@@ -1,4 +1,4 @@
-"""DashScope general-Qwen Chat Completions provider."""
+"""DeepSeek Chat Completions provider (OpenAI-compatible endpoint)."""
 
 from __future__ import annotations
 
@@ -21,45 +21,43 @@ from document_translator.translation_rules import (
     auto_correct_translation,
     protect_for_translation,
     restore_after_translation,
+    source_name_constraints,
 )
 
 from .translation_prompt import PROMPT_VERSION, compile_translation_policy, matched_glossary_entries
-from document_translator.translation_rules import source_name_constraints
 from .batch_limits import split_semantic_batches
 
 
-_ENDPOINT = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
+_ENDPOINT = "https://api.deepseek.com/chat/completions"
+_ALLOWED_MODELS = frozenset({"deepseek-chat", "deepseek-reasoner", "deepseek-flash", "deepseek-v4-pro"})
 
 
 @dataclass(frozen=True, slots=True)
-class QwenChatConfig:
+class DeepSeekConfig:
     model: str
-    api_key_env: str = "DASHSCOPE_API_KEY"
+    api_key_env: str = "DEEPSEEK_API_KEY"
     timeout: float = 120.0
-    # General Qwen models differ in how reliably they emit every JSON item;
-    # keep the default conservative so one omitted item cannot invalidate a
-    # long document batch.
     batch_input_characters: int = 0
 
     def __post_init__(self) -> None:
-        if not self.model.strip() or self.model.casefold().startswith("qwen-mt"):
-            raise ValueError("Qwen Chat requires a non-Qwen-MT model")
+        if self.model not in _ALLOWED_MODELS:
+            raise ValueError("unsupported DeepSeek translation model")
         if not self.api_key_env.strip() or self.timeout <= 0 or self.batch_input_characters < 0:
-            raise ValueError("Qwen Chat configuration is invalid")
+            raise ValueError("DeepSeek configuration is invalid")
 
 
-class QwenChatError(RuntimeError):
+class DeepSeekError(RuntimeError):
     def __init__(self, code: str, message: str) -> None:
         self.code = code
         super().__init__(message)
 
 
-class QwenChatProvider:
-    provider_name = "qwen"
+class DeepSeekProvider:
+    provider_name = "deepseek"
     prompt_version = PROMPT_VERSION
     glossary_version = "none"
 
-    def __init__(self, config: QwenChatConfig, *, client: httpx.Client, glossary: Glossary | None = None) -> None:
+    def __init__(self, config: DeepSeekConfig, *, client: httpx.Client, glossary: Glossary | None = None) -> None:
         self.config = config
         self.client = client
         self._glossary = glossary
@@ -79,7 +77,7 @@ class QwenChatProvider:
     def _translate_with_split(self, units: list[TranslationUnit]) -> list[TranslationResult]:
         try:
             return self._translate_batch_once(units)
-        except QwenChatError as exc:
+        except DeepSeekError as exc:
             # Content-quality validation issues (residual English, untranslated
             # dates, missing proper names, ...) no longer raise here: they are
             # returned as validation_status="needs_review" results so one imperfect
@@ -92,7 +90,7 @@ class QwenChatProvider:
     def _translate_batch_once(self, units: list[TranslationUnit], *, correction: dict[str, list[str]] | None = None, mapping_retry: bool = False) -> list[TranslationResult]:
         key = os.getenv(self.config.api_key_env)
         if not key or not key.strip():
-            raise QwenChatError("API_KEY_MISSING", "DashScope API key is not configured")
+            raise DeepSeekError("API_KEY_MISSING", "DeepSeek API key is not configured")
         first = units[0]
         policy = compile_translation_policy(first, self._glossary)
         terms_by_id = {
@@ -119,10 +117,6 @@ class QwenChatProvider:
         body = {
             "model": self.config.model,
             "temperature": 0,
-            # Document translation is a deterministic extraction/rewriting
-            # task.  Disable hybrid reasoning so large batches do not spend
-            # the request timeout in an internal thinking pass.
-            "enable_thinking": False,
             "messages": [{"role": "system", "content": system}, {"role": "user", "content": json.dumps({"items": items}, ensure_ascii=False)}],
             "response_format": {"type": "json_object"},
         }
@@ -135,20 +129,20 @@ class QwenChatProvider:
             if not isinstance(rows, list):
                 raise ValueError("items must be an array")
         except httpx.HTTPStatusError as exc:
-            raise QwenChatError(f"HTTP_{exc.response.status_code}", "DashScope Qwen Chat request failed") from exc
+            raise DeepSeekError(f"HTTP_{exc.response.status_code}", "DeepSeek request failed") from exc
         except httpx.HTTPError as exc:
             # Connection/TLS/timeout failures never reached a response body
             # at all -- collapsing them into the same "response was
             # invalid" message as a genuine malformed-JSON reply (below)
             # made a transient local network hiccup indistinguishable from
             # a real content/parsing defect while debugging a failure.
-            raise QwenChatError("TRANSPORT_ERROR", f"DashScope Qwen Chat request failed: {exc}") from exc
+            raise DeepSeekError("TRANSPORT_ERROR", f"DeepSeek request failed: {exc}") from exc
         except (ValueError, TypeError, KeyError, json.JSONDecodeError) as exc:
-            raise QwenChatError("BATCH_FAILED", "DashScope Qwen Chat response was invalid") from exc
+            raise DeepSeekError("BATCH_FAILED", "DeepSeek response was invalid") from exc
         mapped = {row.get("id"): row.get("translation") for row in rows if isinstance(row, dict)}
         expected = {unit.id for unit in units}
         if set(mapped) != expected or any(not isinstance(value, str) for value in mapped.values()):
-            raise QwenChatError("BATCH_MAPPING_INVALID", "Qwen Chat batch IDs are incomplete")
+            raise DeepSeekError("BATCH_MAPPING_INVALID", "DeepSeek batch IDs are incomplete")
         results: list[TranslationResult] = []
         invalid: dict[str, list[str]] = {}
         for unit in units:

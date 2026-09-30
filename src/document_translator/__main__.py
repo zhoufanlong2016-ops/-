@@ -13,7 +13,22 @@ from typing import Sequence
 
 import httpx
 
-from .providers import OpenAIConfig, OpenAIProvider, QwenChatConfig, QwenChatProvider, QwenMTConfig, QwenMTProvider
+try:
+    from dotenv import find_dotenv, load_dotenv
+except ImportError:  # pragma: no cover - python-dotenv is a declared dependency
+    find_dotenv = load_dotenv = None
+
+if load_dotenv is not None:
+    # Loaded once at import time, before any provider reads its own
+    # os.getenv(api_key_env): a provider API key (DASHSCOPE_API_KEY,
+    # OPENAI_API_KEY, DEEPSEEK_API_KEY) previously only worked for a
+    # session that had it exported by hand into the shell, gone the moment
+    # that terminal closed. find_dotenv() walks up from the current
+    # working directory, so this also works when the CLI is invoked from
+    # a subdirectory of the project, not just its root.
+    load_dotenv(find_dotenv(usecwd=True))
+
+from .providers import DeepSeekConfig, DeepSeekProvider, OpenAIConfig, OpenAIProvider, QwenChatConfig, QwenChatProvider, QwenMTConfig, QwenMTProvider
 from .services import (
     DocxTranslationService,
     DwgTranslationService,
@@ -92,7 +107,7 @@ def _parser() -> argparse.ArgumentParser:
     pdf = subparsers.add_parser("translate-pdf", help="translate PDF through MinerU 4 ORIGINAL layout rendering")
     pdf.add_argument("source", type=Path); pdf.add_argument("destination", type=Path)
     pdf.add_argument("--source-language", required=True); pdf.add_argument("--target-language", required=True)
-    pdf.add_argument("--provider", choices=("qwen", "gpt"), default="qwen")
+    pdf.add_argument("--provider", choices=("qwen", "gpt", "deepseek"), default="qwen")
     pdf.add_argument("--model", required=True, help="approved provider model for this PDF job")
     pdf.add_argument("--glossary", type=Path); pdf.add_argument("--style-profile", type=Path, metavar="PATH", help="JSON PDF structural/numbering style profile")
     pdf.add_argument("--minimum-font-size", type=float, default=6.0)
@@ -303,6 +318,8 @@ def _translate_pdf(args: argparse.Namespace) -> int:
     with httpx.Client() as client:
         if args.provider == "gpt":
             provider = OpenAIProvider(OpenAIConfig(model=args.model), client=client, glossary=glossary_obj)
+        elif args.provider == "deepseek":
+            provider = DeepSeekProvider(DeepSeekConfig(model=args.model), client=client, glossary=glossary_obj)
         else:
             provider = QwenChatProvider(QwenChatConfig(model=args.model), client=client, glossary=glossary_obj)
         output, preflight, report = MinerUPdfTranslationService(

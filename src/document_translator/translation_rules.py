@@ -16,6 +16,43 @@ _PROTECTED_PATTERNS = (
     r"https?://[^\s<>()]+|mailto:[^\s<>()]+|[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}",
     r"(?:[A-Za-z]:\\|\\\\)[^\s<>\"|?*]+|(?<![\w.])(?:\./|\.\./)[\w./-]+",
     r"\\[PpHhWwFf][^;]*;",
+    # A table's own row-number cell (just "1.", "2)", nothing else) is a
+    # bare numbering marker, not a sentence -- it has no full stop to
+    # localise. Left unprotected, providers commonly "translate" its
+    # ASCII "." into the Chinese full-width "。" anyway (observed on both
+    # this project's own providers), which is wrong on its own terms
+    # (a list index is not prose) and additionally exposed a real font
+    # rendering defect for that character on this project's own render
+    # path. Anchored to the whole cell (a bare marker is never legitimately
+    # only PART of a larger cell's text) so this never touches a period or
+    # bracket appearing inside actual sentence content elsewhere. Placed
+    # ahead of the general engineering-number pattern below: alternation
+    # tries earlier branches first and keeps whichever matches first, not
+    # whichever is longest, so a later, narrower rule never gets a chance
+    # to win against an earlier one that already matched just the bare
+    # digit.
+    r"^\s*\d{1,3}[.)）]\s*$",
+    # The SAME numbering marker also appears leading a normal paragraph of
+    # real content ("1. Kindly refer to Section 6...") rather than filling
+    # a whole cell alone -- observed rendering as "1。请参阅..." with the
+    # marker's own period turned into a Chinese full stop even though
+    # everything after it translated correctly. Only the marker itself
+    # (through the whitespace right after it) is protected here, so the
+    # sentence that follows still reaches the model normally.
+    r"^\s*\d{1,3}[.)）]\s+",
+    # The same marker also starts a NEW numbered item midway through a
+    # cell's own long text, not just at the very beginning of it -- table
+    # cells go through mineru_pdf._translate_tables(), which sends a
+    # cell's ENTIRE multi-paragraph text to the provider as one string, so
+    # a genuine new list item's own "2." can land anywhere inside that
+    # string, not only at position zero (observed: "...avoid water
+    # flooding live switchgear. 2. For the offices..." rendered with that
+    # second marker's period turned into "。" exactly like the leading
+    # case above). Requiring real sentence-ending punctuation right before
+    # it is what distinguishes "a new item is starting here" from an
+    # ordinary decimal or a mid-sentence number: "2.3" or "item 5" never
+    # match, since neither has one of these right before the digit.
+    r"(?<=[.!?:;])\s+\d{1,3}[.)）]\s+",
     # Engineering numbers: stationing, dimensions, percentages, ratios,
     # tolerances, scientific notation, currency and symbol-unit combinations.
     r"\b[A-Za-z0-9&-]+(?:/[A-Za-z0-9&-]+){2,}\b",
@@ -34,7 +71,27 @@ _PROTECTED_PATTERNS = (
     # as "72\nV" ("72 Volts"), consuming the V and silently defeating
     # the immutable-identifier pattern below for "Volume-1". A real
     # "number unit" pairing never has a hard line break between them.
-    r"(?<![\w.])[+-]?(?>\d+)(?!(?:st|nd|rd|th)\b)(?:,\d{3})*(?:\.\d+)*(?:[eE][+-]?\d+)?(?:[ \t]*(?:%|‰|°|㎡|m²|m³|mm|cm|km|m|MPa|kPa|kN|N|kg|kW|MW|W|kV|V|Hz|L|mL|USD|PKR|RMB|CNY))?",
+    # The trailing (?![A-Za-z]) guards the same failure mode on a single
+    # line: without it a short unit letter (N, W, V, m...) also matches
+    # as the FIRST letter of an unrelated following word -- "1 No x 4
+    # Cusec" protected "1 N" as "1 Newton", leaving a stray "o" glued to
+    # the placeholder that the model could never restore, observed as a
+    # PLACEHOLDER_MISMATCH on a lift-station schedule where "No" (quantity)
+    # appears on nearly every line. A genuine unit is never immediately
+    # followed by another Latin letter (a Chinese character or digit
+    # right after, as in "450kW光伏", is unaffected).
+    # kVA/KVA (apparent power -- transformer and generator ratings) must be
+    # tried before the shorter kV alternative below, or "1000KVA" matches
+    # only "1000kV" and leaves a stray "A". It is spelled both ways in the
+    # wild (kVA is the SI-correct form; KVA is what most drawing title
+    # blocks actually use), and unlike every other unit here it is also
+    # written glued to its number with NO space ("1000KVA") about as often
+    # as with one ("1000 KVA") in the same table -- the two spellings must
+    # both be protected as one token, or _count_token()'s digit-boundary
+    # check (core/validation.py) counts the bare number in one spelling
+    # but not the other, and a plain reformatting difference between the
+    # two forms is misreported as a placeholder mismatch.
+    r"(?<![\w.])[+-]?(?>\d+)(?!(?:st|nd|rd|th)\b)(?:,\d{3})*(?:\.\d+)*(?:[eE][+-]?\d+)?(?:[ \t]*(?:kVA|KVA|%|‰|°|㎡|m²|m³|mm|cm|km|m|MPa|kPa|kN|N|kg|kW|MW|W|kV|V|Hz|L|mL|USD|PKR|RMB|CNY)(?![A-Za-z]))?",
     # Standards, document/model numbers and established engineering acronyms
     # are identifiers, not natural-language words.  Do not treat every word
     # written in title-block capitals (for example, "TOTAL TENDER PRICE") as
@@ -215,6 +272,20 @@ def validate_translation_residue(
     # Long paragraphs are already checked by the structured PDF block contract;
     # residue correction here is reserved for isolated drawing labels and
     # dates so it cannot turn one batch into recursive retries.
+    #
+    # A table cell's own long paragraph was tried here too (this project's
+    # engineering-clarification tables are full of them, and one dropped
+    # "domestic sewage" untranslated with nothing positioned to catch it),
+    # but reverted immediately: this document's tables are equally full of
+    # legitimate bare acronyms and units the writing policy deliberately
+    # keeps in English -- NFPA, GSM, PMC, WASA, MV, ER, SLD, mm, and more
+    # -- and neither the protected-token nor the proper-name filter below
+    # was ever meant to enumerate that class, only numbers/identifiers and
+    # multi-word names. Enabling this check there flagged nearly every
+    # cell, forcing far more remediation retries than intended; one of
+    # those independent retries then regressed a "Gulshan e Ravi" mention
+    # that had translated correctly the first time -- a net loss, not a
+    # fix. Left as a known gap rather than trading it for that.
     if not is_short_label and not has_date:
         return []
     errors: list[str] = []

@@ -20,8 +20,7 @@ from pathlib import Path
 from statistics import median
 from typing import Any, Iterable, Mapping
 
-
-_CJK_RE = re.compile(r"[\u3400-\u9fff]")
+from document_translator.font_policy import contains_cjk
 _NUMBERED_SOURCE_RE = re.compile(
     r"第\s*(?P<number>[〇零一二三四五六七八九十百千万亿两\d]+)\s*"
     r"(?P<kind>章|条|节|款|项)\s*(?P<body>.*)",
@@ -352,7 +351,7 @@ def normalize_document_reference_translation(
     if not match:
         return translated_text
     prefix = match.group("prefix").strip(" \t\r\n:：")
-    if not prefix or _CJK_RE.search(prefix):
+    if not prefix or contains_cjk(prefix):
         # Do not silently transliterate or delete an unknown issuer.  The strict
         # language validator reports this and the gateway can retry/glossary it.
         return translated_text
@@ -638,7 +637,7 @@ def _font_file(
     """
 
     name = font_name.casefold()
-    if _CJK_RE.search(text):
+    if contains_cjk(text):
         candidates = (r"C:\Windows\Fonts\simhei.ttf", r"C:\Windows\Fonts\msyh.ttc")
     elif "times" in name or ("noto" in name and "serif" in name) or "serif" in name:
         # Times New Roman is a stable serif fallback whose family is normally
@@ -780,8 +779,28 @@ def _merge_reflow_candidate_blocks(
         "lines": lines,
         "block": selected[0]["block"],
     }
-def _choose_candidate_block(contract: LayoutContract, blocks: list[dict[str, Any]], used: set[int]) -> dict[str, Any] | None:
-    source_y = (contract.bbox[1] + contract.bbox[3]) / 2
+def _choose_candidate_block(
+    contract: LayoutContract, blocks: list[dict[str, Any]], used: set[int], position_bias: float = 0.0
+) -> dict[str, Any] | None:
+    """Find the candidate block matching ``contract``, searching around its expected Y.
+
+    ``position_bias`` shifts that expected position by however far the page's
+    OWN preceding contract already drifted from its source Y once matched --
+    passed in by the per-page loop in validate_layout_contract() and
+    restore_layout_contract(), both of which match contracts top-to-bottom
+    and can track it cheaply. Without it, a page with several stacked
+    centered_text/heading blocks (this project's own title page: two
+    separate centered blocks one above the other) fails as soon as the
+    FIRST one's translation renders as a different number of lines than
+    its source -- every block below it shifts down or up by that same
+    amount on the real page, but this function used to keep measuring
+    each one against its own STATIC, un-shifted source position with only
+    a ~12pt window, so the second block would be reported "missing" (out
+    of range) or matched to something else that then reads as having
+    "wrapped unexpectedly". A translation is essentially never the exact
+    same line-count as its source, so this was not a rare edge case.
+    """
+    source_y = (contract.bbox[1] + contract.bbox[3]) / 2 + position_bias
     scored: list[tuple[float, dict[str, Any]]] = []
     for block in blocks:
         if block["index"] in used:
@@ -1052,9 +1071,10 @@ def restore_layout_contract(
             page = candidate[page_number - 1]
             blocks = _candidate_text_blocks(page)
             used: set[int] = set()
+            position_bias = 0.0
             page_contracts = [item for item in contracts if item.page_number == page_number]
             for contract in page_contracts:
-                selected = _choose_candidate_block(contract, blocks, used)
+                selected = _choose_candidate_block(contract, blocks, used, position_bias)
                 if selected is None:
                     unmatched.append({"page": page_number, "role": contract.role, "source_text": contract.source_text})
                     continue
@@ -1064,6 +1084,9 @@ def restore_layout_contract(
                     raise
                 operations.append(operation)
                 used.update(selected.get("indices", (selected["index"],)))
+                source_y = (contract.bbox[1] + contract.bbox[3]) / 2
+                candidate_y = (selected["bbox"][1] + selected["bbox"][3]) / 2
+                position_bias = candidate_y - source_y
         if unmatched:
             # Ordinary documents may not have every role in the candidate when
             # a provider omitted a block.  Failing closed is safer than drawing
@@ -1132,6 +1155,7 @@ def validate_layout_contract(
     observed: list[dict[str, Any]] = []
     try:
         used_by_page: dict[int, set[int]] = {}
+        position_bias_by_page: dict[int, float] = {}
         for contract in contracts:
             if contract.page_number > candidate.page_count:
                 failures.append(f"page {contract.page_number}: missing page")
@@ -1139,11 +1163,16 @@ def validate_layout_contract(
             page = candidate[contract.page_number - 1]
             blocks = _candidate_text_blocks(page)
             used = used_by_page.setdefault(contract.page_number, set())
-            selected = _choose_candidate_block(contract, blocks, used)
+            selected = _choose_candidate_block(
+                contract, blocks, used, position_bias_by_page.get(contract.page_number, 0.0)
+            )
             if selected is None:
                 failures.append(f"page {contract.page_number}: missing {contract.role}")
                 continue
             used.update(selected.get("indices", (selected["index"],)))
+            source_y = (contract.bbox[1] + contract.bbox[3]) / 2
+            candidate_y = (selected["bbox"][1] + selected["bbox"][3]) / 2
+            position_bias_by_page[contract.page_number] = candidate_y - source_y
             bbox = selected["bbox"]
             center = (bbox[0] + bbox[2]) / 2
             alignment_error = abs(center - contract.center_x)

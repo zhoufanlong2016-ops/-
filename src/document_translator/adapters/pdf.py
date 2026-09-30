@@ -6,6 +6,12 @@ from pathlib import Path
 from document_translator.core import DocumentFormat, DocumentLocation, TranslationUnit, generate_unit_id
 from document_translator.translation_rules import rule_protected_tokens
 
+# See the comment at its use in _paragraph_groups() below for why this caps
+# placeholder density rather than a fixed batch size like the 24-unit
+# per-request chunking in mineru_pdf.py's table path; the two are unrelated
+# limits that happen to share a magnitude.
+_MAX_GROUP_PROTECTED_TOKENS = 24
+
 
 def _looks_like_language_text(text: str) -> bool:
     """Reject content that is only punctuation, digits or symbol-font glyphs.
@@ -83,7 +89,28 @@ def _paragraph_groups(page, blocks):
         # A paragraph may legitimately change indentation after its first
         # line. Use semantic boundaries instead of a fixed left-edge test.
         if gap <= 35 and same_font and not starts_clause and not starts_title and not boundary_hint:
-            groups[-1].append(block)
+            # A dense, unruled data table (no drawn cell borders, so
+            # `is_table` above never trips) still passes every prose
+            # heuristic here: short, same-size, tightly-spaced lines of
+            # figures read exactly like a wrapped paragraph. Each bare
+            # number in it is a protected placeholder by design (see
+            # translation_rules.rule_protected_tokens), which is correct
+            # for an ordinary paragraph's occasional figure -- but a
+            # numbers-only table row-by-row fuses into a block that is
+            # almost entirely placeholders (one real case hit 200+ in a
+            # single unit). A provider cannot reliably reproduce that
+            # many placeholders verbatim in one response; observed
+            # effect was a multi-minute stall ending in a rejected
+            # translation, leaving the whole block untranslated. Capping
+            # placeholder density -- not text length, since an ordinary
+            # long paragraph with few numbers is harmless -- keeps every
+            # genuine paragraph merge intact and only splits this table
+            # case back into its natural per-row units.
+            candidate = "\n".join(str(b[4]).strip() for b in groups[-1]) + "\n" + text
+            if len(rule_protected_tokens(candidate)) <= _MAX_GROUP_PROTECTED_TOKENS:
+                groups[-1].append(block)
+            else:
+                groups.append([block])
         else:
             groups.append([block])
     return groups

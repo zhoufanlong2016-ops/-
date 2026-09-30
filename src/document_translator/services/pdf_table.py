@@ -40,7 +40,42 @@ class PdfTableFitError(PdfTableError):
     """Raised when translated text does not fit at the minimum font size."""
 
 
-_TABLE_LIST_ITEM_RE = re.compile(r"^\s*(?:\d+[.)]|[-*•])\s+")
+_TABLE_LIST_ITEM_RE = re.compile(r"^\s*(?:\d+[.)]|[A-Za-z][.)]|[-*•])\s+")
+
+# A non-breaking space (U+00A0) between a number and its unit, or after a
+# short list marker, was tried here to stop insert_textbox() from
+# stranding a unit or marker alone at a line break. Reverted: on this
+# project own embedded CJK font, after the page fonts are subset for
+# publishing, that same character renders as a visible tofu box wherever
+# it landed (observed: "6.<box>Volume 2..." and "(EL)<box>System") --
+# corrupting the page is worse than the wrap it was meant to fix, and a
+# word-joiner (U+2060) is not a working substitute either: this font has
+# no glyph for it either, and PyMuPDF own wrapper still breaks the line
+# at that position anyway. Left unsolved rather than traded for something
+# worse; revisit only with a fix verified against a real, fully-published
+# (redacted, subset, saved) page, not an isolated probe render.
+
+
+_INLINE_LIST_MARKER_RE = re.compile(r"(?<![A-Za-z0-9])(\d{1,3}[.)]|[A-Za-z][.)]|-)\s+")
+
+
+def _break_inline_list_markers(text: str) -> str:
+    """Force a line break before each list marker found inline in the text.
+
+    A provider translating a whole multi-item cell as one string returns it
+    as ONE continuous run with no real line breaks at all -- confirmed
+    directly against this project's own real translations: a bulleted
+    cell's "-"/"•" separators, and a single reference letter like "C.",
+    come back with plain spaces around them, never a "\\n". Left alone,
+    PyMuPDF's own insert_textbox() wraps that flat string purely by how
+    much fits per line, and a short marker frequently ends up the last
+    thing that fits -- reading as though it trails the PREVIOUS item
+    ("...for offices; -" at a line's end) purely by coincidence of line
+    width, not because of anything meaningful in the string. Inserting a
+    genuine "\\n" before each marker removes that coincidence entirely: the
+    marker now always leads its own line, exactly like a hand-typed list.
+    """
+    return _INLINE_LIST_MARKER_RE.sub(lambda match: "\n" + match.group(1) + " ", text)
 
 
 def _normalise_render_text(text: str) -> str:
@@ -52,6 +87,22 @@ def _normalise_render_text(text: str) -> str:
     extraction artifacts.
     """
 
+    # "*" bullet (U+2022) is swapped for a plain hyphen before anything else
+    # touches this text. PyMuPDF's font subsetting on publish (subset_fonts()
+    # + garbage=3 in _atomic_save) corrupts this specific glyph's outline on
+    # this project's own embedded CJK font -- confirmed directly against the
+    # real render_table_translations()+publish path, not just an isolated
+    # insert_textbox() probe: the character survives the FIRST render (a
+    # correct, visible bullet dot) but is redrawn as a blank ".notdef" box
+    # once the file is actually subset and saved, with its own ToUnicode
+    # entry left pointing at U+0000 -- the exact documented failure mode
+    # repair_pdf_text_cmaps() already treats as a corrupted space, except
+    # this glyph draws visible ink instead, so that repair (which only ever
+    # remaps the character code, never repaints geometry) cannot restore it.
+    # A hyphen is both already an accepted list marker to _TABLE_LIST_ITEM_RE
+    # below and verified to survive the identical publish path intact.
+    text = text.replace("•", "-")
+    text = _break_inline_list_markers(text)
     lines = [re.sub(r"\s+", " ", line).strip() for line in text.replace("\r\n", "\n").replace("\r", "\n").split("\n")]
     lines = [line for line in lines if line]
     if not lines:
@@ -88,6 +139,7 @@ class PdfTableCell:
     column: int
     rect: tuple[float, float, float, float] | None
     text: str
+    source_font_size: float | None = None
 
     @property
     def is_empty(self) -> bool:
@@ -203,6 +255,50 @@ def _normalise_page_numbers(page_numbers: Iterable[int] | None, page_count: int)
     return values
 
 
+def _dominant_font_size(spans_by_size: dict[float, int], rect: Any) -> float | None:
+    """Return the font size covering the most characters inside ``rect``.
+
+    A cell can mix sizes (a bold run-in label ahead of regular body text,
+    say); the size backing the most text is the one that actually reads
+    as "this cell's font size" to a reader, not whichever span happens to
+    come first in the page's own content-stream order.
+    """
+    if not spans_by_size:
+        return None
+    return max(spans_by_size.items(), key=lambda item: item[1])[0]
+
+
+def _collect_cell_font_sizes(page: Any, cell_rects: Sequence[Any]) -> list[dict[float, int]]:
+    """For each cell rect, tally character counts by font size within it.
+
+    One pass over the page's own text spans, tested against every still-
+    unmatched cell rect, is far cheaper than re-querying get_text() per
+    cell on a page with a large table -- this project's own tables run to
+    dozens of rows.
+    """
+    import fitz
+
+    tallies: list[dict[float, int]] = [dict() for _ in cell_rects]
+    fitz_rects = [fitz.Rect(r) if r is not None else None for r in cell_rects]
+    for block in page.get_text("dict").get("blocks", ()):
+        if block.get("type") != 0:
+            continue
+        for line in block.get("lines", ()):
+            for span in line.get("spans", ()):
+                span_text = span.get("text", "")
+                if not span_text.strip():
+                    continue
+                span_box = fitz.Rect(span.get("bbox", ()))
+                center = fitz.Point((span_box.x0 + span_box.x1) / 2, (span_box.y0 + span_box.y1) / 2)
+                for index, rect in enumerate(fitz_rects):
+                    if rect is not None and center in rect:
+                        size = round(float(span.get("size") or 0), 2)
+                        if size > 0:
+                            tallies[index][size] = tallies[index].get(size, 0) + len(span_text.strip())
+                        break
+    return tallies
+
+
 def _table_cells(table: Any, page_number: int, table_number: int) -> tuple[PdfTableCell, ...]:
     try:
         row_count = int(table.row_count)
@@ -280,6 +376,27 @@ def _table_cells(table: Any, page_number: int, table_number: int) -> tuple[PdfTa
                     text=text,
                 )
             )
+
+    # Read back each cell's own source font size so the renderer can start
+    # from it (this project's stated policy elsewhere -- prefer the
+    # source's own size, shrink only on real overflow -- otherwise never
+    # reaches table cells at all, which is exactly the content most of
+    # this project's own documents are made of). Best-effort: a table
+    # object from a test double or an older PyMuPDF without a page
+    # back-reference simply leaves every cell's source_font_size unset,
+    # falling back to the renderer's own default exactly as before.
+    page = getattr(table, "page", None)
+    if page is not None:
+        from dataclasses import replace
+
+        cell_rects = [cell.rect for cell in result]
+        tallies = _collect_cell_font_sizes(page, cell_rects)
+        result = [
+            replace(cell, source_font_size=_dominant_font_size(tally, cell.rect))
+            if cell.rect is not None
+            else cell
+            for cell, tally in zip(result, tallies)
+        ]
     return tuple(result)
 
 
@@ -327,12 +444,28 @@ def _merge_phantom_rows(
     return tuple(merged[cell.id] for cell in cells)
 
 
-def extract_tables_from_document(document: Any, *, page_numbers: Iterable[int] | None = None) -> tuple[PdfTable, ...]:
+def extract_tables_from_document(
+    document: Any, *, page_numbers: Iterable[int] | None = None, merge_phantom_rows: bool = True
+) -> tuple[PdfTable, ...]:
     """Extract vector tables from an open PyMuPDF document.
 
     Table numbering is one-based per page and is the order returned by
-    ``page.find_tables(strategy="lines_strict")``.  Page numbers are one-based
-    and preserve the original document numbering when a page filter is used.
+    ``page.find_tables()``.  Page numbers are one-based and preserve the
+    original document numbering when a page filter is used.
+
+    "lines_strict" (a fully drawn grid on every side of every cell) is
+    tried first since it is the least likely of PyMuPDF's strategies to
+    mis-segment ordinary prose into a false table. Some real data tables
+    in the wild are drawn with only a partial rule -- an outer border and
+    a header underline, no per-cell grid -- and "lines_strict" finds
+    nothing on them at all (observed: a 68-row lift-station schedule,
+    whitespace-aligned with no interior lines, silently skipped as "no
+    vector tables" and left completely untranslated). Falling back to the
+    looser "lines" strategy only when "lines_strict" finds nothing picks
+    that case up without changing anything for a page "lines_strict"
+    already handles. The looser-still "text" strategy is not used here:
+    on this project's own drawings it over-segments a 6-column table into
+    12, which is worse than not detecting a table at all.
     """
 
     selected_pages = _normalise_page_numbers(page_numbers, int(document.page_count))
@@ -341,13 +474,17 @@ def extract_tables_from_document(document: Any, *, page_numbers: Iterable[int] |
         page = document[page_number - 1]
         try:
             finder = page.find_tables(strategy="lines_strict")
+            page_tables = tuple(getattr(finder, "tables", ()) or ())
+            if not page_tables:
+                finder = page.find_tables(strategy="lines")
+                page_tables = tuple(getattr(finder, "tables", ()) or ())
         except Exception as exc:  # pragma: no cover - implementation-specific PyMuPDF errors
             raise PdfTableExtractionError(f"failed to find vector tables on page {page_number}") from exc
-        page_tables = tuple(getattr(finder, "tables", ()) or ())
         for table_number, table in enumerate(page_tables, 1):
             rect = _rect_tuple(getattr(table, "bbox", None), allow_none=False)
             cells = _table_cells(table, page_number, table_number)
-            cells = _merge_phantom_rows(cells, int(table.row_count), int(table.col_count))
+            if merge_phantom_rows:
+                cells = _merge_phantom_rows(cells, int(table.row_count), int(table.col_count))
             tables.append(
                 PdfTable(
                     page_number=page_number,
@@ -361,13 +498,15 @@ def extract_tables_from_document(document: Any, *, page_numbers: Iterable[int] |
     return tuple(tables)
 
 
-def extract_pdf_tables(source_path: str | Path, *, page_numbers: Iterable[int] | None = None) -> tuple[PdfTable, ...]:
+def extract_pdf_tables(
+    source_path: str | Path, *, page_numbers: Iterable[int] | None = None, merge_phantom_rows: bool = True
+) -> tuple[PdfTable, ...]:
     """Open ``source_path`` and return all requested vector tables."""
 
     fitz = _fitz()
     document = fitz.open(Path(source_path))
     try:
-        return extract_tables_from_document(document, page_numbers=page_numbers)
+        return extract_tables_from_document(document, page_numbers=page_numbers, merge_phantom_rows=merge_phantom_rows)
     finally:
         document.close()
 
@@ -543,6 +682,117 @@ def _font_alias(fontfile: Path) -> str:
     return f"pdfTable{digest}"
 
 
+# A run of 2-6 short Latin/digit "words" (a unit value like "3,500 mm", a
+# standard code like "NFPA 2001", a proper noun like "Gulshan e Ravi", a
+# project code like "0074-PAK-01") must never be split at one of its own
+# internal spaces. PyMuPDF's own insert_textbox() wraps CJK-mixed text by
+# packing characters to the available width with no notion that these
+# particular ASCII spaces are inside one semantic unit -- confirmed
+# directly, including splitting mid-word once a too-long run no longer
+# fits as one "word". An embedded non-breaking character (tried here
+# earlier) does stop the split, but on this project's own font pipeline it
+# also re-emerges as a visible corrupted glyph once the page is subset for
+# publishing -- confirmed against a REAL multi-cell render, not just an
+# isolated probe -- so it was reverted rather than traded for that. This
+# regex identifies the same phrases for a DIFFERENT purpose: choosing
+# where _wrap_atomic_phrases() below is and is not allowed to place a line
+# break, using nothing but ordinary characters.
+_ATOMIC_PHRASE_RE = re.compile(
+    r"[A-Za-z0-9][A-Za-z0-9.,&/-]{0,19}(?: [A-Za-z0-9][A-Za-z0-9.,&/-]{0,19}){1,5}"
+)
+
+
+_CJK_CHAR_CLASS = r"　-〿㐀-䶿一-鿿豈-﫿＀-￯"
+_ATOM_TOKEN_RE = re.compile(
+    r"(?P<phrase>" + _ATOMIC_PHRASE_RE.pattern + r")"
+    r"|(?P<space>\s+)"
+    r"|(?P<cjk>[" + _CJK_CHAR_CLASS + r"])"
+    r"|(?P<word>[^\s" + _CJK_CHAR_CLASS + r"]+)"
+)
+
+
+def _tokenize_atoms_with_seps(text: str) -> list[tuple[str, str]]:
+    """Split text into (atom, trailing_separator) pairs, preserving original spacing.
+
+    A recognised phrase is one atom (its OWN internal spaces are part of
+    the atom, never a break point); anything else is walked one character
+    at a time, so a CJK character is always its own atom (that script uses
+    no inter-word spaces) while a run of other characters simply comes
+    through as consecutive single-character atoms that the packer below
+    will naturally keep adjacent (no whitespace between them to record).
+    ``trailing_separator`` is "" or a single " ", copied from whether real
+    whitespace followed this atom in the ORIGINAL text -- never invented --
+    so re-wrapping never adds or removes a space the translation didn't
+    already have (e.g. "编号5附表" stays spaceless; "132 kV" keeps its one).
+    """
+    tokens: list[tuple[str, str]] = []
+    for match in _ATOM_TOKEN_RE.finditer(text):
+        if match.lastgroup == "space":
+            if tokens:
+                atom, _ = tokens[-1]
+                tokens[-1] = (atom, " ")
+            continue
+        tokens.append((match.group(0), ""))
+    return tokens
+
+
+def _wrap_atomic_phrases(
+    text: str,
+    *,
+    fontfile: str,
+    fontname: str,
+    fontsize: float,
+    max_width: float,
+) -> str:
+    """Re-wrap ``text`` at real line breaks, never splitting an atomic phrase.
+
+    Runs a small greedy packer per existing paragraph (each "\\n"-delimited
+    segment _normalise_render_text() already produced stays its own
+    paragraph -- this never merges two list items together): each atom
+    from _tokenize_atoms_with_seps() is added to the current line, with
+    its ORIGINAL separator reproduced exactly, if it still fits
+    ``max_width`` at this exact font/size, otherwise it starts a new line.
+    A single atom wider than ``max_width`` on its own is still placed
+    rather than dropped -- unavoidable overflow, no worse than today's
+    behaviour, just never triggered by a short phrase this function
+    already knows to keep together.
+
+    Width is measured with a real fitz.Font loaded from ``fontfile`` --
+    fitz.get_text_length() only measures PyMuPDF's built-in fonts, never a
+    caller-supplied file, so it cannot see this project's own embedded CJK
+    and Latin faces at all.
+    """
+    import fitz
+
+    font = fitz.Font(fontfile=fontfile)
+
+    def width_of(candidate: str) -> float:
+        return font.text_length(candidate, fontsize=fontsize)
+
+    out_paragraphs: list[str] = []
+    for paragraph in text.split("\n"):
+        pairs = _tokenize_atoms_with_seps(paragraph)
+        if not pairs:
+            out_paragraphs.append(paragraph)
+            continue
+        lines: list[str] = []
+        current = ""
+        pending_sep = ""
+        for atom, sep in pairs:
+            candidate = current + pending_sep + atom if current else atom
+            if not current or width_of(candidate) <= max_width:
+                current = candidate
+                pending_sep = sep
+            else:
+                lines.append(current)
+                current = atom
+                pending_sep = sep
+        if current:
+            lines.append(current)
+        out_paragraphs.append("\n".join(lines))
+    return "\n".join(out_paragraphs)
+
+
 def _fit_textbox(
     page: Any,
     rect: Any,
@@ -554,13 +804,18 @@ def _fit_textbox(
     minimum_font_size: float,
     font_step: float,
     align: int,
-) -> float:
+) -> tuple[float, int]:
     """Find a fitting point size while preferring fewer wrapped lines.
 
     A first-fit search can keep a large font even when a slightly smaller,
     still-readable size would place the next word on the current line.  Probe
     every candidate on an isolated page, then choose the minimum line count;
-    ties prefer the largest point size.
+    ties prefer the largest point size. Also returns that size's own line
+    count, which the caller uses to decide whether the cell's remaining
+    height (a Chinese translation commonly wraps to far fewer lines than the
+    English source the cell was originally sized for) is worth spreading the
+    same lines into with taller line spacing, rather than leaving them
+    huddled at the top of an otherwise mostly-blank cell.
     """
 
     import fitz
@@ -570,12 +825,19 @@ def _fit_textbox(
     fitting: list[tuple[int, float]] = []
     for step_index in range(step_count + 1):
         candidate = max(minimum_font_size, round(size - step_index * font_step, 4))
+        # Pre-wrapped per candidate size: how many atoms fit on one line
+        # changes with the font size, so the same phrase-preserving layout
+        # has to be recomputed for each size this loop tries, not just once
+        # for the winning one.
+        wrapped = _wrap_atomic_phrases(
+            text, fontfile=fontfile, fontname=fontname, fontsize=candidate, max_width=rect.width
+        )
         probe = fitz.open()
         try:
             probe_page = probe.new_page(width=page.rect.width, height=page.rect.height)
             result = probe_page.insert_textbox(
                 rect,
-                text,
+                wrapped,
                 fontname=fontname,
                 fontfile=fontfile,
                 fontsize=candidate,
@@ -596,10 +858,80 @@ def _fit_textbox(
         # Keep the largest fitting size.  Horizontal utilisation is handled by
         # the condensed font selected by the caller; shrinking solely to save
         # a wrapped line is explicitly not allowed by the font policy.
-        return max(fitting, key=lambda item: item[1])[1]
+        line_count, chosen_size = max(fitting, key=lambda item: item[1])
+        return chosen_size, line_count
     raise PdfTableFitError(
         f"cell text does not fit at minimum font size {minimum_font_size:g}pt: {text[:100]!r}"
     )
+
+
+# insert_textbox()'s own default line spacing (no explicit ``lineheight``)
+# is fixed to the font's own metrics -- it has no idea how tall the cell
+# it is filling actually is. A cell whose height was sized for the
+# English source's own (longer) line-wrapped paragraph commonly holds a
+# Chinese translation that only needs half as many lines at the same
+# point size, leaving the back half of the cell blank while every line
+# sits packed at its ordinary spacing up against the top. A small,
+# fixed bump to the line spacing -- not a computed stretch to exactly
+# fill whatever room happens to be left -- eases that packed-at-the-top
+# look without visually turning a short paragraph into a stretched-out
+# one; the font size and top alignment are both left exactly as they
+# are (this project's font-size policy -- prefer the source size, never
+# grow past it -- untouched). Only ever applied as an increase over
+# PyMuPDF's own default for this font, and only when the cell actually
+# has slack to spare (an already-full cell renders exactly as before).
+_DEFAULT_LINE_HEIGHT_FACTOR = 1.35
+_MODEST_LINE_HEIGHT_FACTOR = 1.5
+
+
+def _fill_line_height(
+    rect: Any,
+    text: str,
+    *,
+    fontfile: str,
+    fontname: str,
+    font_size: float,
+    line_count: int,
+    align: int,
+) -> float | None:
+    """Pick a modest line-height bump, verified to actually still fit.
+
+    A formula based on ``rect``'s height and the font's nominal line
+    pitch is only ever an estimate -- real line pitch varies slightly by
+    font and by how insert_textbox itself lays a given piece of text out
+    (confirmed directly: the same formula that left comfortable room for
+    one cell overflowed a different one by a fraction of a point,
+    turning a cosmetic spacing tweak into ``PdfTableFitError`` for the
+    entire table). Render the candidate for real on a disposable page
+    and only keep it if PyMuPDF itself reports the text still fits;
+    otherwise the cell is left at its normal, already-verified spacing.
+    """
+    import fitz
+
+    if line_count <= 0 or font_size <= 0:
+        return None
+    natural = _DEFAULT_LINE_HEIGHT_FACTOR * font_size * line_count
+    if rect.height <= natural:
+        return None
+    probe = fitz.open()
+    try:
+        probe_page = probe.new_page(width=rect.width + 20, height=rect.height + 20)
+        probe_rect = fitz.Rect(0, 0, rect.width, rect.height)
+        result = probe_page.insert_textbox(
+            probe_rect,
+            text,
+            fontname=fontname,
+            fontfile=fontfile,
+            fontsize=font_size,
+            lineheight=_MODEST_LINE_HEIGHT_FACTOR,
+            align=align,
+            overlay=True,
+        )
+        if result >= -1e-6:
+            return _MODEST_LINE_HEIGHT_FACTOR
+        return None
+    finally:
+        probe.close()
 
 
 def _cell_alignment(
@@ -734,7 +1066,12 @@ def _atomic_save(document: Any, destination: Path) -> None:
     os.close(fd)
     temporary = Path(temporary_name)
     try:
-        document.save(temporary)
+        # PyMuPDF embeds the complete font file when text is inserted. Keep
+        # only the glyphs referenced by this document before publishing the
+        # table-rendered PDF; otherwise a one-page table can carry several MB
+        # of unused CJK font data.
+        document.subset_fonts()
+        document.save(temporary, garbage=3, deflate=True)
         # A hard link is used as the final publish operation so an existing
         # destination can never be silently replaced, even under a race.
         try:
@@ -844,6 +1181,8 @@ def render_table_translations(
         # fonts never collide under one PDF font resource name.
         redactions_by_page: dict[int, list[Any]] = {}
         fitted_sizes: dict[str, float] = {}
+        fitted_line_heights: dict[str, float | None] = {}
+        fitted_texts: dict[str, str] = {}
         source_drawing_counts: dict[int, int] = {}
         font_by_cell: dict[str, Path] = {}
         alias_by_path: dict[Path, str] = {}
@@ -897,15 +1236,43 @@ def render_table_translations(
                     cell.rect,
                     _cell_fit_padding(cell_rect, translated, padding),
                 )
-                fitted_sizes[cell.id] = _fit_textbox(
+                # Start from THIS cell's own source font size when it is
+                # known, matching this project's stated policy for every
+                # other kind of text on the page (prefer the source's own
+                # size, shrink only on real overflow) -- table cells used
+                # to always start from the caller's single, table-wide
+                # ``initial_font_size`` (a flat 10pt default) regardless of
+                # what the source actually used, systematically rendering
+                # a translation smaller than its own source whenever the
+                # source ran larger than that default.
+                cell_initial_size = max(cell.source_font_size or initial_font_size, minimum_font_size)
+                fitted_size, fitted_line_count = _fit_textbox(
                     fit_page,
                     fit_rect,
                     translated,
                     fontfile=str(cell_font),
                     fontname=cell_alias,
-                    initial_font_size=initial_font_size,
+                    initial_font_size=cell_initial_size,
                     minimum_font_size=minimum_font_size,
                     font_step=font_step,
+                    align=_cell_alignment(align, cell),
+                )
+                fitted_sizes[cell.id] = fitted_size
+                wrapped_text = _wrap_atomic_phrases(
+                    translated,
+                    fontfile=str(cell_font),
+                    fontname=cell_alias,
+                    fontsize=fitted_size,
+                    max_width=fit_rect.width,
+                )
+                fitted_texts[cell.id] = wrapped_text
+                fitted_line_heights[cell.id] = _fill_line_height(
+                    fit_rect,
+                    wrapped_text,
+                    fontfile=str(cell_font),
+                    fontname=cell_alias,
+                    font_size=fitted_size,
+                    line_count=fitted_line_count,
                     align=_cell_alignment(align, cell),
                 )
             fit_page = None
@@ -947,15 +1314,33 @@ def render_table_translations(
                     cell.rect,
                     _cell_fit_padding(cell_rect, translated, padding),
                 )
+                render_text = fitted_texts.get(cell.id, translated)
                 result = page.insert_textbox(
                     fit_rect,
-                    translated,
+                    render_text,
                     fontname=cell_alias,
                     fontfile=str(cell_font),
                     fontsize=fitted_sizes[cell.id],
+                    lineheight=fitted_line_heights.get(cell.id),
                     align=_cell_alignment(align, cell),
                     overlay=True,
                 )
+                if result < -1e-6 and fitted_line_heights.get(cell.id) is not None:
+                    # The cosmetic line-spacing bump was verified to fit on a
+                    # disposable probe page, but the real page's own already-
+                    # embedded font resources (accumulated from earlier cells)
+                    # can round glyph metrics a hair differently -- fall back
+                    # to this cell's normal, unmodified spacing rather than
+                    # failing the whole table over a purely cosmetic extra.
+                    result = page.insert_textbox(
+                        fit_rect,
+                        render_text,
+                        fontname=cell_alias,
+                        fontfile=str(cell_font),
+                        fontsize=fitted_sizes[cell.id],
+                        align=_cell_alignment(align, cell),
+                        overlay=True,
+                    )
                 if result < -1e-6:
                     raise PdfTableFitError(
                         f"cell {cell.id} no longer fits at {fitted_sizes[cell.id]:g}pt during rendering"

@@ -22,6 +22,36 @@ class PdfTranslationService:
     def __init__(self, provider):
         self.provider=provider
 
+    @staticmethod
+    def _clip_from_protected(rect, protected_rects):
+        """Shrink `rect` away from every rect it must never redact into.
+
+        Handles the common real-world shape of this overlap -- one block
+        sitting immediately beside or above/below another, whose boxes
+        clip by a fraction of a point along their shared edge -- by
+        trimming whichever one of rect's four edges is the one reaching
+        into the protected box. This is not a general rectangle
+        difference (a rect straddling a protected box on two sides at
+        once would not be fully separated), but that shape does not occur
+        for adjacent PDF text blocks, which this project's own redaction
+        rects always are.
+        """
+        for protected in protected_rects:
+            overlap = rect & protected
+            if overlap.is_empty:
+                continue
+            if overlap.width <= overlap.height:
+                if rect.x1 > protected.x0 and rect.x0 < protected.x0:
+                    rect.x1 = protected.x0
+                elif rect.x0 < protected.x1 and rect.x1 > protected.x1:
+                    rect.x0 = protected.x1
+            else:
+                if rect.y1 > protected.y0 and rect.y0 < protected.y0:
+                    rect.y1 = protected.y0
+                elif rect.y0 < protected.y1 and rect.y1 > protected.y1:
+                    rect.y0 = protected.y1
+        return rect
+
     def translate_file(self, source_path, destination_path, *, source_language, target_language):
         source,dest=Path(source_path),Path(destination_path)
         if source.resolve()==dest.resolve(): raise ValueError("source and destination paths must differ")
@@ -59,6 +89,33 @@ class PdfTranslationService:
                 # redaction in one call.  Calling apply_redactions per block
                 # on a page with many blocks and large embedded images
                 # causes the content stream (and file size) to blow up.
+                # get_text('blocks') bounding boxes are not guaranteed
+                # disjoint -- two independent, adjacent labels on a dense
+                # drawing page (observed: a "DRAWING No." caption sitting
+                # right next to the drawing number itself) can report boxes
+                # that overlap by a fraction of a point along the shared
+                # edge. A block whose translation is identical to its
+                # source (a protected identifier, kept in English on
+                # purpose) is deliberately left untouched below -- but if a
+                # NEIGHBOURING block that DOES get redacted has a span
+                # reaching across that shared edge, its redaction still
+                # erases whatever original glyph sat in the sliver of
+                # overlap, and nothing ever reinserts it there since the
+                # untouched block was never queued for reinsertion
+                # (observed: "LW-TD-005A" losing its leading "L" to the
+                # "DRAWING No." label's own redaction). Collect every
+                # untouched block's rect first so every OTHER block's own
+                # redaction span can be clipped away from it before either
+                # is queued.
+                protected_rects = []
+                for block_no, block in enumerate(page_blocks):
+                    item = by_block.get((f'page:{page_no+1}', f'block:{block_no}'))
+                    if item is None or not item[1]:
+                        continue
+                    result, _, unit = item
+                    if result.translation.strip() == unit.source_text.strip():
+                        protected_rects.append(fitz.Rect(block[:4]))
+
                 plans = []
                 page_redact_rects = []
                 claimed_cells: list = []
@@ -136,7 +193,7 @@ class PdfTranslationService:
                                 # picking up another block's font, colour or
                                 # rotation angle.
                                 if span_text and span_box.intersects(rect) and span_text in source_text:
-                                    span_rects.append(span_box + (-0.4, -0.4, 0.4, 0.4))
+                                    span_rects.append(self._clip_from_protected(span_box + (-0.4, -0.4, 0.4, 0.4), protected_rects))
                                     size=float(span.get('size') or size)
                                     color=self._span_color(span.get('color'))
                                     source_font=str(span.get('font') or source_font)
