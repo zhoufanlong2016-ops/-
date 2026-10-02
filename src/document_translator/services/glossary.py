@@ -100,6 +100,13 @@ class Glossary:
             flags = re.IGNORECASE if case_insensitive_term(entry.source) else 0
             plural = "" if normalized_source.endswith("s") else "s?"
             pattern = re.compile(re.escape(normalized_source) + plural, flags)
+            # A bare abbreviation ("No.") is a term only as a whole label (a
+            # column header); inside text, "Schedule No. 2" is 2号附表 and
+            # "Item No. 4.5" 第4.5项, not 编号.
+            if len(normalized_source) <= 3 and not _contains_cjk(normalized_source):
+                if remaining.strip().casefold() == normalized_source.casefold():
+                    selected.append(entry)
+                continue
             if pattern.search(remaining):
                 selected.append(entry)
                 remaining = pattern.sub("\x00", remaining)

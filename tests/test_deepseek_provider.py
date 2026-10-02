@@ -38,7 +38,7 @@ def test_deepseek_sends_json_batch_and_terms(monkeypatch) -> None:
     provider = DeepSeekProvider(DeepSeekConfig(model="deepseek-chat"), client=httpx.Client(transport=httpx.MockTransport(handler)), glossary=glossary)
     result = provider.translate_batch([make_unit()])[0]
 
-    assert result.translation == "阀门长2.4 m。"
+    assert result.translation == "阀门长2.4m。"
     assert calls[0]["model"] == "deepseek-chat"
     assert calls[0]["response_format"] == {"type": "json_object"}
     assert "valve -> 阀门" in calls[0]["messages"][0]["content"]

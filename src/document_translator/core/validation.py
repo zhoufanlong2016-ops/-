@@ -31,11 +31,20 @@ def _count_token(text: str, token: str) -> int:
         return text.count(token)
     # A numeric or engineering identifier must not be accepted as a substring
     # of a changed value, for example ``2015`` inside ``202015``.
+    # "3,500 mm" may be written "3,500mm" in Chinese output (no space
+    # between a number and its unit there); both are the same value.
+    from document_translator.translation_rules import UNIT_WORDS
+
+    unit = re.fullmatch(rf"(.*\d)[ \t]+((?:{UNIT_WORDS}))", token)
+    if unit:
+        pattern = rf"(?<![A-Za-z0-9]){re.escape(unit.group(1))}[ \t]?{re.escape(unit.group(2))}(?![A-Za-z])"
+        return len(re.findall(pattern, text))
     if token[0].isdigit() or token[-1].isdigit():
         # A list label such as "1. " already ends in a space; demanding a
         # non-alphanumeric after it rejected "1. Kindly" in the source while
         # accepting "1. 请" in the translation.
-        tail = "" if token[-1].isspace() else "(?![A-Za-z0-9])"
+        # A unit may follow directly in Chinese output ("150HP", "132KV").
+        tail = "" if token[-1].isspace() else rf"(?:(?![A-Za-z0-9])|(?=(?:{UNIT_WORDS}|KV)(?![A-Za-z])))"
         pattern = rf"(?<![A-Za-z0-9]){re.escape(token)}{tail}"
         return len(re.findall(pattern, text))
     return text.count(token)

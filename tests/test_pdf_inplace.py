@@ -409,3 +409,23 @@ def test_numbered_item_with_hanging_indent_stays_one_paragraph():
     line = lambda x0, y, text: pdf_inplace._VisualLine([pdf_inplace._Segment(text, (x0, y, 523.0, y + 13), [{"size": 11.0, "color": 0}])])
     lines = [line(72.0, 402.0, "1. In partial modification to the above referred SPN"), line(90.0, 416.0, "Section 2 - (Tender Data Sheet) Page 2-9"), line(90.0, 430.0, "Documents; the Tender submission deadline")]
     assert len(pdf_inplace._segment(1, lines, (72.0, 526.0))) == 1
+
+
+def test_numbered_sub_items_go_back_on_their_own_lines():
+    source = "2.1.1. Inception Report Approved\n2.1.2 Liaison with stakeholders for NOC\n2.1.3 Design Team mobilized"
+    restored = pdf_inplace._restore_item_breaks(source, "2.1.1.启动报告获批2.1.2.与利益相关者联络 2.1.3设计团队进场")
+    assert restored.split("\n") == ["2.1.1.启动报告获批", "2.1.2.与利益相关者联络", "2.1.3设计团队进场"]
+    assert pdf_inplace._restore_item_breaks("Refer to Sub-Clause 2.1.1", "参见第2.1.1款") == "参见第2.1.1款"
+
+
+def test_full_width_rows_are_not_folded_into_the_cell_above():
+    from document_translator.services.pdf_table import PdfTableCell, _merge_phantom_rows
+
+    cell = lambda row, column, rect, text="x": PdfTableCell(id=f"r{row}c{column}", page_number=1, table_number=1, row=row, column=column, text=text, rect=rect, source_font_size=10.0)
+    cells = (
+        cell(1, 1, (82, 162, 287, 232)), cell(1, 2, (287, 162, 514, 232)),
+        cell(2, 1, (82, 232, 514, 301), "Note: ..."), cell(2, 2, None, ""),
+        cell(3, 1, (82, 301, 514, 338), "Schedule No. 4"), cell(3, 2, None, ""),
+    )
+    folded = {c.id: c for c in _merge_phantom_rows(cells, 3, 2)}
+    assert folded["r2c1"].text == "Note: ..." and folded["r3c1"].text == "Schedule No. 4"

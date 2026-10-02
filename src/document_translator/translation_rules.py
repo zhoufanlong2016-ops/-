@@ -255,6 +255,17 @@ def validate_name_retention(
     return errors
 
 
+_LOWER_RUN_RE = re.compile(r"\b[a-z]+(?:[ \t]+[a-z]+){3,}\b")
+
+
+def _untranslated_phrase(source_text: str, translation: str) -> str | None:
+    source = " ".join(source_text.split()).casefold()
+    for match in _LOWER_RUN_RE.finditer(translation):
+        if match.group(0) in source:
+            return match.group(0)
+    return None
+
+
 def validate_translation_residue(
     source_text: str,
     translation: str,
@@ -292,9 +303,14 @@ def validate_translation_residue(
     # those independent retries then regressed a "Gulshan e Ravi" mention
     # that had translated correctly the first time -- a net loss, not a
     # fix. Left as a known gap rather than trading it for that.
+    # Prose left in English is caught by phrase, not by word: four or more
+    # lowercase words in a row from the source ("of proportion of each site
+    # on delivery") are an untranslated sentence, while acronyms and names
+    # (PMC, Gulshan Ravi) never form such a run.
+    phrase = _untranslated_phrase(source_text, translation)
     if not is_short_label and not has_date:
-        return []
-    errors: list[str] = []
+        return [f"UNTRANSLATED_ENGLISH: {phrase!r} remains in Chinese output"] if phrase else []
+    errors: list[str] = [f"UNTRANSLATED_ENGLISH: {phrase!r} remains in Chinese output"] if phrase else []
     remaining = source_text
     # "Gulshan-e-Ravi" / "Gulshan e Ravi" is a place name the prompt tells the
     # model to keep in English; it has no Rd./Colony suffix to be recognised by.
@@ -351,7 +367,15 @@ def normalize_chinese_spacing(text: str, target_language: str) -> str:
         return text
     for pattern in _ZH_SPACING_RES:
         text = pattern.sub(lambda match: match.group(0) if _LIST_LABEL_BEFORE_RE.search(text[: match.start()]) else "", text)
-    return text
+    return _NUMBER_UNIT_SPACE_RE.sub("", text)
+
+
+# 数字 + 英文单位:"3,500 mm" -> "3,500mm"
+UNIT_WORDS = (
+    "kVA|KVA|MPa|kPa|kN|kg|kW|MW|kV|KV|Hz|mL|mm|cm|km|m²|m³|㎡|m|N|W|V|L|HP|hp|hrs|hr|"
+    "cusecs|cusec|Cusecs|Cusec|USD|PKR|RMB|CNY|%|‰|°"
+)
+_NUMBER_UNIT_SPACE_RE = re.compile(rf"(?<=\d)[ \t ]+(?=(?:{UNIT_WORDS})(?![A-Za-z]))")
 
 
 def auto_correct_translation(

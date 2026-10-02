@@ -147,7 +147,8 @@ class PdfTableFitError(PdfTableError):
         self.cell_id = cell_id
 
 
-_TABLE_LIST_ITEM_RE = re.compile(r"^\s*(?:\d+[.)]|[A-Za-z][.)]|[-*•])\s+")
+# "2.1.2 Liaison..." milestone sub-items are list items too.
+_TABLE_LIST_ITEM_RE = re.compile(r"^\s*(?:\d+(?:\.\d+)+\.?\s*(?=\S)|\d+[.)]\s+|[A-Za-z][.)]\s+|[-*•]\s+)")
 
 # A non-breaking space (U+00A0) between a number and its unit, or after a
 # short list marker, was tried here to stop insert_textbox() from
@@ -553,9 +554,23 @@ def _merge_phantom_rows(
     merged: dict[str, PdfTableCell] = {cell.id: cell for cell in cells}
     for row in range(1, row_count + 1):
         real = [cell for cell in by_row.get(row, ()) if cell.rect is not None]
-        if len(real) == 1 and column_count > 1 and real[0].column in active:
+        target = merged[active[real[0].column]] if len(real) == 1 and real[0].column in active else None
+        # A row spanning several columns ("Note: ..." across the whole table)
+        # is a real row, not an underline artefact: its one cell is wider
+        # than the column it starts in.
+        widest = max((c.rect[2] - c.rect[0] for c in cells if c.rect is not None and c.column == 1), default=0.0)
+        narrowest = min((c.rect[2] - c.rect[0] for c in cells if c.rect is not None and c.column == 1), default=0.0)
+        spans_columns = (
+            target is not None and target.rect is not None and real[0].rect is not None
+            and (
+                real[0].rect[2] - real[0].rect[0] > (target.rect[2] - target.rect[0]) + 2.0
+                # a heading row across the table after another one
+                or (widest > narrowest + 2.0 and real[0].rect[2] - real[0].rect[0] >= widest - 2.0)
+            )
+        )
+        if len(real) == 1 and column_count > 1 and real[0].column in active and not spans_columns:
             phantom = real[0]
-            target = merged[active[phantom.column]]
+            assert target is not None
             assert target.rect is not None and phantom.rect is not None
             merged_text = target.text + ("\n" + phantom.text if phantom.text.strip() else "")
             merged_rect = (target.rect[0], target.rect[1], target.rect[2], phantom.rect[3])

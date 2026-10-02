@@ -330,3 +330,29 @@ def test_chinese_output_has_no_spaces_between_hanzi_digits_latin_and_punctuation
     assert normalize("新制造的 MTBM ， 详见 ISO 9001 标准。", "zh") == "新制造的MTBM，详见ISO 9001标准。"
     assert normalize("1. 请参阅第 6 节", "zh") == "1. 请参阅第6节"
     assert normalize("Section 2 of the Contract", "en") == "Section 2 of the Contract"
+
+
+def test_english_prose_left_in_chinese_output_is_caught_but_names_are_not():
+    from document_translator.translation_rules import validate_translation_residue
+
+    source = "for all sites in scope.\n70% of proportion of each site on delivery of\ncomplete equipment"
+    assert validate_translation_residue(source, "70% of proportion of each site on delivery of complete equipment", "en", "zh")
+    assert not validate_translation_residue(source, "设备交付时各场地比例的70%", "en", "zh")
+    assert not validate_translation_residue("the PMC at Gulshan Ravi shall approve", "PMC 应在 Gulshan Ravi 批准", "en", "zh")
+
+
+def test_bare_abbreviation_glossary_term_matches_only_a_whole_label():
+    from document_translator.services.glossary import load_glossary
+
+    glossary = load_glossary(r"D:\01 绿色程序\文档翻译器\src\document_translator\assets\engineering_en_zh_glossary.csv")
+    assert [e.target for e in glossary.entries_for("No.")] == ["编号"]
+    assert glossary.entries_for("Schedule No. 2 of Tender Forms") == ()
+
+
+def test_no_space_between_number_and_unit_in_chinese_and_both_forms_validate():
+    from document_translator.core.validation import validate_placeholders
+    from document_translator.translation_rules import normalize_chinese_spacing
+
+    assert normalize_chinese_spacing("直径在2,400 mm和3,500 mm之间，功率60 HP", "zh") == "直径在2,400mm和3,500mm之间，功率60HP"
+    assert validate_placeholders("2,400 mm and 3,500 mm", "2,400mm和3,500mm", ["2,400 mm", "3,500 mm"]) == []
+    assert validate_placeholders("3,500 mm", "3,600mm", ["3,500 mm"])

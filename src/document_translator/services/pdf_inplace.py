@@ -207,7 +207,7 @@ class InPlacePdfTranslationService:
         profile = load_numbering_profile(style_profile, target_language=target_language)
         run: dict[str, object] = {"engine": "inplace", "source_hash": preflight.source_hash}
         destination.parent.mkdir(parents=True, exist_ok=True)
-        with tempfile.TemporaryDirectory(prefix="document-translator-inplace-", dir=destination.parent) as workdir_text:
+        with tempfile.TemporaryDirectory(prefix="document-translator-inplace-", dir=destination.parent, ignore_cleanup_errors=True) as workdir_text:
             candidate = Path(workdir_text) / "inplace-candidate.pdf"
             try:
                 run.update(
@@ -343,9 +343,14 @@ def _translate_in_place(
                 translation, len(cell.text) / max(1, len(cell.text) + len(tail.text))
             )
         else:
-            cell_translations[cell.id] = translation or cell.text
+            cell_translations[cell.id] = _restore_item_breaks(cell.text, translation) if translation else cell.text
     table_report = _render_tables(source, staged, candidate, tables, cell_translations, source_language, target_language, warnings)
-    staged.unlink(missing_ok=True)
+    try:
+        staged.unlink(missing_ok=True)
+    except OSError:
+        # Windows can still hold the intermediate file a moment (a virus
+        # scanner); it lives in a temporary folder that is removed anyway.
+        pass
     return {
         "paragraph_count": len(paragraphs),
         "translated_paragraph_count": len(translatable),
@@ -406,6 +411,27 @@ def _continued_cells(tables: list[Any]) -> dict[str, Any]:
             ):
                 pairs[source.id] = cell
     return pairs
+
+
+_ITEM_NUMBER_AT_LINE_START = re.compile(r"(?m)^[ \t]*(\d+(?:\.\d+)+\.?)(?=\s*\S)")
+
+
+def _restore_item_breaks(source: str, translation: str) -> str:
+    """Put each numbered sub-item of a cell back on its own line.
+
+    A milestone cell lists "2.1.1. Inception Report Approved" / "2.1.2
+    Liaison..." on separate lines; the model returned one run-on sentence
+    ("…获批2.1.2.与利益相关者…"). Only numbers that start a line in the
+    source are used, so a reference like "第2.1.1款" is never split.
+    """
+    numbers = _ITEM_NUMBER_AT_LINE_START.findall(source)
+    if len(numbers) < 2:
+        return translation
+    for number in numbers[1:]:
+        translation = re.sub(
+            rf"(?<=[^\n])[ \t]*(?=(?<![0-9.]){re.escape(number)}(?![0-9]))", "\n", translation, count=1
+        )
+    return translation
 
 
 _SPLIT_MARKS = "。；，、;,. "
@@ -608,7 +634,7 @@ def _segment(
     current: list[_VisualLine] = []
     current_centred = False
     for line in lines:
-        centred = _is_centred(line, bounds)
+        centred = own_centred = _is_centred(line, bounds)
         # The widest line of a centred block is what sets the margins, so it
         # has no open margins of its own; it must not split that block.
         if not centred and current and current_centred and (line.bbox[2] - line.bbox[0]) >= 0.95 * (right - left):
@@ -644,6 +670,11 @@ def _segment(
             if new:
                 paragraphs.append(_Paragraph(page_number, current, current_centred))
                 current = []
+                # A full-width line only counts as centred while it continues
+                # a centred block; starting a new paragraph after a centred
+                # title it is body text ("Contractor shall submit..." was
+                # centred, and its last line split off as a paragraph).
+                centred = own_centred
         if not current:
             current_centred = centred
         current.append(line)
