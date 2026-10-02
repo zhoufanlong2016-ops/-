@@ -87,7 +87,12 @@ def build_cli_command(
     if glossary:
         args.extend(("--glossary", str(glossary)))
     if suffix == ".pdf":
-        args.extend(("--allow-complex-pdf", "--report", str(Path(destination).with_suffix(".report.json"))))
+        # The in-place engine keeps every page object, so drawing PDFs (class
+        # C) are safe to translate from the GUI as well.
+        args.extend((
+            "--engine", "inplace", "--allow-complex-pdf", "--allow-cad-pdf",
+            "--report", str(Path(destination).with_suffix(".report.json")),
+        ))
         if pdf_cache is not None:
             args.extend(("--cache", str(pdf_cache)))
     elif suffix == ".docx":

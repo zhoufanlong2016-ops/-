@@ -95,6 +95,7 @@ def test_default_en_zh_engineering_glossary_is_selected() -> None:
     assert [(entry.source, entry.target) for entry in glossary.entries] == [
         ("Clearing and Grubb", "清表及清根"),
         ("No.", "编号"),
+        ("Ultimate Disposal Station", "最终处置站"),
     ]
 
 

@@ -305,3 +305,58 @@ def test_translate_all_dedups_runs_concurrently_and_reuses_cache(tmp_path):
         again, _, stats2 = pdf_inplace._translate_all(rerun, units, cache=cache)
         assert rerun.sent == [] and stats2["from_cache"] == 41
         assert again == translations
+
+
+def test_line_broken_after_hyphen_joins_without_space():
+    line = lambda text: pdf_inplace._VisualLine([pdf_inplace._Segment(text, (0, 0, 10, 10), [{"size": 10.0}])])
+    paragraph = pdf_inplace._Paragraph(1, [line("Drawing No. LW-"), line("TD-401 through")], False)
+    assert paragraph.text == "Drawing No. LW-TD-401 through"
+
+
+def test_bare_codes_are_not_sent_for_translation():
+    assert not pdf_inplace._needs_translation("J01-L3C", "en")
+    assert not pdf_inplace._needs_translation("R05-A", "en")
+    assert pdf_inplace._needs_translation("AREA= 86 ACRE", "en")
+
+
+def test_cjk_paragraph_never_breaks_inside_a_code(tmp_path):
+    source = tmp_path / "source.pdf"
+    doc = fitz.open()
+    page = doc.new_page(width=300, height=200)
+    page.insert_text((20, 40), "a clean gas-based fire suppression system e.g. Inergen (IG-541) or FM200", fontsize=6)
+    doc.save(source)
+    lines, _ = pdf_inplace._visual_lines(fitz.open(source)[0], [])
+    paragraph = pdf_inplace._Paragraph(1, lines, False, page_width=300, bounds=(20.0, 280.0))
+    text = "承包商应设计并提供洁净气体灭火系统，例如 Inergen (IG-541) 或 FM200。" * 3
+    for width in range(90, 200, 3):
+        content, *_ = pdf_inplace._layout(fitz.open(source)[0], paragraph, text, 10.0, (20.0, 280.0), float(width))
+        assert all("IG-" not in row or "IG-541" in row for row in content.split("\n"))
+
+
+def test_map_marker_glyphs_are_neither_text_nor_a_merge_bridge(tmp_path):
+    source = tmp_path / "map.pdf"
+    doc = fitz.open()
+    page = doc.new_page(width=300, height=200)
+    page.insert_text((20, 40), "J01-L3C", fontsize=5)
+    page.insert_text((43, 40), "!(", fontsize=5, fontname="Symbol")
+    page.insert_text((52, 40), "BEIGUM Rd.", fontsize=5)
+    doc.save(source)
+    lines, _ = pdf_inplace._visual_lines(fitz.open(source)[0], [])
+    assert sorted(line.text for line in lines) == ["BEIGUM Rd.", "J01-L3C"]
+
+
+def test_code_digits_are_not_an_inline_list_marker():
+    from document_translator.services.pdf_table import _break_inline_list_markers
+
+    assert "\n" not in _break_inline_list_markers("例如 Inergen (IG-541) 或 FM200。")
+    assert _break_inline_list_markers("要求如下 1. 第一项 2. 第二项").count("\n") == 2
+
+
+def test_acronyms_in_a_dated_cell_are_not_untranslated_english():
+    from document_translator.translation_rules import validate_translation_residue
+
+    errors = validate_translation_residue(
+        "PMC shall approve the windows by 12th March 2025", "PMC 应于2025年3月12日批准 windows", "en", "zh"
+    )
+    assert not any("'PMC'" in error for error in errors)
+    assert any("'windows'" in error for error in errors)

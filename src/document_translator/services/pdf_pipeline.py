@@ -202,16 +202,26 @@ def repair_pdf_text_cmaps(path: str | Path) -> dict[str, object]:
                 # mapping at the PDF boundary as well; this changes text-layer
                 # semantics only and leaves painted glyph geometry intact.
                 dash_repairs: list[dict[str, object]] = []
-                for dash_code in _UNICODE_DASH_CODES:
+                # Arial shares one glyph between "-" and U+00AD and between
+                # " " and U+00A0, and the generated CMap names the latter:
+                # "J01-L3C" then copied/searched as "J01\xadL3C".
+                for dash_code, target in (
+                    *((code, "002D") for code in _UNICODE_DASH_CODES),
+                    ("00AD", "002D"),
+                    ("00A0", "0020"),
+                ):
                     dash_mapping = re.compile(
                         rb"(<[0-9a-fA-F]+>)\s*<" + dash_code.encode("ascii") + rb">"
+                        if dash_code in _UNICODE_DASH_CODES
+                        # bfchar lines only: "<0001> <00A0> <...>" is a bfrange bound.
+                        else rb"(?mi)^(<[0-9a-f]+>)[ \t]*<" + dash_code.encode("ascii") + rb">[ \t\r]*$"
                     )
-                    repaired_cmap, count = dash_mapping.subn(rb"\1<002D>", repaired_cmap)
+                    repaired_cmap, count = dash_mapping.subn(rb"\1<" + target.encode("ascii") + rb">", repaired_cmap)
                     if count:
                         dash_repairs.append(
                             {
                                 "font": str(font[4]),
-                                "mapping": f"U+{dash_code}->U+002D",
+                                "mapping": f"U+{dash_code}->U+{target}",
                                 "control_count": count,
                             }
                         )

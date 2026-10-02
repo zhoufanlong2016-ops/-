@@ -55,6 +55,7 @@ def probe_textbox(
     fontsize: float,
     align: int = 0,
     count_lines: bool = False,
+    lineheight: float | None = None,
 ) -> tuple[float, int]:
     """insert_textbox()'s fit result (and line count) for a width x height box.
 
@@ -71,7 +72,7 @@ def probe_textbox(
         try:
             page = probe.new_page(width=width + 20, height=height + 20)
             rect = fitz.Rect(0, 0, width, height)
-            result = page.insert_textbox(rect, text, fontname=fontname, fontfile=fontfile, fontsize=fontsize, align=align)
+            result = page.insert_textbox(rect, text, fontname=fontname, fontfile=fontfile, fontsize=fontsize, align=align, lineheight=lineheight)
             return result, _probe_line_count(page, None) if count_lines else 0
         finally:
             probe.close()
@@ -86,8 +87,36 @@ def probe_textbox(
         rect = fitz.Rect(10, state["y"], 10 + width, state["y"] + height)
         state["y"] += height + 30
         state["count"] += 1
-        result = state["page"].insert_textbox(rect, text, fontname=fontname, fontfile=fontfile, fontsize=fontsize, align=align)
+        result = state["page"].insert_textbox(rect, text, fontname=fontname, fontfile=fontfile, fontsize=fontsize, align=align, lineheight=lineheight)
         return result, _probe_line_count(state["page"], rect) if count_lines else 0
+
+
+# insert_textbox() reserves a full line pitch plus the descent even for a
+# single line, so a 7 pt value no longer fit the 9 pt row it came from and
+# the whole table dropped to 6 pt. One line needs no inter-line room.
+
+
+def compact_line_height(
+    width: float, height: float, wrapped: str, *, fontfile: str, fontname: str, fontsize: float, align: int = 0
+) -> float | None:
+    """A line height (< 1) when single-line ``wrapped`` fits only with one."""
+    if not wrapped.strip():
+        return None
+    if probe_textbox(width, height, wrapped, fontfile=fontfile, fontname=fontname, fontsize=fontsize, align=align)[0] >= 0:
+        return None
+    font = cached_font(fontfile)
+    # insert_textbox() needs lineheight*size plus the descent: with the
+    # ascent as line height one line takes exactly the glyph box height;
+    # several lines keep the glyph pitch (SimHei's default adds 20 %).
+    if "\n" in wrapped:
+        compact = round(max(font.ascender - font.descender, 1.0) + 0.05, 3)
+    else:
+        compact = round(max(font.ascender, 0.8), 3)
+    fits = probe_textbox(
+        width, height, wrapped, fontfile=fontfile, fontname=fontname, fontsize=fontsize, align=align,
+        lineheight=compact,
+    )[0] >= 0
+    return compact if fits else None
 
 
 def _probe_line_count(page: Any, clip: Any) -> int:
@@ -134,7 +163,9 @@ _TABLE_LIST_ITEM_RE = re.compile(r"^\s*(?:\d+[.)]|[A-Za-z][.)]|[-*•])\s+")
 # (redacted, subset, saved) page, not an isolated probe render.
 
 
-_INLINE_LIST_MARKER_RE = re.compile(r"(?<![A-Za-z0-9])(\d{1,3}[.)]|[A-Za-z][.)]|-)\s+")
+# "(IG-541) 或" is a code, not a "541)" list marker: a hyphen, slash or dot
+# before the digits joins them to what precedes.
+_INLINE_LIST_MARKER_RE = re.compile(r"(?<![A-Za-z0-9./-])(\d{1,3}[.)]|[A-Za-z][.)]|-)\s+")
 
 
 def _break_inline_list_markers(text: str) -> str:
@@ -722,7 +753,9 @@ def _cell_fit_padding(rect: Any, text: str, padding: float) -> float:
         return 0.0
     width = max(0.0, float(rect.x1 - rect.x0))
     height = max(0.0, float(rect.y1 - rect.y0))
-    if len(text.strip()) <= 4 or width < 36.0 or height < 24.0:
+    # Rows a few lines tall (a dense schedule: 3 lines in a 27.7 pt row) have
+    # no room for a 2 pt inset at the source's own size either.
+    if len(text.strip()) <= 4 or width < 36.0 or height < 48.0:
         return min(padding, 0.5)
     return padding
 
@@ -905,15 +938,25 @@ def _wrap_atomic_phrases(
             continue
         lines: list[str] = []
         current = ""
+        current_width = 0.0
         pending_sep = ""
         for atom, sep in pairs:
-            candidate = current + pending_sep + atom if current else atom
-            if not current or width_of(candidate) <= max_width:
-                current = candidate
+            # Widths add up (text_length() applies no kerning), so measure
+            # only the new piece: re-measuring the whole line per atom made
+            # wrapping quadratic in the paragraph length.
+            atom_width = width_of(atom)
+            added = (width_of(pending_sep) if pending_sep else 0.0) + atom_width
+            if not current:
+                current, current_width = atom, atom_width
+                pending_sep = sep
+            elif current_width + added <= max_width:
+                current += pending_sep + atom
+                current_width += added
                 pending_sep = sep
             else:
                 lines.append(current)
                 current = atom
+                current_width = atom_width
                 pending_sep = sep
         if current:
             lines.append(current)
@@ -965,7 +1008,11 @@ def _fit_textbox(
             fontfile=fontfile, fontname=fontname, fontsize=candidate, align=align, count_lines=True,
         )
         if result < -1e-6:
-            continue
+            if compact_line_height(
+                rect.width, rect.height, wrapped, fontfile=fontfile, fontname=fontname, fontsize=candidate, align=align
+            ) is None:
+                continue
+            line_count = 1
         fitting.append((max(1, line_count), candidate))
     if fitting:
         # Keep the largest fitting size.  Horizontal utilisation is handled by
@@ -1303,6 +1350,7 @@ def render_table_translations(
         redactions_by_page: dict[int, list[Any]] = {}
         fitted_sizes: dict[str, float] = {}
         fitted_line_heights: dict[str, float | None] = {}
+        compact_cells: set[str] = set()
         fitted_texts: dict[str, str] = {}
         source_drawing_counts: dict[int, int] = {}
         font_by_cell: dict[str, Path] = {}
@@ -1402,7 +1450,13 @@ def render_table_translations(
                     max_width=fit_rect.width,
                 )
                 fitted_texts[cell.id] = wrapped_text
-                fitted_line_heights[cell.id] = None if not spread_lines else _fill_line_height(
+                compact = compact_line_height(
+                    fit_rect.width, fit_rect.height, wrapped_text, fontfile=str(cell_font), fontname=cell_alias,
+                    fontsize=fitted_size, align=_cell_alignment(align, cell),
+                )
+                if compact:
+                    compact_cells.add(cell.id)
+                fitted_line_heights[cell.id] = compact if compact or not spread_lines else _fill_line_height(
                     fit_rect,
                     wrapped_text,
                     fontfile=str(cell_font),
@@ -1451,7 +1505,7 @@ def render_table_translations(
                     _cell_fit_padding(cell_rect, translated, padding),
                 )
                 render_text = fitted_texts.get(cell.id, translated)
-                if middle_aligned is not None and middle_aligned(cell):
+                if middle_aligned is not None and middle_aligned(cell) and cell.id not in compact_cells:
                     fitted_line_heights[cell.id] = None
                     probe = fitz.open()
                     try:

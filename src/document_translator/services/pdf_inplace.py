@@ -73,6 +73,7 @@ _LABEL_RE = re.compile(
     r"|[（(][一二三四五六七八九十\d]+[）)]"
     r"|\d+(?:\.\d+)*[、．.](?!\d))"
 )
+_SYMBOL_FONT_RE = re.compile(r"ESRI|Marker|Symbol|Wingding|Webding|Dingbat", re.IGNORECASE)
 _FONT_STEP = 0.5
 # Only a runaway guard: sizes keep stepping down until the text fits.
 _ABSOLUTE_MIN_SIZE = 1.0
@@ -145,7 +146,10 @@ class _Paragraph:
         result = ""
         for line in self.lines:
             text = line.text
-            if result and not (_CJK_END_RE.search(result) and _CJK_START_RE.search(text)):
+            # "Drawing No. LW-" / "TD-401": a line broken after a hyphen
+            # continues the same word or code, with no space.
+            hyphen_break = bool(re.search(r"[A-Za-z0-9]-$", result)) and text[:1].isalnum()
+            if result and not hyphen_break and not (_CJK_END_RE.search(result) and _CJK_START_RE.search(text)):
                 result += " "
             result += text
         return result.strip()
@@ -305,7 +309,9 @@ def _translate_in_place(
         for cell in table.cells:
             if cell.is_empty or not _needs_translation(cell.text, source_language):
                 continue
-            unit = _unit(cell.text, f"page:{cell.page_number}", cell.id, "table_cell", source_hash, source_language, target_language)
+            # "Drawing No. LW-" / "TD-401" broken across cell lines is one code.
+            cell_text = re.sub(r"(?<=[A-Za-z0-9])-\n(?=[A-Za-z0-9])", "-", cell.text)
+            unit = _unit(cell_text, f"page:{cell.page_number}", cell.id, "table_cell", source_hash, source_language, target_language)
             cell_units.append(unit)
             cell_by_unit[unit.id] = cell
 
@@ -390,12 +396,25 @@ def _visual_lines(page: Any, table_rects: list[Any]) -> tuple[list[_VisualLine],
     import fitz
 
     segments: list[_Segment] = []
+    markers: list[tuple[float, float, float, float]] = []
     rotated = 0
-    for block in page.get_text("dict").get("blocks", ()):
+    # rawdict: the per-glyph boxes let removal target exactly these glyphs.
+    for block in page.get_text("rawdict").get("blocks", ()):
         if block.get("type") != 0:
             continue
         for line in block.get("lines", ()):
-            spans = [span for span in line.get("spans", ()) if str(span.get("text", "")).strip()]
+            spans = []
+            for span in line.get("spans", ()):
+                span["text"] = "".join(str(char.get("c", "")) for char in span.get("chars", ()))
+                if not str(span.get("text", "")).strip():
+                    continue
+                # Map symbols ("!(" in ESRIDefaultMarker is a point marker)
+                # are graphics: rewriting them in a text font printed "!("
+                # and their removal clipped neighbouring labels.
+                if _SYMBOL_FONT_RE.search(str(span.get("font", ""))):
+                    markers.append(tuple(span["bbox"]))
+                    continue
+                spans.append(span)
             if not spans:
                 continue
             direction = line.get("dir", (1.0, 0.0))
@@ -423,7 +442,13 @@ def _visual_lines(page: Any, table_rects: list[Any]) -> tuple[list[_VisualLine],
             # a drawing share baselines but are separate pieces of text.
             size = max(float(span.get("size", 0.0)) for span in segment.spans)
             gap = max(segment.bbox[0] - lx1, lx0 - segment.bbox[2])
-            if height > 0 and overlap >= 0.6 * height and gap <= 3.0 * size:
+            between = (min(lx1, segment.bbox[2]), max(lx0, segment.bbox[0]))
+            marker_between = any(
+                between[0] <= (m[0] + m[2]) / 2 <= between[1]
+                and min(m[3], segment.bbox[3]) - max(m[1], segment.bbox[1]) > 0
+                for m in markers
+            )
+            if height > 0 and overlap >= 0.6 * height and gap <= 3.0 * size and not marker_between:
                 line.segments.append(segment)
                 break
         else:
@@ -527,7 +552,11 @@ def _segment(
 def _needs_translation(text: str, source_language: str) -> bool:
     if source_language.lower().startswith("zh"):
         return bool(_CJK_RE.search(text))
-    return any(char.isalpha() for char in text)
+    # A bare code ("J01-L3C", "R05-A") has nothing to translate; rewriting it
+    # only risks changing it.
+    from .pdf_pipeline import _IMMUTABLE_IDENTIFIER_RE
+
+    return any(char.isalpha() for char in _IMMUTABLE_IDENTIFIER_RE.sub("", text))
 
 
 def _unit(
@@ -779,6 +808,10 @@ def _render_paragraphs(
     # largest size at which its translation fits there.
     plans: list[tuple[_Paragraph, str, Any]] = []
     for paragraph, unit in zip(translatable, units):
+        # A name kept as is ("GULSHAN E RAVI DS"): the original glyphs, in
+        # their own bold face and position, are already the right output.
+        if " ".join(translations[unit.id].split()) == " ".join(paragraph.text.split()):
+            continue
         page = doc[paragraph.page_number - 1]
         page_paragraphs = [p for p in paragraphs if p.page_number == paragraph.page_number]
         own = [fitz.Rect(line.bbox) for line in paragraph.lines]
@@ -811,10 +844,12 @@ def _render_paragraphs(
         page_plans = [plan for plan in plans if plan[0].page_number == page_number]
         # Remove every original glyph being replaced first, then write.
         for paragraph, _, _ in page_plans:
+            # A small box at each glyph's centre: a whole-span box also
+            # removed glyphs of neighbouring labels whose (tall, often
+            # rotated) boxes merely touched it.
             for span in (s for line in paragraph.lines for s in line.spans):
-                x0, y0, x1, y1 = span["bbox"]
-                inset = (y1 - y0) * 0.2
-                page.add_redact_annot(fitz.Rect(x0, y0 + inset, x1, y1 - inset), fill=False)
+                for x0, y0, x1, y1 in _glyph_centre_bands(span):
+                    page.add_redact_annot(fitz.Rect(x0, y0, x1, y1), fill=False)
         page.apply_redactions(images=0, graphics=0, text=0)
         for paragraph, text, region in page_plans:
             size = _insert(page, paragraph, text, region, group_size[_style_key(paragraph)], paragraph.bounds)
@@ -825,6 +860,25 @@ def _render_paragraphs(
         "style_sizes": [{"source_size": key[0], "font": key[1], "size": size} for key, size in group_size.items()],
         "size_reduced": shrunk,
     }
+
+
+def _glyph_centre_bands(span: dict[str, Any]) -> list[tuple[float, float, float, float]]:
+    """Thin boxes through the glyph centres of ``span``: one per level span
+    (one annotation per glyph made a 100-page file 4x slower), one per glyph
+    when the span is tilted and a single band would miss its ends."""
+    chars = [c for c in span.get("chars", ()) if c["bbox"][2] > c["bbox"][0]]
+    if not chars:
+        return []
+    centres = [((c["bbox"][0] + c["bbox"][2]) / 2, (c["bbox"][1] + c["bbox"][3]) / 2) for c in chars]
+    height = max(c["bbox"][3] - c["bbox"][1] for c in chars)
+    dy = max(height * 0.05, 0.05)
+    if max(y for _, y in centres) - min(y for _, y in centres) <= dy:
+        cy = sum(y for _, y in centres) / len(centres)
+        return [(chars[0]["bbox"][0] + 0.1, cy - dy, chars[-1]["bbox"][2] - 0.1, cy + dy)]
+    return [
+        (cx - max((c["bbox"][2] - c["bbox"][0]) * 0.1, 0.05), cy - dy, cx + max((c["bbox"][2] - c["bbox"][0]) * 0.1, 0.05), cy + dy)
+        for c, (cx, cy) in zip(chars, centres)
+    ]
 
 
 def _style_key(paragraph: _Paragraph) -> tuple[object, ...]:
@@ -869,7 +923,9 @@ def _region(page: Any, paragraph: _Paragraph, obstacles: list[Any], bounds: tupl
     return fitz.Rect(x0 - 0.5, top, x1 + 0.5, max(y1 + 1.0, bottom))
 
 
-def _layout(page: Any, paragraph: _Paragraph, text: str, size: float, bounds: tuple[float, float]) -> tuple[str, str, str, int]:
+def _layout(
+    page: Any, paragraph: _Paragraph, text: str, size: float, bounds: tuple[float, float], width: float | None = None
+) -> tuple[str, str, str, int]:
     """(content, fontfile, alias, align) for writing ``text`` at ``size``.
 
     English uses its own normal line spacing throughout: the source's wide
@@ -890,23 +946,51 @@ def _layout(page: Any, paragraph: _Paragraph, text: str, size: float, bounds: tu
         align = 3  # the source body text is justified
     indent = first.bbox[0] - paragraph.bbox[0] if multi_line and align in (0, 3) else 0.0
     spaces = 0
-    from .pdf_table import cached_font
+    from .pdf_table import _wrap_atomic_phrases, cached_font
 
     font = cached_font(fontfile)
+    cjk = bool(_CJK_RE.search(text))
     # CJK fonts such as SimHei have no NBSP glyph (it shows as a box); use
     # the ideographic space there.
-    pad = "\u00a0" if font.has_glyph(0xA0) else "\u3000"
+    pad = "\u3000" if cjk or not font.has_glyph(0xA0) else "\u00a0"
     if indent > 0.8 * size:
         spaces = int(round(indent / max(font.text_length(pad, fontsize=size), 0.1)))
     content = pad * spaces + text if spaces else text
+    if cjk and width:
+        # insert_textbox() only breaks at spaces, so an unspaced Chinese
+        # paragraph was cut wherever the width ran out -- inside "IG-541" or
+        # an English word. Break it ourselves, between CJK characters only.
+        content = _wrap_atomic_phrases(content, fontfile=fontfile, fontname=_font_alias(fontfile), fontsize=size, max_width=width - 1.0)
     return content, fontfile, _font_alias(fontfile), align
+
+
+def _on_source_baseline(region: Any, paragraph: _Paragraph, fontfile: str, size: float) -> Any:
+    """Move the box down so the first line sits on the source's own baseline.
+
+    The source's span boxes include the font's full ascent, so writing from
+    their top put every translation a few points above the original line
+    (on a map, 5 pt above the label it replaced). Never moves the box up.
+    """
+    import fitz
+
+    from .pdf_table import cached_font
+
+    span = paragraph.lines[0].spans[0]
+    origin = span.get("origin") or (span.get("chars") or [{}])[0].get("origin")
+    if not origin:
+        return region
+    top = float(origin[1]) - cached_font(fontfile).ascender * size
+    if top <= region.y0:
+        return region
+    return fitz.Rect(region.x0, min(top, region.y1 - size), region.x1, region.y1)
 
 
 def _fit_size(page: Any, paragraph: _Paragraph, text: str, region: Any, bounds: tuple[float, float]) -> float:
     """The source size if the text fits its place; otherwise stepped down until it does."""
     size = round(paragraph.size * 2) / 2 or paragraph.size
     while size - _FONT_STEP >= _ABSOLUTE_MIN_SIZE:
-        content, fontfile, alias, align = _layout(page, paragraph, text, size, bounds)
+        content, fontfile, alias, align = _layout(page, paragraph, text, size, bounds, region.width)
+        # Sitting on the source baseline is preferred, never worth a smaller size.
         if _fits(region, content, fontfile, alias, size, align):
             return size
         size = round(size - _FONT_STEP, 2)
@@ -922,9 +1006,11 @@ def _insert(page: Any, paragraph: _Paragraph, text: str, region: Any, size: floa
     line). Returns the size actually written.
     """
     while True:
-        content, fontfile, alias, align = _layout(page, paragraph, text, size, bounds)
+        content, fontfile, alias, align = _layout(page, paragraph, text, size, bounds, region.width)
+        anchored = _on_source_baseline(region, paragraph, fontfile, size)
+        box = anchored if _fits(anchored, content, fontfile, alias, size, align) else region
         written = page.insert_textbox(
-            region, content, fontname=alias, fontfile=fontfile, fontsize=size,
+            box, content, fontname=alias, fontfile=fontfile, fontsize=size,
             color=_rgb(paragraph.lines[0].color), align=align, overlay=True,
         )
         if written >= 0 or size - _FONT_STEP < _ABSOLUTE_MIN_SIZE:
@@ -1062,7 +1148,9 @@ def _table_font_size(tables: list[Any], cell_translations: dict[str, str]) -> fl
                 if any(font.text_length(word, fontsize=size) > width for word in atom.split(" ")):
                     return False
         wrapped = pdf_table._wrap_atomic_phrases(normalised, fontfile=fontfile, fontname="probe", fontsize=size, max_width=width)
-        return pdf_table.probe_textbox(width, height, wrapped, fontfile=fontfile, fontname="probe", fontsize=size)[0] >= 0
+        if pdf_table.probe_textbox(width, height, wrapped, fontfile=fontfile, fontname="probe", fontsize=size)[0] >= 0:
+            return True
+        return pdf_table.compact_line_height(width, height, wrapped, fontfile=fontfile, fontname="probe", fontsize=size) is not None
 
     cells = [c for t in tables for c in t.cells if c.rect is not None]
     size = round(max((c.source_font_size or 10.0) for c in cells) * 2) / 2

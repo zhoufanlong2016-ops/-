@@ -300,6 +300,10 @@ def validate_translation_residue(
             continue
         if word.casefold() in _DATE_MONTHS:
             continue
+        # Acronyms (PMC, GSM, LDA, WASA) stay in English by policy; in an
+        # all-caps drawing label ("AREA= 86 ACRE") capitals mark nothing.
+        if word.isupper() and len(word) <= 6 and not source_text.isupper():
+            continue
         if re.search(rf"(?<![A-Za-z]){re.escape(word)}(?![A-Za-z])", translated, re.I):
             errors.append(f"UNTRANSLATED_ENGLISH: {word!r} remains in Chinese output")
     for match in _DATE_RE.finditer(source_text):
