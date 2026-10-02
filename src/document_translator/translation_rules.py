@@ -16,6 +16,9 @@ _PROTECTED_PATTERNS = (
     r"https?://[^\s<>()]+|mailto:[^\s<>()]+|[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}",
     r"(?:[A-Za-z]:\\|\\\\)[^\s<>\"|?*]+|(?<![\w.])(?:\./|\.\./)[\w./-]+",
     r"\\[PpHhWwFf][^;]*;",
+    # "3-D"/"2D" is one notation: protecting only its digit made "3-D model"
+    # -> "3D模型" a placeholder mismatch ("3" no longer stood alone).
+    r"(?<![A-Za-z0-9-])[234]-?D(?![A-Za-z0-9])",
     # A table's own row-number cell (just "1.", "2)", nothing else) is a
     # bare numbering marker, not a sentence -- it has no full stop to
     # localise. Left unprotected, providers commonly "translate" its
@@ -101,8 +104,10 @@ _PROTECTED_PATTERNS = (
     # example "ENVELOPE", "ENGINEERING", "BSSN"): a real standard reference
     # is always an abbreviation, a space, and a code containing a number.
     r"\b(?:ISO|IEC|ASTM|BS|EN|AASHTO)\s+[A-Z]*\d[A-Z0-9.-]*\b",
-    r"\b(?:EPC|FIDIC|SCADA|ESHS|DAAB|HDPE|RCC|BOQ|BOD|COD|WWTP|STP|PPP|AIIB|CCECC|CRCC)\b",
-    r"\b(?:USD|PKR|CNY|RMB|EUR|GBP|AED)\b",
+    # ASCII boundaries, not \b: Chinese characters count as word characters,
+    # so "EPC银皮书" or "AIIB项目" was never protected and a model could drop it.
+    r"(?<![A-Za-z0-9])(?:EPC|FIDIC|SCADA|ESHS|DAAB|HDPE|RCC|BOQ|BOD|COD|WWTP|STP|PPP|AIIB|CCECC|CRCC)(?![A-Za-z0-9])",
+    r"(?<![A-Za-z0-9])(?:USD|PKR|CNY|RMB|EUR|GBP|AED)(?![A-Za-z0-9])",
     r"\b[A-Z]{1,4}\d+(?:-[A-Z0-9]+)*\b",
     # A hyphen-joined compound identifier ("Volume-1", "LW-TD-411") whose
     # ASCII spelling must survive translation. This mirrors

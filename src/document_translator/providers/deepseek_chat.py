@@ -105,15 +105,31 @@ class DeepSeekProvider:
         terminology = "\n\nRequired terminology (mandatory):\n" + "\n".join(
             f"- {source} -> {target}" for source, target in batch_terms
         ) if batch_terms else ""
+        # Short per-request IDs: qwen3.7-plus miscopied a few hex digits of the
+        # 64-character unit IDs ("...8049e8f..." -> "...849e8f..."), failing
+        # the whole batch as "IDs are incomplete" on every attempt.
+        short_ids = {unit.id: str(index) for index, unit in enumerate(units, start=1)}
+        unit_by_short = {short: unit_id for unit_id, short in short_ids.items()}
         correction_text = ""
         if mapping_retry:
             correction_text = "\n\nPROTOCOL CORRECTION. Return exactly one translation for every requested ID, with no omissions, duplicates, reordering, commentary, or markdown."
         if correction:
             correction_text = "\n\nAUTOMATIC CORRECTION. Fix every listed defect and return the same IDs.\n" + "\n".join(
-                f"{unit_id}: {'; '.join(errors)}" for unit_id, errors in correction.items()
+                f"{short_ids[unit_id]}: {'; '.join(errors)}" for unit_id, errors in correction.items()
             )
         protected = {unit.id: protect_for_translation(unit.source_text, unit.protected_tokens) for unit in units}
-        items = [{"id": unit.id, "text": protected[unit.id].text, "required_names": source_name_constraints(unit.source_text, unit.source_language, unit.target_language)} for unit in units]
+        # The model must know what each [[TRP_n]] stands for: shown only the
+        # marker in "[[TRP_0000]] EPC银皮书" it wrote "FIDIC" itself as well
+        # ("FIDIC FIDIC Silver Book") on every attempt.
+        items = [
+            {
+                "id": short_ids[unit.id],
+                "text": protected[unit.id].text,
+                "required_names": source_name_constraints(unit.source_text, unit.source_language, unit.target_language),
+                **({"markers": dict(protected[unit.id].replacements)} if protected[unit.id].replacements else {}),
+            }
+            for unit in units
+        ]
         system = policy.instruction + terminology + correction_text + "\nReturn JSON only: {\"items\":[{\"id\":string,\"translation\":string}]}"
         body = {
             "model": self.config.model,
@@ -140,7 +156,7 @@ class DeepSeekProvider:
             raise DeepSeekError("TRANSPORT_ERROR", f"DeepSeek request failed: {exc}") from exc
         except (ValueError, TypeError, KeyError, json.JSONDecodeError) as exc:
             raise DeepSeekError("BATCH_FAILED", "DeepSeek response was invalid") from exc
-        mapped = {row.get("id"): row.get("translation") for row in rows if isinstance(row, dict)}
+        mapped = {unit_by_short.get(str(row.get("id"))): row.get("translation") for row in rows if isinstance(row, dict)}
         expected = {unit.id for unit in units}
         if set(mapped) != expected or any(not isinstance(value, str) for value in mapped.values()):
             raise DeepSeekError("BATCH_MAPPING_INVALID", "DeepSeek batch IDs are incomplete")

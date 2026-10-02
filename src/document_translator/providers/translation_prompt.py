@@ -10,7 +10,7 @@ from document_translator.core import TranslationUnit
 from document_translator.translation_rules import source_name_constraints
 
 
-PROMPT_VERSION = "en-zh-general-rules-v4"
+PROMPT_VERSION = "en-zh-general-rules-v5"
 
 
 class GlossaryLike(Protocol):
@@ -120,6 +120,8 @@ def general_translation_instruction(source_language: str, target_language: str) 
         "When Chinese section or list ordinals such as 一、二、三、四、第一 are not Arabic digits in the source, do not introduce Arabic numerals for them; preserve them as words or Roman numerals so they cannot collide with protected page numbers or identifiers. "
         "Keep acronyms, model numbers, formulas, URLs, file paths, codes, and CAD/Office formatting markers unchanged. "
         "Any protected token present in the source is immutable: reproduce it exactly, in the same count and binding with adjacent values or units. "
+        "An item's markers map gives the literal each [[TRP_n]] marker stands for: copy every marker unchanged exactly once, where that literal belongs, "
+        "and never also write the literal itself in words, because the marker already becomes that literal. "
         "For an unverified proper name covered by the retained-name rule, keep the original English spelling and do not invent a Chinese alias. "
         "When the input contains <UNIT_n> markers, return every marker unchanged and keep its translated text under that marker. "
         "Output only the translation, with no explanation. "

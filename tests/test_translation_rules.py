@@ -228,6 +228,10 @@ def test_provider_name_policy_parity_and_bounded_batch_repair(monkeypatch, provi
         text = "谢里夫居民区（SHAREEF COLONY）下游" if repair_succeeds and len(calls) > 1 else "谢里夫居民区下游"
         current = units if len(calls) == 1 else units[1:]
         rows = [{"id": u.id, "translation": "投标总价" if u == units[0] else text} for u in current]
+        if provider_name == "qwen":
+            # The request carries short per-request IDs; answer with those.
+            sent = [item["id"] for item in json.loads(body["messages"][1]["content"])["items"]]
+            rows = [{**row, "id": short} for row, short in zip(rows, sent)]
         if provider_name == "openai":
             return httpx.Response(200, json={"output": [{"type": "message", "content": [{"type": "output_text", "text": json.dumps({"items": rows})}]}]})
         content = json.dumps({"items": rows}) if provider_name == "qwen" else "\n".join(
@@ -261,3 +265,35 @@ def test_provider_name_policy_parity_and_bounded_batch_repair(monkeypatch, provi
         assert '"required_names": ["SHAREEF COLONY"]' in data or '"required_names":["SHAREEF COLONY"]' in data
     assert "roads, bridges, and local place names" in shared
     assert "not colonial territory" in shared
+
+
+def test_acronyms_glued_to_chinese_are_protected():
+    from document_translator.translation_rules import rule_protected_tokens
+
+    assert set(rule_protected_tokens("FIDIC EPC银皮书2017版")) >= {"FIDIC", "EPC"}
+    assert "AIIB" in rule_protected_tokens("AIIB项目")
+    assert "EPC" not in rule_protected_tokens("EPCOT DEPCO")
+
+
+def test_qwen_request_uses_short_ids_and_explains_markers():
+    import json
+    import httpx
+    from document_translator.providers import QwenChatConfig, QwenChatProvider
+
+    unit = _named_unit(text="FIDIC EPC银皮书")
+    unit = unit.model_copy(update={"source_language": "zh", "target_language": "en", "protected_tokens": ["FIDIC", "EPC"]})
+    seen = []
+
+    def handler(request):
+        items = json.loads(json.loads(request.content)["messages"][1]["content"])["items"]
+        seen.extend(items)
+        rows = [{"id": item["id"], "translation": "[[TRP_0000]] [[TRP_0001]] Silver Book"} for item in items]
+        return httpx.Response(200, json={"choices": [{"message": {"content": json.dumps({"items": rows})}}]})
+
+    import os
+    os.environ.setdefault("DASHSCOPE_API_KEY", "test")
+    provider = QwenChatProvider(QwenChatConfig(model="qwen-plus"), client=httpx.Client(transport=httpx.MockTransport(handler)))
+    result = provider.translate_batch([unit])[0]
+    assert seen[0]["id"] == "1"
+    assert set(seen[0]["markers"].values()) == {"FIDIC", "EPC"}
+    assert result.unit_id == unit.id and result.translation == "FIDIC EPC Silver Book"
