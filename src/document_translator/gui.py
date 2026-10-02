@@ -30,7 +30,7 @@ SUPPORTED_FORMATS = {
 }
 
 PROVIDER_MODELS = {
-    "qwen": ("qwen3.8-flash", "qwen3.7-plus", "qwen3.8-max"),
+    "qwen": ("qwen3.7-plus", "qwen3.8-flash", "qwen3.8-max"),
     "openai": ("gpt-5.6-luna", "gpt-5.6-terra"),
     "deepseek": ("deepseek-chat", "deepseek-reasoner", "deepseek-flash", "deepseek-v4-pro"),
 }
