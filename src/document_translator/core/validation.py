@@ -89,7 +89,9 @@ def validate_glossary_terms(
     """Require every matched glossary target to survive translation verbatim."""
     errors: list[str] = []
     for source, target in terms:
-        expected = source_text.count(source)
+        # Multi-word English terms match in any case, as in Glossary.entries_for().
+        folded = not re.search(r"[㐀-鿿]", source) and len(source.split()) >= 2
+        expected = source_text.casefold().count(source.casefold()) if folded else source_text.count(source)
         actual = translation.casefold().count(target.casefold())
         if expected and actual < expected:
             errors.append(

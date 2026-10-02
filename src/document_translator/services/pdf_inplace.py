@@ -32,6 +32,7 @@ from document_translator.core import (
     TranslationResult,
     TranslationUnit,
     generate_unit_id,
+    sha256_text,
     validate_result_for_unit,
 )
 from document_translator.translation_rules import localize_chinese_dates, rule_protected_tokens
@@ -305,12 +306,17 @@ def _translate_in_place(
     ]
     cell_units: list[TranslationUnit] = []
     cell_by_unit: dict[str, Any] = {}
+    continued = _continued_cells(tables)
+    continuations = set(continued.values())
     for table in tables:
         for cell in table.cells:
-            if cell.is_empty or not _needs_translation(cell.text, source_language):
+            if cell.is_empty or cell.id in continuations:
+                continue
+            text = cell.text + ("\n" + continued[cell.id].text if cell.id in continued else "")
+            if not _needs_translation(text, source_language):
                 continue
             # "Drawing No. LW-" / "TD-401" broken across cell lines is one code.
-            cell_text = re.sub(r"(?<=[A-Za-z0-9])-\n(?=[A-Za-z0-9])", "-", cell.text)
+            cell_text = re.sub(r"(?<=[A-Za-z0-9])-\n(?=[A-Za-z0-9])", "-", text)
             unit = _unit(cell_text, f"page:{cell.page_number}", cell.id, "table_cell", source_hash, source_language, target_language)
             cell_units.append(unit)
             cell_by_unit[unit.id] = cell
@@ -330,7 +336,14 @@ def _translate_in_place(
     cell_translations: dict[str, str] = {}
     for unit in cell_units:
         cell = cell_by_unit[unit.id]
-        cell_translations[cell.id] = translations.get(unit.id, "").strip() or cell.text
+        translation = translations.get(unit.id, "").strip()
+        if cell.id in continued and translation:
+            tail = continued[cell.id]
+            cell_translations[cell.id], cell_translations[tail.id] = _split_continued(
+                translation, len(cell.text) / max(1, len(cell.text) + len(tail.text))
+            )
+        else:
+            cell_translations[cell.id] = translation or cell.text
     table_report = _render_tables(source, staged, candidate, tables, cell_translations, source_language, target_language, warnings)
     staged.unlink(missing_ok=True)
     return {
@@ -346,6 +359,72 @@ def _translate_in_place(
 
 
 # ---------------------------------------------------------------- structure
+
+
+def _continued_cells(tables: list[Any]) -> dict[str, Any]:
+    """Cells of a row that runs on from one page's table into the next.
+
+    A long clarification row ends mid-sentence at the foot of a page
+    ("...the Tenderer shall procure,") and continues in the next page's
+    first body row, whose row-number cell is empty. Translated apart, the
+    model "completed" each half with an ellipsis ("其将采购……"); translated
+    as one text, it reads as the source does. Maps head cell id -> tail cell.
+    """
+    pairs: dict[str, Any] = {}
+    by_page: dict[int, list[Any]] = {}
+    for table in tables:
+        by_page.setdefault(table.page_number, []).append(table)
+    for page_number, page_tables in by_page.items():
+        following = by_page.get(page_number + 1)
+        if not following:
+            continue
+        head = max(page_tables, key=lambda t: t.rect[1])
+        tail = min(following, key=lambda t: t.rect[1])
+        if head.column_count != tail.column_count:
+            continue
+        cells = lambda table, row: {c.column: c for c in table.cells if c.row == row}
+        first_row = 1
+        # A repeated header row on the next page is not the continuation.
+        if [c.text for c in sorted(cells(tail, 1).values(), key=lambda c: c.column)] == [
+            c.text for c in sorted(cells(head, 1).values(), key=lambda c: c.column)
+        ]:
+            first_row = 2
+        last, carried = cells(head, head.row_count), cells(tail, first_row)
+        if not last or not carried or 1 not in carried or 1 not in last:
+            continue
+        # The continuation row has no row number of its own.
+        if not carried[1].is_empty or last[1].is_empty:
+            continue
+        for column, cell in carried.items():
+            source = last.get(column)
+            if source is not None and not cell.is_empty and not source.is_empty and cell.rect is not None:
+                pairs[source.id] = cell
+    return pairs
+
+
+_SPLIT_MARKS = "。；，、;,. "
+
+
+def _split_continued(translation: str, share: float) -> tuple[str, str]:
+    """Split one translation back over a row's two page parts, near the
+    source's own proportion and at a punctuation mark where one is close."""
+    target = round(len(translation) * share)
+    window = max(4, len(translation) // 6)
+    best = None
+    for offset in range(window + 1):
+        for index in (target + offset, target - offset):
+            if 0 < index < len(translation) and translation[index - 1] in _SPLIT_MARKS:
+                best = index
+                break
+        if best is not None:
+            break
+    if best is None:
+        best = min(max(target, 1), len(translation) - 1)
+        # Never cut through a Latin word or a number.
+        while 0 < best < len(translation) and translation[best - 1].isascii() and translation[best - 1].isalnum() and translation[best].isascii() and translation[best].isalnum():
+            best += 1
+    head, tail = translation[:best].strip(), translation[best:].strip()
+    return (head or translation, tail or translation) if not (head and tail) else (head, tail)
 
 
 def _page_key(page: Any) -> tuple[int, int]:
@@ -586,6 +665,20 @@ def _unit(
 
 _MAX_BATCH_ITEMS = 40
 
+_PAGE_OF_EN = re.compile(r"Page\s+(\d+)\s+of\s+(\d+)", re.I)
+_PAGE_OF_ZH = re.compile(r"第\s*(\d+)\s*页\s*[，,]?\s*共\s*(\d+)\s*页")
+
+
+def _page_footer_translation(unit: TranslationUnit) -> str | None:
+    """"Page 2 of 2" footers in one fixed form: translated separately, page 1
+    came back as "第 1 页，共 2 页" and page 2 as "2 / 2"."""
+    text = unit.source_text.strip()
+    if unit.target_language.lower().startswith("zh") and (match := _PAGE_OF_EN.fullmatch(text)):
+        return f"第 {match.group(1)} 页，共 {match.group(2)} 页"
+    if unit.target_language.lower().startswith("en") and (match := _PAGE_OF_ZH.fullmatch(text)):
+        return f"Page {match.group(1)} of {match.group(2)}"
+    return None
+
 
 def _translate_all(
     provider: TranslationBatchProvider,
@@ -628,6 +721,14 @@ def _translate_all(
     results: dict[str, TranslationResult] = {}
     pending: list[TranslationUnit] = []
     for unit in representatives:
+        local = _page_footer_translation(unit)
+        if local is not None:
+            results[unit.id] = TranslationResult(
+                unit_id=unit.id, translation=local, source_hash=sha256_text(unit.source_text),
+                result_hash=sha256_text(local), request_count=1, validation_status="valid",
+                **{key: value or "local" for key, value in identity.items()},
+            )
+            continue
         cached = None
         if cache is not None:
             try:
@@ -851,8 +952,10 @@ def _render_paragraphs(
                 for x0, y0, x1, y1 in _glyph_centre_bands(span):
                     page.add_redact_annot(fitz.Rect(x0, y0, x1, y1), fill=False)
         page.apply_redactions(images=0, graphics=0, text=0)
+        rules = _rule_drawings(page)
         for paragraph, text, region in page_plans:
-            size = _insert(page, paragraph, text, region, group_size[_style_key(paragraph)], paragraph.bounds)
+            size, written_box = _insert(page, paragraph, text, region, group_size[_style_key(paragraph)], paragraph.bounds)
+            _refit_underline(page, paragraph, text, size, written_box, rules)
             if size < paragraph.size - 1e-6:
                 shrunk.append({"page": page_number, "source_size": round(paragraph.size, 2), "size": size, "text": text[:60]})
     return {
@@ -997,7 +1100,7 @@ def _fit_size(page: Any, paragraph: _Paragraph, text: str, region: Any, bounds: 
     return size
 
 
-def _insert(page: Any, paragraph: _Paragraph, text: str, region: Any, size: float, bounds: tuple[float, float]) -> float:
+def _insert(page: Any, paragraph: _Paragraph, text: str, region: Any, size: float, bounds: tuple[float, float]) -> tuple[float, Any]:
     """Write the translation, stepping down further if the real page disagrees.
 
     insert_textbox() writes NOTHING (silently) when the text overflows, so a
@@ -1009,13 +1112,80 @@ def _insert(page: Any, paragraph: _Paragraph, text: str, region: Any, size: floa
         content, fontfile, alias, align = _layout(page, paragraph, text, size, bounds, region.width)
         anchored = _on_source_baseline(region, paragraph, fontfile, size)
         box = anchored if _fits(anchored, content, fontfile, alias, size, align) else region
+        color = _rgb(paragraph.lines[0].color)
+        # A bold source heading stays bold: CJK faces here have no bold
+        # file, so the glyphs are filled and outlined in the same colour.
+        bold = _CJK_RE.search(content) and _is_bold(paragraph)
         written = page.insert_textbox(
             box, content, fontname=alias, fontfile=fontfile, fontsize=size,
-            color=_rgb(paragraph.lines[0].color), align=align, overlay=True,
+            color=color, align=align, overlay=True,
+            **({"render_mode": 2, "fill": color, "border_width": 0.04} if bold else {}),
         )
         if written >= 0 or size - _FONT_STEP < _ABSOLUTE_MIN_SIZE:
-            return size
+            return size, box
         size = round(size - _FONT_STEP, 2)
+
+
+def _is_bold(paragraph: _Paragraph) -> bool:
+    spans = paragraph.lines[0].spans
+    bold = [bool(int(span.get("flags") or 0) & 16) or "bold" in str(span.get("font", "")).casefold() for span in spans]
+    return sum(bold) * 2 > len(bold)
+
+
+def _rule_drawings(page: Any) -> list[tuple[Any, tuple[float, ...] | None, float]]:
+    """Thin horizontal rules (rect, colour, thickness) still on the page."""
+    import fitz
+
+    rules = []
+    for drawing in page.get_drawings():
+        rect = drawing.get("rect")
+        if rect is not None and rect.height <= 3.0 and rect.width > 2.0 * max(rect.height, 1.0):
+            color = drawing.get("color") or drawing.get("fill")
+            rules.append((fitz.Rect(rect), tuple(color) if color else None, max(rect.height, float(drawing.get("width") or 0.0), 0.5)))
+    return rules
+
+
+def _refit_underline(page: Any, paragraph: _Paragraph, text: str, size: float, box: Any, rules: list) -> None:
+    """Shorten (or lengthen) a heading's underline to the translated text.
+
+    The rule was drawn for the English line; under a shorter Chinese title it
+    ran on well past the text. Only a single written line is refitted.
+    """
+    import fitz
+
+    from .pdf_table import cached_font
+
+    line = paragraph.lines[-1]
+    x0, _, x1, y1 = line.bbox
+    width = x1 - x0
+    under = [
+        rule for rule in rules
+        if y1 - 0.4 * line.size <= rule[0].y0 <= y1 + 0.6 * line.size
+        and min(x1, rule[0].x1) - max(x0, rule[0].x0) >= 0.8 * width
+        # an underline, not a full-width separator rule below a short line
+        and rule[0].width <= 1.25 * width + 2.0
+    ]
+    if len(under) != 1:
+        return
+    content, fontfile, _, align = _layout(page, paragraph, text, size, paragraph.bounds, box.width)
+    if "\n" in content.strip():
+        return
+    text_width = cached_font(fontfile).text_length(content, fontsize=size)
+    if text_width > box.width:
+        return
+    if align == 1:
+        centre = (box.x0 + box.x1) / 2
+        left, right = centre - text_width / 2, centre + text_width / 2
+    elif align == 2:
+        left, right = box.x1 - text_width, box.x1
+    else:
+        left, right = box.x0, box.x0 + text_width
+    rect, color, thickness = under[0]
+    # Remove only that rule (line art fully inside the box), never text.
+    page.add_redact_annot(fitz.Rect(rect.x0 - 0.5, rect.y0 - 0.5, rect.x1 + 0.5, rect.y1 + 0.5), fill=False)
+    page.apply_redactions(images=0, graphics=1, text=1)
+    y = (rect.y0 + rect.y1) / 2
+    page.draw_line((left, y), (right, y), color=color or (0, 0, 0), width=thickness)
 
 
 def _fits(region: Any, text: str, fontfile: str, alias: str, size: float, align: int) -> bool:
@@ -1098,6 +1268,7 @@ def _render_tables(
             middle_aligned=lambda cell: alignment.get(cell.id, (0, False))[1],
             spread_lines=False,
             fixed_cell_size=True,
+            keep_unchanged=True,
         )
     return {
         "status": "patched" if len(good) == len(tables) else "partially_patched",

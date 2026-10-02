@@ -297,3 +297,10 @@ def test_qwen_request_uses_short_ids_and_explains_markers():
     assert seen[0]["id"] == "1"
     assert set(seen[0]["markers"].values()) == {"FIDIC", "EPC"}
     assert result.unit_id == unit.id and result.translation == "FIDIC EPC Silver Book"
+
+
+def test_value_written_inside_marker_brackets_is_restored_as_the_value():
+    from document_translator.translation_rules import protect_for_translation, restore_after_translation
+
+    protected = protect_for_translation("福设院〔2024〕54号", ["2024", "54"])
+    assert restore_after_translation("Fusheyuan [[2024]] No. [[54]]", protected) == "Fusheyuan 2024 No. 54"

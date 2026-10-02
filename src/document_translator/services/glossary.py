@@ -83,14 +83,17 @@ class Glossary:
     def entries_for(self, source_text: str) -> tuple[GlossaryEntry, ...]:
         """Return matched terms, tolerating ordinary English punctuation/number variants."""
         normalized_text = _normalize_term_text(source_text)
+        folded_text = normalized_text.casefold()
         matches = []
         for entry in self.entries:
             normalized_source = _normalize_term_text(entry.source)
             if not normalized_source:
                 continue
-            if normalized_source in normalized_text or (
-                not normalized_source.endswith("s") and f"{normalized_source}s" in normalized_text
-            ):
+            # A multi-word term matches in any case ("Ultimate disposal
+            # station" in running text); a short one such as "No." does not,
+            # or every sentence ending in "no." would demand "编号".
+            text, term = (folded_text, normalized_source.casefold()) if case_insensitive_term(entry.source) else (normalized_text, normalized_source)
+            if term in text or (not term.endswith("s") and f"{term}s" in text):
                 matches.append(entry)
         ordered = sorted(matches, key=lambda entry: (-len(entry.source), entry.source))
         # For CJK terms, a shorter entry embedded in a longer matched term is
@@ -107,6 +110,10 @@ class Glossary:
                 continue
             selected.append(entry)
         return tuple(selected)
+
+
+def case_insensitive_term(source: str) -> bool:
+    return not _contains_cjk(source) and len(source.split()) >= 2
 
 
 def _normalize_term_text(value: str) -> str:

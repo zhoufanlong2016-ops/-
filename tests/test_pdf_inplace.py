@@ -360,3 +360,40 @@ def test_acronyms_in_a_dated_cell_are_not_untranslated_english():
     )
     assert not any("'PMC'" in error for error in errors)
     assert any("'windows'" in error for error in errors)
+
+
+def test_bracketed_quantity_is_not_an_inline_list_marker():
+    from document_translator.services.pdf_table import _break_inline_list_markers
+
+    assert "\n" not in _break_inline_list_markers("投标人需提供六 (06) 台新制造的设备")
+
+
+def test_chinese_wrap_keeps_punctuation_off_line_starts_and_brackets_off_line_ends():
+    from document_translator.services.pdf_table import _wrap_atomic_phrases
+
+    text = "业主认为，已经为投标人提供了三（03）个月的准备投标时间，这被认为是充分的。因此，遗憾地拒绝进一步延长投标提交日期。"
+    for width in range(120, 300, 7):
+        lines = _wrap_atomic_phrases(text, fontfile=r"C:\Windows\Fonts\simhei.ttf", fontname="x", fontsize=10, max_width=width).split("\n")
+        assert not any(line[:1] in "，。、；：）" for line in lines[1:])
+        assert not any(line.endswith("（") for line in lines)
+
+
+def test_row_continued_on_next_page_is_one_text_split_back_at_punctuation():
+    head, tail = pdf_inplace._split_continued("投标人将采购、制造并部署所需数量的设备，完全符合规定。", 0.3)
+    assert head.endswith(("、", "，")) and head + tail == "投标人将采购、制造并部署所需数量的设备，完全符合规定。"
+
+
+def test_multi_word_glossary_terms_match_in_any_case():
+    from document_translator.services.glossary import load_glossary
+
+    glossary = load_glossary(r"D:\01 绿色程序\文档翻译器\src\document_translator\assets\engineering_en_zh_glossary.csv")
+    assert [e.target for e in glossary.entries_for("the Ultimate disposal station")] == ["最终处置站"]
+    assert glossary.entries_for("the answer is no.") == ()
+
+
+def test_page_footers_have_one_fixed_form():
+    from types import SimpleNamespace
+
+    assert pdf_inplace._page_footer_translation(SimpleNamespace(source_text="Page 2 of 2", target_language="zh")) == "第 2 页，共 2 页"
+    assert pdf_inplace._page_footer_translation(SimpleNamespace(source_text="第 1 页，共 2 页", target_language="en")) == "Page 1 of 2"
+    assert pdf_inplace._page_footer_translation(SimpleNamespace(source_text="Page 2 of the report", target_language="zh")) is None

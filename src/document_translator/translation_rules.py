@@ -137,6 +137,7 @@ _NAME_BOUNDARIES = frozenset((
     "complete completed build construct widen temporary permanent river lake level training"
 ).split())
 _ENGLISH_WORD_RE = re.compile(r"\b[A-Za-z]{2,}\b")
+_IZAFAT_NAME_RE = re.compile(r"\b[A-Z][a-z]+(?:[- ]e[- ][A-Z][a-z]+)+\b")
 _DATE_RE = re.compile(r"\b(?P<day>\d{1,2})(?P<ordinal>st|nd|rd|th)\s+(?P<month>[A-Za-z]+)\s+(?P<year>\d{4})\b", re.I)
 _DATE_MONTHS = frozenset(
     "january february march april may june july august september october november december".split()
@@ -295,6 +296,9 @@ def validate_translation_residue(
         return []
     errors: list[str] = []
     remaining = source_text
+    # "Gulshan-e-Ravi" / "Gulshan e Ravi" is a place name the prompt tells the
+    # model to keep in English; it has no Rd./Colony suffix to be recognised by.
+    remaining = _IZAFAT_NAME_RE.sub(" ", remaining)
     for name in sorted(source_name_constraints(source_text, source_language, target_language), key=len, reverse=True):
         remaining = re.sub(re.escape(name), " ", remaining, flags=re.I)
     for token in sorted(rule_protected_tokens(source_text), key=len, reverse=True):
@@ -503,7 +507,7 @@ def protect_for_translation(text: str, tokens: Iterable[str]) -> ProtectedText:
 
 def restore_after_translation(text: str, protected: ProtectedText) -> str:
     """Restore protected source values only when every placeholder survives."""
-    restored = text
+    restored = _unwrap_bracketed_values(text, protected)
     for marker, value in protected.replacements:
         marker_count = restored.count(marker)
         if marker_count == 1:
@@ -524,6 +528,16 @@ def restore_markers_best_effort(text: str, protected: ProtectedText) -> str:
     The result is still flagged for review by the caller, but a raw
     ``[[TRP_nnnn]]`` marker must never reach the output document.
     """
+    text = _unwrap_bracketed_values(text, protected)
     for marker, value in protected.replacements:
         text = text.replace(marker, value)
+    return text
+
+
+def _unwrap_bracketed_values(text: str, protected: ProtectedText) -> str:
+    """A model told "[[TRP_0000]] stands for 2024" sometimes writes "[[2024]]"
+    (marker brackets around the value): that is the marker, not new brackets."""
+    for marker, value in protected.replacements:
+        if marker not in text:
+            text = text.replace(f"[[{value}]]", marker)
     return text

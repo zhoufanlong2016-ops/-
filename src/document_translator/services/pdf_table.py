@@ -164,8 +164,9 @@ _TABLE_LIST_ITEM_RE = re.compile(r"^\s*(?:\d+[.)]|[A-Za-z][.)]|[-*•])\s+")
 
 
 # "(IG-541) 或" is a code, not a "541)" list marker: a hyphen, slash or dot
-# before the digits joins them to what precedes.
-_INLINE_LIST_MARKER_RE = re.compile(r"(?<![A-Za-z0-9./-])(\d{1,3}[.)]|[A-Za-z][.)]|-)\s+")
+# before the digits joins them to what precedes; so does an opening bracket
+# ("六 (06) 台" is a quantity, not item "06)").
+_INLINE_LIST_MARKER_RE = re.compile(r"(?<![A-Za-z0-9./(（-])(\d{1,3}[.)]|[A-Za-z][.)]|-)\s+")
 
 
 def _break_inline_list_markers(text: str) -> str:
@@ -936,32 +937,40 @@ def _wrap_atomic_phrases(
         if not pairs:
             out_paragraphs.append(paragraph)
             continue
-        lines: list[str] = []
-        current = ""
+        # Widths add up (text_length() applies no kerning), so each atom and
+        # separator is measured once: re-measuring the whole line per atom
+        # made wrapping quadratic in the paragraph length.
+        lines: list[list[tuple[str, str, float, float]]] = []
+        current: list[tuple[str, str, float, float]] = []
         current_width = 0.0
-        pending_sep = ""
         for atom, sep in pairs:
-            # Widths add up (text_length() applies no kerning), so measure
-            # only the new piece: re-measuring the whole line per atom made
-            # wrapping quadratic in the paragraph length.
-            atom_width = width_of(atom)
-            added = (width_of(pending_sep) if pending_sep else 0.0) + atom_width
-            if not current:
-                current, current_width = atom, atom_width
-                pending_sep = sep
-            elif current_width + added <= max_width:
-                current += pending_sep + atom
+            entry = (atom, sep, width_of(atom), width_of(sep) if sep else 0.0)
+            added = (current[-1][3] if current else 0.0) + entry[2]
+            if not current or current_width + added <= max_width:
+                current.append(entry)
                 current_width += added
-                pending_sep = sep
-            else:
-                lines.append(current)
-                current = atom
-                current_width = atom_width
-                pending_sep = sep
+                continue
+            # Chinese line-breaking rules: no closing punctuation at the start
+            # of a line ("，因此") and no opening bracket at its end ("三（").
+            following = [entry]
+            if atom[:1] in _NO_LINE_START and len(current) > 1:
+                following.insert(0, current.pop())
+            while len(current) > 1 and current[-1][0][-1:] in _NO_LINE_END:
+                following.insert(0, current.pop())
+            lines.append(current)
+            current = following
+            current_width = sum(item[2] for item in current) + sum(item[3] for item in current[:-1])
         if current:
             lines.append(current)
-        out_paragraphs.append("\n".join(lines))
+        out_paragraphs.append("\n".join(
+            "".join(atom + (sep if index < len(line) - 1 else "") for index, (atom, sep, _, _) in enumerate(line))
+            for line in lines
+        ))
     return "\n".join(out_paragraphs)
+
+
+_NO_LINE_START = frozenset("，。、；：！？）」』”’》〉】…,.;:!?)]%")
+_NO_LINE_END = frozenset("（「『“‘《〈【([")
 
 
 def _fit_textbox(
@@ -1264,6 +1273,7 @@ def render_table_translations(
     middle_aligned: Callable[[PdfTableCell], bool] | None = None,
     spread_lines: bool = True,
     fixed_cell_size: bool = False,
+    keep_unchanged: bool = False,
 ) -> PdfTableRenderReport:
     """Render complete table translations into a new PDF.
 
@@ -1333,6 +1343,12 @@ def render_table_translations(
             raise PdfTableExtractionError("no vector tables found in selected pages")
         mapping = validate_pdf_table_translations(table_list, translations)
 
+        # keep_unchanged: a cell whose text needs no translation (a row
+        # number "1.") keeps its original glyphs, alignment and weight.
+        unchanged_ids = {
+            cell.id for table in table_list for cell in table.cells
+            if keep_unchanged and not cell.is_empty and mapping[cell.id] == cell.text
+        }
         cells_by_page: dict[int, list[PdfTableCell]] = {}
         last_row_cell_ids: set[str] = set()
         for table in table_list:
@@ -1374,7 +1390,7 @@ def render_table_translations(
             fit_page = temporary_fit_doc.new_page(width=page.rect.width, height=page.rect.height)
             for cell in cells:
                 translated = _normalise_render_text(mapping[cell.id])
-                if not translated.strip():
+                if not translated.strip() or cell.id in unchanged_ids:
                     continue
                 if cell.rect is None:
                     raise PdfTableExtractionError(f"translated cell has no geometry: {cell.id}")
@@ -1493,7 +1509,7 @@ def render_table_translations(
 
             for cell in cells:
                 translated = _normalise_render_text(mapping[cell.id])
-                if not translated.strip():
+                if not translated.strip() or cell.id in unchanged_ids:
                     continue
                 assert cell.rect is not None
                 cell_font = font_by_cell[cell.id]
