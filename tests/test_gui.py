@@ -57,3 +57,28 @@ def test_dwg_runs_the_one_step_autocad_pipeline(tmp_path: Path) -> None:
     )
     assert command[3:6] == ["translate-dwg", str(tmp_path / "source.dwg"), str(tmp_path / "target.dwg")]
     assert command[command.index("--source-language") + 1] == "auto"
+
+
+def test_input_holds_one_file_and_newest_supported_file_wins(tmp_path: Path) -> None:
+    import tkinter as tk
+
+    from document_translator.gui import TranslationApp
+
+    first, second, other = tmp_path / "a.xlsx", tmp_path / "b.pdf", tmp_path / "c.txt"
+    for path in (first, second, other):
+        path.write_bytes(b"x")
+    try:
+        root = tk.Tk()
+    except tk.TclError:
+        pytest.skip("no display")
+    try:
+        root.withdraw()
+        app = TranslationApp(root)
+        app.add_files([str(first)])
+        assert app.files == [first]
+        app.add_files([str(other), str(second), str(first)])
+        assert app.files == [second]
+        app.add_files([str(other)])
+        assert app.files == [second]
+    finally:
+        root.destroy()

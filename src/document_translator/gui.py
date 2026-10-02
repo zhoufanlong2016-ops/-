@@ -104,55 +104,106 @@ def build_cli_command(
 
 
 class _WindowsDropTarget:
-    """Receive native Windows Explorer file drops without extra packages."""
+    """Receive native Windows Explorer file drops without extra packages.
+
+    DragAcceptFiles lives in shell32 (calling it on user32 raised and was
+    silently swallowed, so no drop ever worked). The drop message is caught
+    by a thread message hook rather than by replacing Tk's window procedure:
+    a Python window procedure re-enters Tcl for every message and crashes
+    the interpreter. The hook only reads the file names into a queue, which
+    the Tk loop polls.
+    """
+
+    _WM_DROPFILES = 0x0233
 
     def __init__(self, root: tk.Tk, callback: Callable[[list[str]], None]) -> None:
+        import queue
+
         self.root = root
         self.callback = callback
-        self._old_proc = None
+        self._queue: "queue.SimpleQueue[list[str]]" = queue.SimpleQueue()
+        self._hook = None
         self._proc = None
         if os.name != "nt":
             return
         try:
-            import ctypes
-            from ctypes import wintypes
+            self._install()
+        except Exception:
+            self._hook = None
+            return
+        self.root.after(150, self._poll)
+        self.root.bind("<Destroy>", self.close, add="+")
 
-            user32 = ctypes.windll.user32
-            shell32 = ctypes.windll.shell32
-            hwnd = root.winfo_id()
-            user32.DragAcceptFiles(hwnd, True)
-            self._user32 = user32
-            self._shell32 = shell32
-            self._hwnd = hwnd
-            self._call_window_proc = user32.CallWindowProcW
-            self._call_window_proc.restype = ctypes.c_ssize_t
-            self._old_proc = user32.GetWindowLongPtrW(hwnd, -4)
-            wndproc_type = ctypes.WINFUNCTYPE(ctypes.c_ssize_t, wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM)
+    def _install(self) -> None:
+        import ctypes
+        from ctypes import wintypes
 
-            def wndproc(window, message, wparam, lparam):
-                if message == 0x0233:  # WM_DROPFILES
-                    count = shell32.DragQueryFileW(wparam, 0xFFFFFFFF, None, 0)
+        user32 = ctypes.WinDLL("user32", use_last_error=True)
+        shell32 = ctypes.WinDLL("shell32")
+        kernel32 = ctypes.WinDLL("kernel32")
+        LRESULT = ctypes.c_ssize_t
+        HOOKPROC = ctypes.WINFUNCTYPE(LRESULT, ctypes.c_int, wintypes.WPARAM, wintypes.LPARAM)
+        user32.SetWindowsHookExW.restype = wintypes.HHOOK
+        user32.SetWindowsHookExW.argtypes = [ctypes.c_int, HOOKPROC, wintypes.HINSTANCE, wintypes.DWORD]
+        user32.CallNextHookEx.restype = LRESULT
+        user32.CallNextHookEx.argtypes = [wintypes.HHOOK, ctypes.c_int, wintypes.WPARAM, wintypes.LPARAM]
+        user32.UnhookWindowsHookEx.argtypes = [wintypes.HHOOK]
+        user32.GetParent.restype = wintypes.HWND
+        user32.GetParent.argtypes = [wintypes.HWND]
+        user32.ChangeWindowMessageFilterEx.argtypes = [wintypes.HWND, wintypes.UINT, wintypes.DWORD, ctypes.c_void_p]
+        shell32.DragAcceptFiles.argtypes = [wintypes.HWND, wintypes.BOOL]
+        shell32.DragQueryFileW.restype = wintypes.UINT
+        shell32.DragQueryFileW.argtypes = [wintypes.WPARAM, wintypes.UINT, wintypes.LPWSTR, wintypes.UINT]
+        shell32.DragFinish.argtypes = [wintypes.WPARAM]
+        self._user32, self._shell32 = user32, shell32
+
+        def hook(code, wparam, lparam):
+            if code >= 0 and wparam == 1:  # PM_REMOVE: the message is about to be dispatched
+                message = ctypes.cast(lparam, ctypes.POINTER(wintypes.MSG)).contents
+                if message.message == self._WM_DROPFILES:
+                    drop = message.wParam
+                    count = shell32.DragQueryFileW(drop, 0xFFFFFFFF, None, 0)
                     paths = []
                     for index in range(count):
-                        length = shell32.DragQueryFileW(wparam, index, None, 0)
+                        length = shell32.DragQueryFileW(drop, index, None, 0)
                         buffer = ctypes.create_unicode_buffer(length + 1)
-                        shell32.DragQueryFileW(wparam, index, buffer, length + 1)
+                        shell32.DragQueryFileW(drop, index, buffer, length + 1)
                         paths.append(buffer.value)
-                    shell32.DragFinish(wparam)
-                    root.after(0, lambda: callback(paths))
-                    return 0
-                return self._call_window_proc(self._old_proc, window, message, wparam, lparam)
+                    shell32.DragFinish(drop)
+                    message.message = 0  # WM_NULL: Tk never sees it
+                    self._queue.put(paths)
+            return user32.CallNextHookEx(None, code, wparam, lparam)
 
-            self._proc = wndproc_type(wndproc)
-            user32.SetWindowLongPtrW(hwnd, -4, self._proc)
-            root.bind("<Destroy>", self.close, add="+")
-        except Exception:
-            self._old_proc = None
+        self._proc = HOOKPROC(hook)
+        self._hook = user32.SetWindowsHookExW(3, self._proc, None, kernel32.GetCurrentThreadId())  # WH_GETMESSAGE
+        if not self._hook:
+            raise OSError("SetWindowsHookExW failed")
+        self._accept(self.root.winfo_id())
+        # Tk creates the top-level frame only when the window is first shown.
+        self.root.after_idle(lambda: self._accept(user32.GetParent(self.root.winfo_id())))
 
-    def close(self, _event=None) -> None:
-        if self._old_proc and getattr(self, "_user32", None):
-            self._user32.SetWindowLongPtrW(self._hwnd, -4, self._old_proc)
-            self._old_proc = None
+    def _accept(self, hwnd: int | None) -> None:
+        if not hwnd:
+            return
+        # An elevated window otherwise never sees drops from a normal Explorer.
+        for message in (self._WM_DROPFILES, 0x004A, 0x0049):
+            self._user32.ChangeWindowMessageFilterEx(hwnd, message, 1, None)
+        self._shell32.DragAcceptFiles(hwnd, True)
+
+    def _poll(self) -> None:
+        if self._hook is None:
+            return
+        while not self._queue.empty():
+            self.callback(self._queue.get())
+        self.root.after(150, self._poll)
+
+    def close(self, event=None) -> None:
+        # <Destroy> on the root also fires for every child widget.
+        if event is not None and event.widget is not self.root:
+            return
+        if self._hook is not None:
+            self._user32.UnhookWindowsHookEx(self._hook)
+            self._hook = None
 
 
 class TranslationApp:
@@ -167,7 +218,8 @@ class TranslationApp:
         self.source_language = tk.StringVar(value="自动")
         self.target_language = tk.StringVar(value="自动")
         self.glossary = tk.StringVar()
-        self.status = tk.StringVar(value="请拖入文件，或点击“选择文件”")
+        self.status = tk.StringVar(value="")
+        self.file_text = tk.StringVar(value="把一份文件拖到这里，或点击“选择文件”")
         self.elapsed = tk.StringVar(value="运行时间：00:00:00")
         self._run_started_at: float | None = None
         self._elapsed_timer: str | None = None
@@ -187,17 +239,16 @@ class TranslationApp:
         outer.pack(fill="both", expand=True)
         ttk.Label(outer, text="文档保真翻译器", font=("Microsoft YaHei UI", 20, "bold")).pack(anchor="w")
         ttk.Label(outer, text="自动识别格式 · 批量调用模型 · 保留原文件并导出新文件", foreground="#5b6472").pack(anchor="w", pady=(0, 12))
-        drop = ttk.LabelFrame(outer, text="输入文件（支持拖放）", padding=10)
+        drop = ttk.LabelFrame(outer, text="输入文件（拖入或选择，一次一份）", padding=10)
         drop.pack(fill="both", expand=True)
-        self.file_list = tk.Listbox(drop, height=8, activestyle="none", selectmode="extended")
-        self.file_list.pack(side="left", fill="both", expand=True)
-        scrollbar = ttk.Scrollbar(drop, orient="vertical", command=self.file_list.yview)
-        scrollbar.pack(side="right", fill="y")
-        self.file_list.configure(yscrollcommand=scrollbar.set)
+        self.file_label = tk.Label(
+            drop, textvariable=self.file_text, anchor="center", justify="center", wraplength=780,
+            background="#f7f8fa", foreground="#5b6472", font=("Microsoft YaHei UI", 11),
+        )
+        self.file_label.pack(fill="both", expand=True)
         buttons = ttk.Frame(outer)
         buttons.pack(fill="x", pady=8)
         ttk.Button(buttons, text="选择文件", command=self.choose_files).pack(side="left")
-        ttk.Button(buttons, text="清空", command=self.clear_files).pack(side="left", padx=6)
         ttk.Label(buttons, textvariable=self.status).pack(side="right")
         settings = ttk.LabelFrame(outer, text="翻译设置", padding=10)
         settings.pack(fill="x")
@@ -235,20 +286,22 @@ class TranslationApp:
             self.model.set(values[0])
 
     def choose_files(self) -> None:
-        paths = filedialog.askopenfilenames(filetypes=[("支持的文档", "*.md *.markdown *.docx *.pptx *.xlsx *.pdf *.dwg"), ("所有文件", "*.*")])
-        self.add_files(list(paths))
+        path = filedialog.askopenfilename(filetypes=[("支持的文档", "*.md *.markdown *.docx *.pptx *.xlsx *.pdf *.dwg"), ("所有文件", "*.*")])
+        if path:
+            self.add_files([path])
 
     def add_files(self, paths: Iterable[str]) -> None:
-        for raw in paths:
-            path = Path(raw)
-            if not path.is_file() or path.suffix.casefold() not in SUPPORTED_FORMATS:
-                continue
-            if path not in self.files:
-                self.files.append(path); self.file_list.insert("end", f"{SUPPORTED_FORMATS[path.suffix.casefold()]}  ·  {path}")
-        self.status.set(f"已选择 {len(self.files)} 个文件")
-
-    def clear_files(self) -> None:
-        self.files.clear(); self.file_list.delete(0, "end"); self.status.set("请拖入文件，或点击“选择文件”")
+        """One document at a time: the newest supported file replaces the current one."""
+        dropped = [Path(raw) for raw in paths]
+        supported = [path for path in dropped if path.is_file() and path.suffix.casefold() in SUPPORTED_FORMATS]
+        if not supported:
+            if dropped:
+                self.status.set(f"不支持的文件：{dropped[0].name}")
+            return
+        path = supported[0]
+        self.files = [path]
+        self.file_text.set(f"{SUPPORTED_FORMATS[path.suffix.casefold()]}\n{path}")
+        self.status.set("一次只处理一份，已取第一份" if len(dropped) > 1 else "")
 
     def choose_glossary(self) -> None:
         path = filedialog.askopenfilename(filetypes=[("术语库", "*.csv *.xlsx"), ("CSV", "*.csv"), ("Excel", "*.xlsx")])
@@ -259,7 +312,7 @@ class TranslationApp:
 
     def execute(self) -> None:
         if not self.files:
-            messagebox.showwarning("缺少输入", "请先拖入或选择至少一个文件")
+            messagebox.showwarning("缺少输入", "请先拖入或选择一份文件")
             return
         self.execute_button.configure(state="disabled")
         self.stop_button.configure(state="normal")
