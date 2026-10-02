@@ -53,6 +53,9 @@ def test_numbered_translation_uses_profile_not_sample_text() -> None:
 def test_document_reference_rebuilds_numeric_fields_without_inventing_issuer() -> None:
     profile = NumberingProfile(target_language="en")
     assert normalize_document_reference_translation("某机构〔2031〕18号", "Some Institute〔2031〕18 号", profile) == "Some Institute [2031] No. 18"
+    # brackets dropped by the provider are restored; other numbers are not matched
+    assert normalize_document_reference_translation("某机构〔2031〕18号", "Some Institute 2031 No. 18", profile) == "Some Institute [2031] No. 18"
+    assert normalize_document_reference_translation("某机构〔2031〕18号", "Some Institute 2031 No. 180", profile) == "Some Institute 2031 No. 180"
     # An unresolved CJK issuer is deliberately left for strict language
     # validation/glossary review rather than silently transliterated.
     assert normalize_document_reference_translation("某机构〔2031〕18号", "某机构〔2031〕18号", profile) == "某机构〔2031〕18号"

@@ -33,7 +33,7 @@ from document_translator.core import (
     generate_unit_id,
     validate_result_for_unit,
 )
-from document_translator.translation_rules import rule_protected_tokens
+from document_translator.translation_rules import localize_chinese_dates, rule_protected_tokens
 
 
 class TranslationBatchProvider(Protocol):
@@ -165,6 +165,8 @@ class MinerUPdfTranslationService:
                     source_language=source_language,
                     target_language=target_language,
                     minimum_font_size=minimum_font_size,
+                    allowed_pages=source_manifest.table_pages,
+                    geometry_source=source,
                 )
                 run["restored_table_images"] = _restore_orphaned_table_images(source, candidate)
                 # A page whose table was already rendered by the geometry-aware
@@ -293,16 +295,72 @@ def _clear_placeholder_text(page: Any, rect: Any) -> None:
     page.apply_redactions(images=0, graphics=0, text=0)
 
 
+def _insert_source_image(
+    source_page: Any,
+    candidate_page: Any,
+    source_rect: Any,
+    dest_rect: Any = None,
+    *,
+    overlay: bool = True,
+) -> None:
+    """Copy one source image into the candidate as the ORIGINAL image object.
+
+    Embeds the source's own image bytes and soft mask unchanged, rather than
+    rasterizing ``source_rect`` off the rendered source page: a region
+    snapshot captures everything visible in that rectangle, not just the
+    image -- confirmed directly, a company seal stamped over its signature
+    line came back with the source's black Chinese company name and date
+    baked into its pixels, its transparency mask flattened away, and the
+    result no longer the independently deletable seal the source had.
+
+    ``dest_rect`` defaults to the source image's own exact bbox (a
+    same-position restore). The region snapshot remains only as a fallback
+    for content that has no matching raster object on the source page at
+    all (vector artwork), or whose matching image is rotated/flipped and
+    so cannot be placed by an axis-aligned rect.
+    """
+    import fitz
+
+    source_rect = fitz.Rect(source_rect)
+    match = None
+    for block in source_page.get_text("dict", flags=fitz.TEXT_PRESERVE_IMAGES).get("blocks", []):
+        if block.get("type") != 1 or not block.get("image"):
+            continue
+        block_rect = fitz.Rect(block["bbox"])
+        overlap = (block_rect & source_rect).get_area()
+        if overlap < 0.6 * source_rect.get_area() or overlap < 0.6 * block_rect.get_area():
+            continue
+        a, b, c, d = (block.get("transform") or (1, 0, 0, 1, 0, 0))[:4]
+        if abs(b) > 1e-6 or abs(c) > 1e-6 or a <= 0 or d <= 0:
+            continue
+        match = block
+        break
+    if match is not None:
+        try:
+            candidate_page.insert_image(
+                fitz.Rect(dest_rect) if dest_rect is not None else fitz.Rect(match["bbox"]),
+                stream=match["image"],
+                mask=match.get("mask") or None,
+                overlay=overlay,
+            )
+            return
+        except Exception:
+            pass
+    pixmap = source_page.get_pixmap(clip=source_rect, dpi=200)
+    candidate_page.insert_image(
+        fitz.Rect(dest_rect) if dest_rect is not None else source_rect, pixmap=pixmap, overlay=overlay
+    )
+
+
 def _restore_missing_images(source: Path, candidate: Path, middle_json: dict[str, Any]) -> int:
-    """Copy each image region straight from the untouched source page.
+    """Copy each image straight from the untouched source page.
 
     MinerU's crop-and-attach step does not reliably populate an image
     payload for every image-type block here (observed: an empty image_body
     with no image_base64/image_path/image_url at all), even though the
-    block's bbox is correct. Only the text needs reconstructing, so
-    rasterize the same region from the source page directly instead of
-    depending on that extraction, and stamp it into the candidate at the
-    identical position.
+    block's bbox is correct. Only the text needs reconstructing, so take
+    the image from the source page directly instead of depending on that
+    extraction, and stamp it into the candidate at the identical position.
     """
     import fitz
 
@@ -335,8 +393,7 @@ def _restore_missing_images(source: Path, candidate: Path, middle_json: dict[str
                 if rect.width <= 1 or rect.height <= 1:
                     continue
                 _clear_placeholder_text(candidate_page, rect)
-                pixmap = source_page.get_pixmap(clip=rect, dpi=200)
-                candidate_page.insert_image(rect, pixmap=pixmap)
+                _insert_source_image(source_page, candidate_page, rect)
                 restored += 1
 
         # A small diagram embedded INSIDE a table cell (observed: a single-
@@ -445,6 +502,249 @@ def _sample_grid_line_style(page: Any, table_rect: Any) -> tuple[tuple[float, fl
     return None
 
 
+def _estimate_required_row_height(
+    text: str, *, fontfile: str, fontname: str, fontsize: float, max_width: float
+) -> float:
+    """Return the cell height ``text`` actually needs at ``fontsize`` and ``max_width``.
+
+    Measured with a real probe insert_textbox() call at successively taller
+    heights, the exact same primitive pdf_table._fit_textbox() itself uses
+    to decide whether a size fits -- an independent estimate (a line-count
+    formula built on pdf_table._wrap_atomic_phrases()'s OWN width
+    measurement) was tried first and was confirmed wrong on a real overflow:
+    it predicted the text would comfortably fit in 2 lines while the real
+    renderer's own probe rejected it even at the floor size, because
+    _wrap_atomic_phrases() measures width with fitz.Font.text_length() while
+    insert_textbox() wraps with its own internal metrics, and the two do not
+    agree closely enough for this to be safe as a standalone estimate.
+    Reusing insert_textbox() itself removes that gap entirely.
+
+    ``text`` is run through pdf_table._normalise_render_text() first, the
+    same call render_table_translations() itself makes before ever wrapping
+    a cell's text -- skipping it here reproduced the exact same class of
+    bug a second time: a numbered list ("1. ...; 2. ...; 3. ...") reflows
+    as one dense paragraph without it, but _normalise_render_text() breaks
+    each numbered item onto its own line first, which cannot reflow back
+    together and so needs far more vertical room. Estimating against the
+    un-normalised text (confirmed directly: a real overflowing list cell)
+    silently underestimated the requirement, so the row was never grown and
+    the real render still failed the exact same way afterwards.
+    """
+    import fitz
+
+    from . import pdf_table
+
+    normalised = pdf_table._normalise_render_text(text)
+    wrapped = pdf_table._wrap_atomic_phrases(
+        normalised, fontfile=fontfile, fontname=fontname, fontsize=fontsize, max_width=max_width
+    )
+    probe = fitz.open()
+    try:
+        page = probe.new_page(width=max_width + 40, height=2000)
+        height = fontsize * 1.35 * 2
+        for _ in range(60):
+            result = page.insert_textbox(
+                fitz.Rect(0, 0, max_width, height),
+                wrapped,
+                fontname=fontname,
+                fontfile=fontfile,
+                fontsize=fontsize,
+                overlay=True,
+            )
+            if result >= -1e-6:
+                return height
+            height *= 1.25
+        return height
+    finally:
+        probe.close()
+
+
+def _recover_table_fit_error(
+    candidate: Path,
+    good_tables: list[Any],
+    good_cell_translations: dict[str, str],
+    cell_id: str | None,
+    *,
+    table_cell_font: Any,
+    minimum_font_size: float,
+    growth_target_size: float | None = None,
+) -> tuple[int, int, float] | None:
+    """Grow the one row that overflowed even at the floor font size, in place.
+
+    A translation into a language that runs wider than the source (English
+    expanding a Chinese table, observed directly: a 5-item numbered list in
+    one cell no longer fit at any legible size within its Chinese-sized row)
+    used to fail the WHOLE table over this single cell. Growing that row
+    reuses the exact same mechanism already used to make room for an image
+    restored into a cell -- redraw the grid, push later rows in the same
+    table down -- so the fix is a row-height problem here too, not a font
+    problem. Returns ``(page_number, zero_based_row_index, deficit)`` only
+    if the row was actually grown (leaving the candidate file modified in
+    place); the caller must shift every affected cell's OWN in-memory rect
+    by that same amount rather than re-extracting tables from the now-
+    modified page (see the caller for why). ``None`` means nothing changed
+    and the caller's existing fail-closed behaviour applies unchanged.
+
+    ``growth_target_size``, when given and larger than ``minimum_font_size``,
+    is tried FIRST, stepping down toward the floor only as far as the page's
+    remaining room actually demands -- one real _grow_table_row() attempt
+    per size, not a pre-check. Estimating only ever against the bare floor
+    (the original behaviour, still used when this is omitted) grows a row
+    by just enough for the smallest, least readable size, so even a cell
+    with plenty of page space left to grow into never ends up any larger
+    than the floor -- confirmed directly on a real table: every row that
+    needed growing rendered between 6-8.5pt against a 12pt source even
+    though the page below the table was still mostly empty. The caller is
+    responsible for choosing a ``growth_target_size`` the table as a whole
+    can actually afford (see _translate_tables's own quality sweep): a
+    cell-by-cell "always aim high" policy risks spending page space one
+    early row didn't need to leave nothing for a later row that did,
+    turning a table that would have fit at the floor into one that fits at
+    no size at all.
+    """
+    if not cell_id:
+        return None
+    from . import pdf_table
+
+    target_cell = None
+    for table in good_tables:
+        for cell in table.cells:
+            if cell.id == cell_id:
+                target_cell = cell
+                break
+        if target_cell is not None:
+            break
+    if target_cell is None or target_cell.rect is None:
+        return None
+    translated_text = good_cell_translations.get(cell_id)
+    if not translated_text:
+        return None
+
+    import fitz
+
+    font_path = str(table_cell_font(target_cell, translated_text))
+    cell_rect = fitz.Rect(target_cell.rect)
+    preferred_size = max(growth_target_size or minimum_font_size, minimum_font_size)
+
+    size = preferred_size
+    while size >= minimum_font_size - 1e-9:
+        required = _estimate_required_row_height(
+            translated_text,
+            fontfile=font_path,
+            fontname="probe",
+            fontsize=size,
+            max_width=cell_rect.width - 4.0,
+        )
+        deficit = required + 4.0 - cell_rect.height
+        if deficit > 0.5:
+            candidate_doc = fitz.open(candidate)
+            try:
+                page = candidate_doc[target_cell.page_number - 1]
+                table = _lines_strict_table(page)
+                row_index = target_cell.row - 1
+                grown = None if table is None else _grow_table_row(page, table, row_index, deficit)
+                if grown is not None:
+                    repaired = candidate.with_name(candidate.stem + ".row-grown" + candidate.suffix)
+                    candidate_doc.save(str(repaired))
+                    candidate_doc.close()
+                    repaired.replace(candidate)
+                    candidate_doc = None
+                    return (target_cell.page_number, row_index, deficit)
+            finally:
+                if candidate_doc is not None:
+                    candidate_doc.close()
+        if size <= minimum_font_size + 1e-9:
+            break
+        size = max(minimum_font_size, size - 1.0)
+    return None
+
+
+def _shift_table_geometry_after_growth(
+    good_tables: list[Any], page_number: int, row_index: int, deficit: float
+) -> list[Any]:
+    """Relocate cell/table rects after a row grew, WITHOUT re-reading the page.
+
+    _grow_table_row() rasterizes everything below the grown row into a
+    single pasted image so the shift is visually seamless -- fine for its
+    original purpose (making room for an already-placed image), but fatal
+    to re-extracting table geometry afterwards via
+    pdf_table.extract_pdf_tables(): every cell in that rasterized band
+    loses its real text layer, so PdfTableCell.is_empty (a pure function of
+    the text captured at extraction time) flips to True for cells that
+    still have a real, pending translation -- confirmed directly: growing a
+    SECOND overflowing row below an already-grown one raised "empty source
+    cell ... cannot receive non-empty translation" for a label cell that
+    plainly was not empty moments before. Recomputing each cell's rect in
+    memory instead -- grow the target row's own height, shift every row
+    below it down by the same amount, leave rows above untouched -- keeps
+    each PdfTableCell's original ``text`` (and therefore its ``is_empty``)
+    intact while still reflecting the page's new, real geometry.
+    """
+    import dataclasses
+
+    updated_tables = []
+    for table in good_tables:
+        if table.page_number != page_number:
+            updated_tables.append(table)
+            continue
+        new_cells = []
+        for cell in table.cells:
+            if cell.rect is None or cell.row - 1 < row_index:
+                new_cells.append(cell)
+                continue
+            x0, y0, x1, y1 = cell.rect
+            if cell.row - 1 == row_index:
+                new_rect = (x0, y0, x1, y1 + deficit)
+            else:
+                new_rect = (x0, y0 + deficit, x1, y1 + deficit)
+            new_cells.append(dataclasses.replace(cell, rect=new_rect))
+        tx0, ty0, tx1, ty1 = table.rect
+        updated_tables.append(dataclasses.replace(table, rect=(tx0, ty0, tx1, ty1 + deficit), cells=tuple(new_cells)))
+    return updated_tables
+
+
+def _strip_growth_artifact_images(candidate: Path, page_number: int, table_rect: tuple[float, float, float, float]) -> None:
+    """Remove any image _grow_table_row() has pasted within this table, in place.
+
+    Every "move content below down" step in _grow_table_row() pastes a
+    fresh raster snapshot of whatever it just shifted; growing a LATER row
+    in the same table correctly clears the previous snapshot before
+    pasting its own (see _grow_table_row's own vertical-fragment comment),
+    but a row that never becomes a growth target itself -- the last one or
+    two rows in a table, once the recovery attempt cap is reached -- stays
+    inside whatever snapshot last swept over it. This pipeline's table-cell
+    text redaction preserves images on purpose (a legitimately restored
+    cell image is meant to survive it), so that stray snapshot would
+    otherwise still be sitting there when the real translated text is
+    drawn on top of it moments later -- confirmed directly: the bottom two
+    rows of a real table stayed visibly double-exposed, source text
+    showing right through the correctly translated text above it, even
+    though every row above rendered cleanly.
+
+    Called right after every successful growth, before the next render
+    attempt, so render_table_translations() -- which refuses to publish a
+    page with FEWER images than its input had, a guard meant to catch an
+    accidentally deleted real image -- measures its own "before" count
+    from a candidate that no longer carries this transient artifact, and
+    never needs to remove it (or trip that guard) itself.
+    """
+    import fitz
+
+    doc = fitz.open(candidate)
+    try:
+        page = doc[page_number - 1]
+        page.add_redact_annot(fitz.Rect(table_rect), fill=None)
+        page.apply_redactions(images=1, graphics=0, text=1)
+        repaired = candidate.with_name(candidate.stem + ".images-stripped" + candidate.suffix)
+        doc.save(str(repaired))
+        doc.close()
+        repaired.replace(candidate)
+        doc = None
+    finally:
+        if doc is not None:
+            doc.close()
+
+
 def _grow_table_row(page: Any, table: Any, row_index: int, deficit: float) -> Any | None:
     """Grow one real table row by ``deficit`` points, pushing later rows down to match.
 
@@ -478,18 +778,31 @@ def _grow_table_row(page: Any, table: Any, row_index: int, deficit: float) -> An
     color, width = style
 
     drawings = page.get_drawings()
-    verticals = [
-        d for d in drawings
-        if d.get("type") == "s" and d["rect"].width < 1
-        and abs(d["rect"].y0 - table_rect.y0) < 1.5 and abs(d["rect"].y1 - old_bottom) < 1.5
-    ]
+    # A vertical divider that has already been grown once (by an earlier
+    # call, for a different overflowing row in the same table) is no
+    # longer one continuous stroke from the table's top to its bottom --
+    # the previous growth drew a SEPARATE extension segment rather than
+    # replacing it, so what reaches this table's current bottom is really
+    # two (or more) stacked fragments at the same x. Requiring a single
+    # drawing that spans the full table_rect.y0-to-old_bottom range (the
+    # original assumption here) matches nothing once that has happened --
+    # confirmed directly: growing a second row after a first successful
+    # growth found zero verticals and silently gave up. Group by x instead
+    # and extend from whatever each column divider's current lowest point
+    # actually is.
+    verticals_by_x: dict[float, float] = {}
+    for d in drawings:
+        rect = d["rect"]
+        if d.get("type") == "s" and rect.width < 1 and abs(rect.y0 - table_rect.y0) < 1.5:
+            x = round(float(rect.x0), 2)
+            verticals_by_x[x] = max(verticals_by_x.get(x, rect.y1), float(rect.y1))
     horizontals_to_shift = [
         d for d in drawings
         if d.get("type") == "s" and d["rect"].height < 1
         and d["rect"].y0 >= row_rect.y1 - 1.5
         and d["rect"].x0 >= table_rect.x0 - 1.5 and d["rect"].x1 <= table_rect.x1 + 1.5
     ]
-    if not verticals or not horizontals_to_shift:
+    if not verticals_by_x or not horizontals_to_shift:
         return None
 
     # Move whatever already renders strictly below this row (later rows'
@@ -503,7 +816,18 @@ def _grow_table_row(page: Any, table: Any, row_index: int, deficit: float) -> An
     if below_band.height > 0.5:
         moved_pixmap = page.get_pixmap(clip=below_band, dpi=200)
         page.add_redact_annot(below_band, fill=None)
-        page.apply_redactions(images=0, graphics=0, text=0)
+        # images=1 (remove any overlapping image), not the original 0
+        # (ignore/preserve): growing a SECOND overflowing row in the same
+        # table re-captures and re-pastes this same band, which by then
+        # already contains the FIRST growth's own pasted snapshot -- with
+        # images preserved that old snapshot is never cleared from its own
+        # (now stale) position, so it keeps showing there as a duplicate
+        # underneath the fresh snapshot pasted at the newly shifted spot.
+        # Confirmed directly: growing every overflowing row in a 10-row
+        # table one at a time left visibly doubled/ghosted text across
+        # every row below the first growth. Text redaction was already
+        # correct (0 = remove); only the image mode needed to match it.
+        page.apply_redactions(images=1, graphics=0, text=0)
 
     # apply_redactions(graphics=...) removes a WHOLE vector path the instant
     # any part of it is touched by the redaction box -- not just the
@@ -515,7 +839,7 @@ def _grow_table_row(page: Any, table: Any, row_index: int, deficit: float) -> An
     # position, so no box ever touches a vertical line at all. A zero-
     # height stroke's rect also has no area for the match itself, hence
     # the small inflation on the thin axis.
-    vertical_xs = sorted({round(float(v["rect"].x0), 2) for v in verticals})
+    vertical_xs = sorted(verticals_by_x.keys())
     gap = 0.9
     for drawing in horizontals_to_shift:
         r = drawing["rect"]
@@ -531,9 +855,8 @@ def _grow_table_row(page: Any, table: Any, row_index: int, deficit: float) -> An
         r = drawing["rect"]
         new_y = r.y0 + deficit
         page.draw_line((r.x0, new_y), (r.x1, new_y), color=color, width=width)
-    for drawing in verticals:
-        r = drawing["rect"]
-        page.draw_line((r.x0, old_bottom), (r.x0, new_bottom), color=color, width=width)
+    for x, current_bottom in verticals_by_x.items():
+        page.draw_line((x, current_bottom), (x, new_bottom), color=color, width=width)
 
     if moved_pixmap is not None:
         dest = fitz.Rect(below_band.x0, below_band.y0 + deficit, below_band.x1, below_band.y1 + deficit)
@@ -599,8 +922,7 @@ def _place_image_in_table_cell(source_page: Any, candidate_page: Any, image_rect
         cell_rect.x0 + (cell_rect.width - target_width) / 2 + target_width,
         available_top + target_height,
     )
-    pixmap = source_page.get_pixmap(clip=image_rect, dpi=200)
-    candidate_page.insert_image(dest, pixmap=pixmap)
+    _insert_source_image(source_page, candidate_page, image_rect, dest)
     return True
 
 
@@ -638,8 +960,13 @@ def _restore_orphaned_table_images(source: Path, candidate: Path) -> int:
                 if _place_image_in_table_cell(source_page, candidate_page, rect):
                     restored += 1
                     continue
-                pixmap = source_page.get_pixmap(clip=rect, dpi=200)
-                candidate_page.insert_image(rect, pixmap=pixmap)
+                # overlay=False (background): this restores an image onto a
+                # page whose translated text is already drawn, so a
+                # foreground paste would draw the image over that text
+                # wherever they overlap (a company chop stamped over its
+                # signature line, by design). Background keeps the image in
+                # its source position with the translated text on top.
+                _insert_source_image(source_page, candidate_page, rect, overlay=False)
                 restored += 1
         if restored:
             repaired = candidate.with_name(candidate.stem + ".with-table-images" + candidate.suffix)
@@ -1066,6 +1393,464 @@ def _table_cell_font(cell: object, translated: str) -> str:
     )
 
 
+def _attempt_table_render(
+    candidate: Path,
+    patched: Path,
+    original_candidate_bytes: bytes,
+    tables: list[Any],
+    good_tables: list[Any],
+    good_cell_translations: dict[str, str],
+    *,
+    minimum_font_size: float,
+    growth_target_size: float,
+    source_page_links: dict[int, list[dict]],
+    units: list[Any],
+    warnings: list[dict[str, object]],
+) -> tuple[dict[str, object], list[Any]]:
+    """Try rendering the whole table once against a fresh copy of ``candidate``.
+
+    One call is one quality level: every row that overflows is grown
+    toward ``growth_target_size`` (stepping down toward the floor only as
+    far as that specific row's own remaining room demands), then the
+    reduced-floor retry this module has always had covers whatever still
+    does not fit even there. Always starts from ``original_candidate_bytes``
+    rather than whatever is currently on disk, so the caller can retry at a
+    higher quality level without a previous attempt's growth leaving the
+    page in a different state. Returns the same result-dict shape
+    _translate_tables itself returns, plus the final good_tables geometry
+    (grown or not) for a caller that wants it.
+    """
+    from . import pdf_table
+
+    candidate.write_bytes(original_candidate_bytes)
+    reduced_floor = round(max(4.5, minimum_font_size - 1.5), 2)
+    floors = [minimum_font_size] if reduced_floor >= minimum_font_size else [minimum_font_size, reduced_floor]
+    last_exc: Exception | None = None
+    for floor in floors:
+        attempts = 0
+        while True:
+            try:
+                report = pdf_table.render_table_translations(
+                    candidate,
+                    patched,
+                    good_cell_translations,
+                    tables=good_tables,
+                    fontfile=_table_cell_font,
+                    minimum_font_size=floor,
+                    page_links=source_page_links,
+                )
+            except pdf_table.PdfTableFitError as exc:
+                patched.unlink(missing_ok=True)
+                last_exc = exc
+                attempts += 1
+                grown = attempts <= 20 and _recover_table_fit_error(
+                    candidate,
+                    good_tables,
+                    good_cell_translations,
+                    getattr(exc, "cell_id", None),
+                    table_cell_font=_table_cell_font,
+                    minimum_font_size=floor,
+                    growth_target_size=growth_target_size,
+                )
+                if grown:
+                    page_number, row_index, deficit = grown
+                    good_tables = _shift_table_geometry_after_growth(good_tables, page_number, row_index, deficit)
+                    table_rect = next(
+                        (t.rect for t in good_tables if t.page_number == page_number), None
+                    )
+                    if table_rect is not None:
+                        _strip_growth_artifact_images(candidate, page_number, table_rect)
+                    continue
+                break
+            except pdf_table.PdfTableError as exc:
+                # fail closed, per this module's own contract: a cell that
+                # cannot be rendered safely must not silently keep the
+                # untranslated English rather than corrupt or overflow the
+                # table, but the rest of the page (already rendered by
+                # MinerU) is still worth publishing, so this is recorded
+                # rather than raised.
+                return (
+                    {"status": "failed", "reason": str(exc), "table_count": len(good_tables), "cell_count": len(units), "warnings": warnings},
+                    good_tables,
+                )
+            else:
+                patched.replace(candidate)
+                return (
+                    {
+                        "status": "patched" if len(good_tables) == len(tables) else "partially_patched",
+                        "table_count": report.table_count,
+                        "cell_count": report.cell_count,
+                        "rendered_cell_count": report.rendered_cell_count,
+                        "restored_link_count": report.restored_link_count,
+                        "skipped_table_count": len(tables) - len(good_tables),
+                        "patched_pages": sorted({table.page_number for table in good_tables}),
+                        "warnings": warnings,
+                    },
+                    good_tables,
+                )
+    return (
+        {"status": "failed", "reason": str(last_exc), "table_count": len(good_tables), "cell_count": len(units), "warnings": warnings},
+        good_tables,
+    )
+
+
+def _adopt_source_table_skeleton(
+    source: Path,
+    candidate: Path,
+    tables: list[Any],
+    *,
+    merge_phantom_rows: bool,
+) -> tuple[list[Any], dict[int, tuple[list[Any], list[Any]]]]:
+    """Swap MinerU's redrawn tables for the source's own, page by page.
+
+    MinerU's render_pdf(ORIGINAL) does not keep a source table's ruled
+    grid; it draws its own from its parse -- confirmed directly on a real
+    page: the source's 129.5 / 311.6 columns came back as 39 / 403 and its
+    rows were squashed to under half their height, so every English label
+    in the starved first column broke mid-word at 4.5pt. Translating on that
+    grid can only ever patch around it. Wherever the source page itself has
+    a ruled table, use the SOURCE table (its geometry and its own cell text)
+    instead; the candidate's tables only tell us which MinerU-drawn regions
+    to clear, so their row/column structure does not need to match.
+
+    Returns the tables to translate (source tables on adopted pages,
+    candidate tables everywhere else) and, per adopted page, the candidate
+    regions that must be cleared before the source grid is redrawn. A page
+    is not adopted only if some OTHER candidate content sits where the
+    source table will go -- redrawing there would overwrite it.
+    """
+    import fitz
+
+    from . import pdf_table
+
+    try:
+        source_tables = pdf_table.extract_pdf_tables(source, merge_phantom_rows=merge_phantom_rows)
+    except pdf_table.PdfTableError:
+        return tables, {}
+    result: list[Any] = []
+    adopted: dict[int, tuple[list[Any], list[Any]]] = {}
+    candidate_doc = fitz.open(candidate)
+    try:
+        for page_number in sorted({table.page_number for table in tables}):
+            candidate_page_tables = sorted((t for t in tables if t.page_number == page_number), key=lambda t: t.rect[1])
+            source_page_tables = sorted((t for t in source_tables if t.page_number == page_number), key=lambda t: t.rect[1])
+            if not source_page_tables:
+                result.extend(candidate_page_tables)
+                continue
+            source_rects = [fitz.Rect(t.rect) for t in source_page_tables]
+            replaced = [t for t in candidate_page_tables if any(fitz.Rect(t.rect).intersects(r) for r in source_rects)]
+            source_ids = {cell.id for t in source_page_tables for cell in t.cells}
+            # A MinerU table elsewhere on the page keeps the existing path,
+            # unless its cell IDs would collide with the source table's.
+            untouched = [
+                t for t in candidate_page_tables
+                if t not in replaced and not ({cell.id for cell in t.cells} & source_ids)
+            ]
+            page = candidate_doc[page_number - 1]
+            candidate_rects = [fitz.Rect(t.rect) + (-2, -2, 2, 2) for t in replaced]
+
+            def owned(rect: Any) -> bool:
+                return any(rect in owner for owner in candidate_rects)
+
+            conflict = False
+            for source_table in source_page_tables:
+                target = fitz.Rect(source_table.rect)
+                for block in page.get_text("dict", clip=target).get("blocks", ()):
+                    for line in block.get("lines", ()) if block.get("type") == 0 else ():
+                        for span in line.get("spans", ()):
+                            box = fitz.Rect(span["bbox"])
+                            if span.get("text", "").strip() and box.intersects(target) and not owned(box):
+                                conflict = True
+                for info in page.get_image_info():
+                    box = fitz.Rect(info["bbox"])
+                    if box.intersects(target) and not owned(box):
+                        conflict = True
+            if conflict:
+                result.extend(candidate_page_tables)
+                continue
+            result.extend(source_page_tables)
+            result.extend(untouched)
+            adopted[page_number] = (candidate_rects + source_rects, source_page_tables)
+    finally:
+        candidate_doc.close()
+    return result, adopted
+
+
+def _source_cell_alignment(source_page: Any, cell: Any) -> tuple[int, bool]:
+    """Return (horizontal align, vertically centred) as the source cell has it."""
+    import fitz
+
+    cell_rect = fitz.Rect(cell.rect)
+    text_rect = fitz.Rect()
+    for block in source_page.get_text("dict", clip=cell_rect).get("blocks", ()):
+        for line in block.get("lines", ()) if block.get("type") == 0 else ():
+            for span in line.get("spans", ()):
+                box = fitz.Rect(span["bbox"])
+                if span.get("text", "").strip() and cell_rect.contains(fitz.Point((box.x0 + box.x1) / 2, (box.y0 + box.y1) / 2)):
+                    text_rect |= box
+    if text_rect.is_empty:
+        return 0, False
+    centred = (
+        abs((text_rect.x0 + text_rect.x1) / 2 - (cell_rect.x0 + cell_rect.x1) / 2) <= max(3.0, cell_rect.width * 0.08)
+        and text_rect.width <= cell_rect.width * 0.85
+    )
+    middle = (
+        abs((text_rect.y0 + text_rect.y1) / 2 - (cell_rect.y0 + cell_rect.y1) / 2) <= max(3.0, cell_rect.height * 0.15)
+        and text_rect.height <= cell_rect.height * 0.75
+    )
+    return (1 if centred else 0), middle
+
+
+def _render_on_source_skeleton(
+    source: Path,
+    candidate: Path,
+    page_number: int,
+    page_tables: list[Any],
+    cell_translations: dict[str, str],
+    clear_rects: list[Any],
+    *,
+    page_links: dict[int, list[dict]],
+) -> dict[str, object] | None:
+    """Render one page's tables on the source's own grid, typeset like the source.
+
+    Clears MinerU's redrawn table, then lays the translation out the way
+    the source table is laid out: one font size for the whole table, never
+    a word split across lines, each cell aligned as its source cell is
+    (label column and header centred both ways, body text left/top), within
+    the source table's own height. The size rule is: start at the source's
+    own size; if the text does not fit the original height, step the size
+    down until it does -- never fall back to another layout and never grow
+    the table past its original area. The grid is drawn once at its final
+    geometry, so nothing has to be shifted or rasterized afterwards.
+    Returns the result dict on success; None (only on an unexpected render
+    error) leaves the candidate untouched for the caller's existing path.
+    """
+    import dataclasses
+
+    import fitz
+
+    from . import pdf_table
+
+    source_doc = fitz.open(source)
+    work_doc = fitz.open(candidate)
+    staged = candidate.with_name(candidate.stem + ".skeleton" + candidate.suffix)
+    patched = candidate.with_name(candidate.stem + ".skeleton-patched" + candidate.suffix)
+    try:
+        source_page = source_doc[page_number - 1]
+        page = work_doc[page_number - 1]
+        for rect in clear_rects:
+            page.add_redact_annot(fitz.Rect(rect) + (-1, -1, 1, 1), fill=None)
+        # graphics=1: remove only paths lying wholly inside these regions
+        # (MinerU's own grid), never a larger path merely crossing them.
+        page.apply_redactions(images=0, graphics=1, text=0)
+
+        cells = [cell for table in page_tables for cell in table.cells]
+        detected = {cell.id: _source_cell_alignment(source_page, cell) for cell in cells if cell.rect is not None}
+        # Alignment is a property of a column, not of one cell: a short
+        # sentence in a left-aligned body column can sit near its cell's
+        # centre by coincidence (observed: one such cell came out centred).
+        # Body rows take their column's majority; the header row keeps its
+        # own, since headers are commonly centred over left-aligned columns.
+        alignment: dict[str, tuple[int, bool]] = {}
+        for table in page_tables:
+            header_row = min((cell.row for cell in table.cells if cell.rect is not None), default=1)
+            for column in {cell.column for cell in table.cells}:
+                body = [detected[c.id] for c in table.cells if c.column == column and c.row != header_row and c.id in detected]
+                if body:
+                    majority = (
+                        1 if sum(h for h, _ in body) * 2 > len(body) else 0,
+                        sum(1 for _, m in body if m) * 2 > len(body),
+                    )
+                for cell in table.cells:
+                    if cell.column != column or cell.id not in detected:
+                        continue
+                    alignment[cell.id] = detected[cell.id] if cell.row == header_row or not body else majority
+        union = fitz.Rect()
+        for table in page_tables:
+            union |= fitz.Rect(table.rect)
+        style = _sample_grid_line_style(source_page, union) or ((0.0, 0.0, 0.0), 0.5)
+
+        fonts: dict[str, fitz.Font] = {}
+
+        def needed_height(cell: Any, size: float) -> float | None:
+            """Height this cell's translation needs at ``size``; None if a word would split."""
+            text = cell_translations.get(cell.id, "")
+            if cell.rect is None or not text.strip():
+                return 0.0
+            rect = fitz.Rect(cell.rect)
+            normalised = pdf_table._normalise_render_text(text)
+            fontfile = str(_table_cell_font(cell, normalised))
+            font = fonts.setdefault(fontfile, fitz.Font(fontfile=fontfile))
+            pad = pdf_table._cell_fit_padding(rect, normalised, 2.0)
+            width = rect.width - 2 * pad
+            for paragraph in normalised.split("\n"):
+                for atom, _ in pdf_table._tokenize_atoms_with_seps(paragraph):
+                    # Only a single word wider than the cell is a hard
+                    # failure; a too-wide phrase just wraps between words.
+                    if any(font.text_length(word, fontsize=size) > width for word in atom.split(" ")):
+                        return None
+            wrapped = pdf_table._wrap_atomic_phrases(
+                normalised, fontfile=fontfile, fontname="probe", fontsize=size, max_width=width
+            )
+            probe = fitz.open()
+            try:
+                leftover = probe.new_page(width=width + 20, height=4000).insert_textbox(
+                    fitz.Rect(0, 0, width, 4000), wrapped, fontname="probe", fontfile=fontfile, fontsize=size
+                )
+            finally:
+                probe.close()
+            if leftover < 0:
+                return None
+            return (4000 - leftover) + 2 * pad + 1.0
+
+
+        def layout(table: Any, size: float) -> dict[int, tuple[float, float]] | None:
+            """New (top, bottom) per row, rebalancing height within the table.
+
+            Each row gets the height its tallest cell needs at ``size``; if
+            those sum to no more than the table's source height, whatever is left
+            is shared back out in proportion to the SOURCE row heights, so
+            the table still fills its original area in its original
+            proportions. Rows the source made generous give up room they
+            do not need to rows that are tight, instead of the tightest row
+            alone dictating a small font for the whole table.
+            """
+            rows = sorted({cell.row for cell in table.cells if cell.rect is not None})
+            bottoms = {
+                row: min(cell.rect[3] for cell in table.cells if cell.row == row and cell.rect is not None)
+                for row in rows
+            }
+            source_heights: dict[int, float] = {}
+            previous = table.rect[1]
+            for row in rows:
+                source_heights[row] = bottoms[row] - previous
+                previous = bottoms[row]
+            required = {row: 0.0 for row in rows}
+            spans: list[tuple[int, int, float]] = []
+            for cell in table.cells:
+                if cell.rect is None:
+                    continue
+                need = needed_height(cell, size)
+                if need is None:
+                    return None
+                last = max(row for row in rows if bottoms[row] <= cell.rect[3] + 0.5)
+                if last == cell.row:
+                    required[cell.row] = max(required[cell.row], need)
+                else:
+                    spans.append((cell.row, last, need))
+            source_total = sum(source_heights.values())
+            available = source_total
+            total_required = sum(required.values())
+            if total_required > available + 1e-6:
+                return None
+            spare = max(total_required, source_total) - total_required
+            heights = {row: required[row] + spare * source_heights[row] / source_total for row in rows}
+            for first, last, need in spans:
+                if sum(heights[row] for row in rows if first <= row <= last) < need:
+                    return None
+            result: dict[int, tuple[float, float]] = {}
+            top = table.rect[1]
+            for row in rows:
+                result[row] = (top, top + heights[row])
+                top += heights[row]
+            return result
+
+        top_size = max((cell.source_font_size or 10.0) for cell in cells if cell.rect is not None)
+        size = round(top_size * 2) / 2
+        layouts: dict[int, dict[int, tuple[float, float]]] | None = None
+        # Step down until it fits; the floor only stops a runaway loop on a
+        # pathological table (a word wider than its column even at 1pt).
+        while size >= 1.0 - 1e-9:
+            attempt = {table.table_number: layout(table, size) for table in page_tables}
+            if all(value is not None for value in attempt.values()):
+                layouts = attempt  # type: ignore[assignment]
+                break
+            size = round(size - 0.5, 2)
+        if layouts is None:
+            return None
+
+        adjusted_tables = []
+        shift_ranges: list[tuple[Any, Any]] = []
+        grown_rows = 0
+        for table in page_tables:
+            row_spans = layouts[table.table_number]
+            rows = sorted(row_spans)
+            bottoms = {
+                row: min(cell.rect[3] for cell in table.cells if cell.row == row and cell.rect is not None)
+                for row in rows
+            }
+            new_cells = []
+            for cell in table.cells:
+                if cell.rect is None:
+                    new_cells.append(cell)
+                    continue
+                last = max(row for row in rows if bottoms[row] <= cell.rect[3] + 0.5)
+                x0, _, x1, _ = cell.rect
+                new_cells.append(dataclasses.replace(
+                    cell, rect=(x0, row_spans[cell.row][0], x1, row_spans[last][1]), source_font_size=size
+                ))
+            tx0, ty0, tx1, ty1 = table.rect
+            new_bottom = row_spans[rows[-1]][1]
+            grown_rows += int(new_bottom > ty1 + 0.5)
+            adjusted_tables.append(dataclasses.replace(table, rect=(tx0, ty0, tx1, new_bottom), cells=tuple(new_cells)))
+            shift_ranges.extend((cell.rect, new.rect) for cell, new in zip(table.cells, new_cells) if cell.rect is not None)
+
+        shape = page.new_shape()
+        for table in adjusted_tables:
+            for cell in table.cells:
+                if cell.rect is not None:
+                    shape.draw_rect(fitz.Rect(cell.rect))
+        shape.finish(color=style[0], width=style[1], fill=None)
+        shape.commit(overlay=True)
+        work_doc.save(str(staged))
+        work_doc.close()
+        work_doc = None
+
+        links = dict(page_links)
+        if page_number in links:
+            remapped = []
+            for link in links[page_number]:
+                origin = fitz.Rect(link["from"])
+                for old, new in shift_ranges:
+                    if abs(fitz.Rect(old).y0 - origin.y0) < 0.5 and abs(fitz.Rect(old).x0 - origin.x0) < 0.5:
+                        link = {**link, "from": fitz.Rect(new)}
+                        break
+                remapped.append(link)
+            links[page_number] = remapped
+
+        page_cell_ids = {cell.id for cell in cells}
+        report = pdf_table.render_table_translations(
+            staged,
+            patched,
+            {cell_id: text for cell_id, text in cell_translations.items() if cell_id in page_cell_ids},
+            tables=adjusted_tables,
+            fontfile=_table_cell_font,
+            minimum_font_size=size,
+            initial_font_size=size,
+            align=lambda cell: alignment.get(cell.id, (0, False))[0],
+            middle_aligned=lambda cell: alignment.get(cell.id, (0, False))[1],
+            page_links=links,
+            spread_lines=False,
+        )
+        patched.replace(candidate)
+        return {
+            "table_count": report.table_count,
+            "cell_count": report.cell_count,
+            "rendered_cell_count": report.rendered_cell_count,
+            "restored_link_count": report.restored_link_count,
+            "font_size": size,
+            "tables_taller_than_source": grown_rows,
+        }
+    except pdf_table.PdfTableError:
+        return None
+    finally:
+        source_doc.close()
+        if work_doc is not None:
+            work_doc.close()
+        staged.unlink(missing_ok=True)
+        patched.unlink(missing_ok=True)
+
+
 def _translate_tables(
     provider: TranslationBatchProvider,
     source: Path,
@@ -1076,8 +1861,14 @@ def _translate_tables(
     target_language: str,
     minimum_font_size: float,
     merge_phantom_rows: bool = True,
+    allowed_pages: Iterable[int] | None = None,
+    geometry_source: Path | None = None,
 ) -> dict[str, object]:
     """Patch this candidate's vector tables through the dedicated cell path.
+
+    ``geometry_source`` (the untouched source PDF) enables rendering on the
+    source's own table grid wherever it matches; see
+    _adopt_source_table_skeleton().
 
     _make_units_from_current_block() above deliberately skips every
     "table"-typed block: the general render_pdf(ORIGINAL) layout has no
@@ -1105,6 +1896,23 @@ def _translate_tables(
     Every other current caller of this function still wants the
     original merge, so this only turns it off where it was actually
     wrong.
+
+    ``allowed_pages`` (source_manifest.table_pages, i.e. what MinerU's own
+    native parse -- run on the untouched source, before any redaction --
+    already classified as containing a table) guards against a false
+    positive this function's own caller can create: _restore_layout()
+    (which always runs first) redacts a multi-line article_text/
+    centered_text paragraph one source LINE at a time, leaving several
+    white redaction rectangles tiled edge-to-edge down the candidate
+    page. find_tables(strategy="lines_strict") reads the shared edges
+    between those tiles as ruled grid lines and reports the whole
+    paragraph as a several-row "table" (observed: two ordinary articles
+    on this project's own test document each misdetected this way).
+    Re-translating that "table" cell-by-cell then re-redacts and
+    re-renders small fragments of the already-correctly-restored
+    paragraph, corrupting it. A page MinerU's own source-side parse
+    never flagged as tabular cannot have gained a real one from
+    translation, so skip it entirely when this filter is given.
     """
     from . import pdf_table
 
@@ -1112,8 +1920,17 @@ def _translate_tables(
         tables = pdf_table.extract_pdf_tables(candidate, merge_phantom_rows=merge_phantom_rows)
     except pdf_table.PdfTableError as exc:
         return {"status": "skipped", "reason": str(exc)}
+    if allowed_pages is not None:
+        allowed = set(allowed_pages)
+        tables = [table for table in tables if table.page_number in allowed]
     if not tables:
         return {"status": "skipped", "reason": "no vector tables detected"}
+    candidate_tables = tables
+    skeleton_regions: dict[int, list[Any]] = {}
+    if geometry_source is not None:
+        tables, skeleton_regions = _adopt_source_table_skeleton(
+            geometry_source, candidate, tables, merge_phantom_rows=merge_phantom_rows
+        )
 
     # A hyperlink is a page annotation, not page content, and MinerU's own
     # render_pdf(ORIGINAL) step -- which runs before this function is ever
@@ -1166,14 +1983,15 @@ def _translate_tables(
         for cell in table.cells:
             if cell.is_empty:
                 continue
+            cell_text, dates = localize_chinese_dates(cell.text, source_language, target_language)
             data = {
                 "document_hash": source_hash,
                 "format": DocumentFormat.PDF,
                 "location": DocumentLocation(part=f"page:{cell.page_number}", object_id=cell.id),
                 "source_language": source_language,
                 "target_language": target_language,
-                "source_text": cell.text,
-                "protected_tokens": rule_protected_tokens(cell.text),
+                "source_text": cell_text,
+                "protected_tokens": rule_protected_tokens(cell_text, dates),
                 "style_signature": "table_cell",
                 "context_before": "",
                 "context_after": "",
@@ -1261,7 +2079,7 @@ def _translate_tables(
             })
             continue
         good_tables.append(table)
-    if not good_tables:
+    if not good_tables and not skeleton_regions:
         return {
             "status": "skipped",
             "reason": "every table failed pre-render validation",
@@ -1273,60 +2091,127 @@ def _translate_tables(
     good_cell_ids = {cell.id for table in good_tables for cell in table.cells}
     good_cell_translations = {cell_id: text for cell_id, text in cell_translations.items() if cell_id in good_cell_ids}
     patched = candidate.with_name(candidate.stem + ".tables-patched" + candidate.suffix)
-    try:
-        report = pdf_table.render_table_translations(
+
+    # Source tables are always laid out on the source's own grid, one page at
+    # a time; the font steps down until everything fits (see
+    # _render_on_source_skeleton). A table whose translation failed
+    # validation is still drawn on that grid -- with its source text, the
+    # same fail-closed content this module has always kept -- so the page's
+    # layout never depends on whether one table translated cleanly. Only an
+    # unexpected rendering error sends a page back to MinerU's grid below.
+    skeleton_reports: dict[int, dict[str, object]] = {}
+    rendered_source_tables: list[Any] = []
+    for page_number, (regions, source_page_tables) in skeleton_regions.items():
+        page_translations = dict(good_cell_translations)
+        for table in source_page_tables:
+            if table not in good_tables:
+                page_translations.update({cell.id: cell.text for cell in table.cells})
+        page_report = _render_on_source_skeleton(
+            geometry_source,
             candidate,
-            patched,
-            good_cell_translations,
-            tables=good_tables,
-            fontfile=_table_cell_font,
-            minimum_font_size=minimum_font_size,
+            page_number,
+            source_page_tables,
+            page_translations,
+            regions,
             page_links=source_page_links,
         )
-    except pdf_table.PdfTableFitError as exc:
-        # A cell that overflows by a hair at the caller's floor -- observed:
-        # a short, narrow "remark" cell repeated across many rows needed
-        # 5.5pt against a 6pt floor, by under a point -- would otherwise
-        # discard every OTHER cleanly-translated cell in the same table
-        # (render_table_translations fits the whole table atomically or not
-        # at all). The translations themselves are already in hand, so a
-        # render-only retry at a still-legible reduced floor costs no
-        # further provider calls; only if that also fails is this table
-        # actually given up on.
-        reduced_floor = round(max(4.5, minimum_font_size - 1.5), 2)
-        if reduced_floor >= minimum_font_size:
-            return {"status": "failed", "reason": str(exc), "table_count": len(good_tables), "cell_count": len(units), "warnings": warnings}
-        patched.unlink(missing_ok=True)
-        try:
-            report = pdf_table.render_table_translations(
-                candidate,
-                patched,
-                good_cell_translations,
-                tables=good_tables,
-                fontfile=_table_cell_font,
-                minimum_font_size=reduced_floor,
-                page_links=source_page_links,
-            )
-        except pdf_table.PdfTableError as retry_exc:
-            return {"status": "failed", "reason": str(retry_exc), "table_count": len(good_tables), "cell_count": len(units), "warnings": warnings}
-    except pdf_table.PdfTableError as exc:
-        # fail closed, per this module's own contract: a cell that cannot
-        # be rendered safely must not silently keep the untranslated
-        # English rather than corrupt or overflow the table, but the rest
-        # of the page (already rendered by MinerU) is still worth
-        # publishing, so this is recorded rather than raised.
-        return {"status": "failed", "reason": str(exc), "table_count": len(good_tables), "cell_count": len(units), "warnings": warnings}
-    patched.replace(candidate)
-    return {
-        "status": "patched" if len(good_tables) == len(tables) else "partially_patched",
-        "table_count": report.table_count,
-        "cell_count": report.cell_count,
-        "rendered_cell_count": report.rendered_cell_count,
-        "restored_link_count": report.restored_link_count,
-        "skipped_table_count": len(tables) - len(good_tables),
-        "patched_pages": sorted({table.page_number for table in good_tables}),
+        if page_report is not None:
+            skeleton_reports[page_number] = page_report
+            rendered_source_tables.extend(source_page_tables)
+    if skeleton_regions:
+        fallback_pages = set(skeleton_regions) - set(skeleton_reports)
+        good_ids_by_page = {
+            page: {cell.id for t in good_tables if t.page_number == page for cell in t.cells} for page in fallback_pages
+        }
+        all_source_tables = [t for _, page_list in skeleton_regions.values() for t in page_list]
+        good_tables = [t for t in good_tables if t not in all_source_tables] + [
+            t for t in candidate_tables
+            if t.page_number in fallback_pages and {cell.id for cell in t.cells} <= good_ids_by_page[t.page_number]
+        ]
+        tables = [t for t in tables if t not in all_source_tables] + [
+            t for t in candidate_tables if t.page_number in fallback_pages and t not in tables
+        ]
+    if skeleton_reports and not good_tables:
+        return _merge_skeleton_reports(None, skeleton_reports, tables, warnings)
+
+    # A translation into a language that runs visually wider than the source
+    # (English expanding a Chinese table's own short phrases) can overflow
+    # more than one row in the same table, and growing every such row
+    # toward a generously large target font competes for the SAME finite
+    # strip of page space below the table -- confirmed directly: aiming
+    # high for each of several overflowing rows in turn left too little
+    # room for the last one, which then failed even at the bare floor,
+    # reverting the whole table to its untranslated source. Sweep the
+    # growth target from the floor upward instead of committing to one
+    # guess: attempt the whole table at the floor first (the one quality
+    # level every row can always afford together, so it succeeding is
+    # never in doubt if the table can be translated at all), then retry
+    # at floor+1, +2, ... against a FRESH copy of this candidate each
+    # time, keeping the LAST attempt that still renders every cell and
+    # discarding the first one that doesn't.
+    original_candidate_bytes = candidate.read_bytes()
+    best_result: dict[str, object] | None = None
+    best_candidate_bytes: bytes | None = None
+    quality = minimum_font_size
+    max_quality = minimum_font_size + 6.0
+    while quality <= max_quality + 1e-9:
+        result, _ = _attempt_table_render(
+            candidate,
+            patched,
+            original_candidate_bytes,
+            tables,
+            good_tables,
+            good_cell_translations,
+            minimum_font_size=minimum_font_size,
+            growth_target_size=quality,
+            source_page_links=source_page_links,
+            units=units,
+            warnings=warnings,
+        )
+        if result["status"] in ("patched", "partially_patched"):
+            best_result = result
+            best_candidate_bytes = candidate.read_bytes()
+            quality += 1.0
+            continue
+        if best_result is None:
+            best_result = result
+        break
+    candidate.write_bytes(best_candidate_bytes if best_candidate_bytes is not None else original_candidate_bytes)
+    if skeleton_reports:
+        return _merge_skeleton_reports(best_result, skeleton_reports, tables, warnings)
+    return best_result
+
+
+def _merge_skeleton_reports(
+    legacy: dict[str, object] | None,
+    skeleton_reports: dict[int, dict[str, object]],
+    tables: list[Any],
+    warnings: list[dict[str, object]],
+) -> dict[str, object]:
+    """Combine source-grid page results with the MinerU-grid path's result."""
+    skeleton_tables = sum(int(r["table_count"]) for r in skeleton_reports.values())
+    merged: dict[str, object] = {
+        "table_count": skeleton_tables,
+        "cell_count": sum(int(r["cell_count"]) for r in skeleton_reports.values()),
+        "rendered_cell_count": sum(int(r["rendered_cell_count"]) for r in skeleton_reports.values()),
+        "restored_link_count": sum(int(r["restored_link_count"]) for r in skeleton_reports.values()),
+        "patched_pages": sorted(skeleton_reports),
+        "source_grid_pages": {
+            page: {"font_size": r["font_size"], "tables_taller_than_source": r["tables_taller_than_source"]}
+            for page, r in skeleton_reports.items()
+        },
         "warnings": warnings,
     }
+    legacy_ok = legacy is None or legacy.get("status") in ("patched", "partially_patched")
+    if legacy is not None and legacy_ok:
+        for key in ("table_count", "cell_count", "rendered_cell_count", "restored_link_count"):
+            merged[key] = int(merged[key]) + int(legacy.get(key, 0) or 0)
+        merged["patched_pages"] = sorted(set(merged["patched_pages"]) | set(legacy.get("patched_pages", ())))
+    all_done = legacy is None or legacy.get("status") == "patched"
+    merged["status"] = "patched" if all_done and int(merged["table_count"]) >= len(tables) else "partially_patched"
+    if legacy is not None and not legacy_ok:
+        merged["legacy_reason"] = legacy.get("reason")
+    return merged
 
 
 def _middle_json(result: object) -> dict[str, Any]:
@@ -1446,7 +2331,39 @@ def _make_units_from_current_block(
     target_language: str,
 ) -> list[_TextUnit]:
     block_type = str(block.get("type", "text")).casefold()
-    if block_type in {"image", "chart", "table", "equation", "formula"}:
+    if block_type == "table":
+        # A "table"-typed block isn't just the grid: MinerU nests a
+        # table_caption (and sometimes a table_footnote) alongside the
+        # table_body as siblings in its own content list. The table_body
+        # is deliberately skipped here -- pdf_table.py's dedicated,
+        # geometry-aware cell path translates the grid safely -- but that
+        # path only ever looks at the rendered grid's own cells, never at
+        # a caption sitting above or a footnote below it, and the
+        # blanket skip below used to drop the caption on the floor
+        # entirely: confirmed directly, a real document's own "表 1 ..."
+        # table title published completely untranslated while every cell
+        # inside the table itself was fine. Caption/footnote text is
+        # ordinary single-line prose, not a grid cell, so it goes through
+        # the normal per-unit translation path like any other paragraph.
+        units: list[_TextUnit] = []
+        for sub_index, sub_block in enumerate(block.get("content") or []):
+            if not isinstance(sub_block, dict):
+                continue
+            sub_type = str(sub_block.get("type", "")).casefold()
+            if sub_type not in {"table_caption", "table_footnote"}:
+                continue
+            units.extend(
+                _make_units_from_current_block(
+                    sub_block,
+                    page_number=page_number,
+                    block_index=f"{block_index}:{sub_type}:{sub_index}",
+                    source_hash=source_hash,
+                    source_language=source_language,
+                    target_language=target_language,
+                )
+            )
+        return units
+    if block_type in {"image", "chart", "equation", "formula"}:
         return []
     targets: list[tuple[dict[str, Any], str]] = []
     content = block.get("content")
@@ -1479,6 +2396,7 @@ def _make_unit(
 ) -> _TextUnit:
     bbox = _bbox(raw_bbox)
     location = DocumentLocation(part=f"page:{page_number}", object_id=f"mineru:{block_index}")
+    text, dates = localize_chinese_dates(text, source_language, target_language)
     unit_data = {
         "document_hash": source_hash,
         "format": DocumentFormat.PDF,
@@ -1486,7 +2404,7 @@ def _make_unit(
         "source_language": source_language,
         "target_language": target_language,
         "source_text": text,
-        "protected_tokens": rule_protected_tokens(text),
+        "protected_tokens": rule_protected_tokens(text, dates),
         "style_signature": str(block_type),
         "context_before": "",
         "context_after": "",
@@ -1585,6 +2503,19 @@ def _remediate_warnings(
 def _apply_translation(item: _TextUnit, translation: str) -> None:
     if not item.targets:
         return
+    if not translation.strip() and item.unit.source_text.strip():
+        # A provider occasionally still returns blank text here even after
+        # the EMPTY_TRANSLATION remediation retry in _translate_units() /
+        # _remediate_warnings() -- validate_result_for_unit() flags it and
+        # gives the model one more attempt, but nothing guarantees that
+        # retry itself comes back non-blank. Writing an empty string into
+        # this block's content crashes the WHOLE document at final
+        # MiddleJson serialization (that schema requires non-empty text),
+        # so as the last line of defense this one unit is left in its
+        # original source language rather than ever doing that -- the
+        # existing fail-closed-per-unit policy already used for a table
+        # cell that never validates cleanly, applied here too.
+        translation = item.unit.source_text
     first, first_key = item.targets[0]
     first[first_key] = translation
     stale = [target for target, _ in item.targets[1:]]

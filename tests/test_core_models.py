@@ -100,3 +100,9 @@ def test_stable_hashes_and_cache_keys() -> None:
                   model="m", prompt_version="p1", glossary_version="g1",
                   protected_tokens=["⟦X⟧"])
     assert generate_cache_key(**kwargs) == generate_cache_key(**kwargs)
+
+
+def test_list_label_before_latin_word_is_counted_in_source():
+    source = "1. Kindly refer to Section 6"
+    assert validate_placeholders(source, "1. 请参阅第6节", ["1. "]) == []
+    assert validate_placeholders(source, "请参阅第6节", ["1. "])

@@ -239,3 +239,20 @@ def test_qwen_gateway_rejects_non_chat_upstream_body(monkeypatch) -> None:
         raise AssertionError("expected GatewayError")
     assert sent == []
 
+
+
+def test_structured_items_unwrap_json_object_wrapper():
+    from document_translator.services.translation_gateway import _parse_structured_items
+
+    items = [{"id": "c0", "output": "Personnel"}, {"id": "c1", "output": "Main Responsibilities"}]
+    for wrapped in ({"items": items}, {"type": "json_object", "result": items}, items):
+        assert _parse_structured_items(json.dumps(wrapped)) == items
+
+
+def test_correction_requests_keep_qwen_no_thinking_settings():
+    from document_translator.services.translation_gateway import GatewayConfig, _chat_upstream_body
+
+    qwen = _chat_upstream_body(GatewayConfig.from_provider(provider="qwen", model="qwen3.8-flash"), {"model": "x", "messages": []})
+    assert (qwen["model"], qwen["enable_thinking"], qwen["reasoning_effort"], qwen["stream"]) == ("qwen3.8-flash", False, "none", False)
+    deepseek = _chat_upstream_body(GatewayConfig.from_provider(provider="deepseek", model="deepseek-chat"), {"messages": []})
+    assert "enable_thinking" not in deepseek and deepseek["model"] == "deepseek-chat"

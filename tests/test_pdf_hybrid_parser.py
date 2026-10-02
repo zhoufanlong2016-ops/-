@@ -81,9 +81,27 @@ def test_mineru_service_translates_structured_block_and_publishes_original_pdf(t
     document.save(source)
     document.close()
 
+    # The docvortex 2.0 middle_json shape MinerU 4 itself produces for this
+    # page (captured from a real parse of the same one-line PDF).
     parsed = {
         "schema": "docvortex.middle",
-        "pages": [{"page_idx": 0, "blocks": [{"type": "text", "content": "Hello PDF", "bbox": [40, 45, 100, 65]}]}],
+        "schema_version": "2.0",
+        "is_full_document": True,
+        "metadata": {
+            "file_suffix": "pdf",
+            "producer": {"name": "mineru", "version": "4.0.7"},
+            "document": {"page_count": 1, "page_count_kind": "physical"},
+        },
+        "extensions": {"mineru": {"tier": "flash", "parse_mode": "txt"}},
+        "pages": [{
+            "page_idx": 0,
+            "blocks": [{
+                "type": "text",
+                "index": 0,
+                "bbox": [0.133, 0.125, 0.3, 0.156],
+                "content": [{"type": "text", "content": "Hello PDF"}],
+            }],
+        }],
     }
 
     def fake_parse(_path, *, tier, ocr_mode):
@@ -92,9 +110,10 @@ def test_mineru_service_translates_structured_block_and_publishes_original_pdf(t
 
     def fake_render(middle_json, *, layout):
         assert str(layout).lower().endswith("original")
+        pages = middle_json.model_dump(by_alias=True)["pages"]
         output = fitz.open()
         page = output.new_page(width=300, height=400)
-        page.insert_text((40, 60), middle_json["pages"][0]["blocks"][0]["content"], fontsize=11)
+        page.insert_text((40, 60), pages[0]["blocks"][0]["content"][0]["content"], fontsize=11)
         data = output.tobytes()
         output.close()
         return data
@@ -146,6 +165,6 @@ def test_mineru_service_translates_structured_block_and_publishes_original_pdf(t
 
     assert output == destination.resolve()
     assert preflight.classification == "A"
-    assert parsed["pages"][0]["blocks"][0]["content"] == "你好 PDF"
+    assert parsed["pages"][0]["blocks"][0]["content"][0]["content"] == "你好 PDF"
     assert destination.is_file()
     assert json.loads(report_path.read_text(encoding="utf-8"))["run"]["engine"] == "mineru4"

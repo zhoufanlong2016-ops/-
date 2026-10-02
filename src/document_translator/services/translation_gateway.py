@@ -88,7 +88,27 @@ class GatewayConfig:
             )
         if provider == "gpt":
             return cls("gpt", model, "https://api.openai.com/v1/responses", "OPENAI_API_KEY")
-        raise ValueError("PDF provider must be qwen or gpt")
+        if provider == "deepseek":
+            # Same Chat Completions contract as DashScope's compatible mode.
+            return cls("deepseek", model, "https://api.deepseek.com/chat/completions", "DEEPSEEK_API_KEY")
+        raise ValueError("PDF provider must be qwen, gpt or deepseek")
+
+
+def _chat_upstream_body(config: "GatewayConfig", request_body: dict[str, Any]) -> dict[str, Any]:
+    upstream_request = _sanitize_json(request_body)
+    upstream_request["model"] = config.model
+    # General Qwen reasoning models may otherwise spend several minutes
+    # thinking before emitting a short translation batch.  The document
+    # contract requires deterministic translation, not chain-of-thought.
+    if config.provider == "qwen":
+        upstream_request["enable_thinking"] = False
+        # Qwen3.8/Qwen3.7 also expose the OpenAI-compatible
+        # ``reasoning_effort`` control.  Disabling ``enable_thinking`` alone
+        # is insufficient for these models: without an explicit effort value
+        # they can retain their very large default reasoning budget.
+        upstream_request["reasoning_effort"] = "none"
+    upstream_request["stream"] = False
+    return upstream_request
 
 
 class _Handler(BaseHTTPRequestHandler):
@@ -168,18 +188,7 @@ class _Handler(BaseHTTPRequestHandler):
         # extracted PDF text cannot invalidate a JSON batch.
         request_body = _with_name_constraints(request_body)
         self._audit_request("qwen", request_body)
-        upstream_request = _sanitize_json(request_body)
-        upstream_request["model"] = config.model
-        # General Qwen reasoning models may otherwise spend several minutes
-        # thinking before emitting a short translation batch.  The document
-        # contract requires deterministic translation, not chain-of-thought.
-        upstream_request["enable_thinking"] = False
-        # Qwen3.8/Qwen3.7 also expose the OpenAI-compatible
-        # ``reasoning_effort`` control.  Disabling ``enable_thinking`` alone
-        # is insufficient for these models: without an explicit effort value
-        # they can retain their very large default reasoning budget.
-        upstream_request["reasoning_effort"] = "none"
-        upstream_request["stream"] = False
+        upstream_request = _chat_upstream_body(config, request_body)
         started = time.monotonic()
         deadline = started + _GATEWAY_REQUEST_TIMEOUT_SECONDS
         validation_body = {**request_body, "model": config.model}
@@ -274,7 +283,10 @@ class _Handler(BaseHTTPRequestHandler):
                     _request_json(
                         config.endpoint,
                         key,
-                        _sanitize_json(request_body),
+                        # Correction retries need the same no-thinking settings
+                        # as the first request, or a reasoning model spends the
+                        # whole gateway deadline on one correction.
+                        _chat_upstream_body(config, request_body),
                         deadline=deadline,
                     )
                 )
@@ -1008,6 +1020,12 @@ def _parse_structured_items(text: str) -> list[dict[str, Any]]:
         ) from exc
     if isinstance(parsed, dict) and ("output" in parsed or "input" in parsed):
         parsed = [parsed]
+    elif isinstance(parsed, dict):
+        # json_object mode forbids a top-level array, so providers such as
+        # DeepSeek wrap it under an arbitrary key ("items", "result", ...).
+        lists = [v for v in parsed.values() if isinstance(v, list) and v and all(isinstance(i, dict) for i in v)]
+        if len(lists) == 1:
+            parsed = lists[0]
     if not isinstance(parsed, list) or any(not isinstance(item, dict) for item in parsed):
         return []
     return parsed

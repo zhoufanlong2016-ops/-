@@ -41,6 +41,8 @@ from .services import (
     load_glossary,
     write_docx_comparison_report,
 )
+from .services.pdf_inplace import InPlacePdfTranslationService
+from .services.babeldoc_pdf import BabelDocPdfTranslationService
 
 
 _DEFAULT_ZH_EN_GLOSSARY = Path(__file__).with_name("assets") / "local_zh_en_glossary.csv"
@@ -112,7 +114,13 @@ def _parser() -> argparse.ArgumentParser:
     pdf.add_argument("--glossary", type=Path); pdf.add_argument("--style-profile", type=Path, metavar="PATH", help="JSON PDF structural/numbering style profile")
     pdf.add_argument("--minimum-font-size", type=float, default=6.0)
     pdf.add_argument("--mineru-tier", choices=("flash", "basic", "standard", "advanced"), default="flash")
+    pdf.add_argument(
+        "--engine", choices=("inplace", "mineru", "babeldoc"), default="inplace",
+        help="inplace (default): keep the original PDF and replace only its text; mineru: rebuild pages through MinerU; "
+        "babeldoc: BabelDOC worker in the separate .venv-babeldoc environment",
+    )
     pdf.add_argument("--report", type=Path, metavar="PATH", help="write the PDF preflight and candidate validation report")
+    pdf.add_argument("--cache", type=Path, metavar="PATH", help="SQLite translation cache: identical texts and reruns are not re-translated (in-place engine)")
     pdf.add_argument("--allow-cad-pdf", action="store_true", help="allow a class-C drawing-style PDF after confirming no source DWG is available")
     pdf.add_argument("--allow-complex-pdf", action="store_true", help="allow a class-B PDF after confirming that full visual review will be performed")
     dwg_import = subparsers.add_parser(
@@ -315,6 +323,16 @@ def _translate_pdf(args: argparse.Namespace) -> int:
     else:
         glossary = _DEFAULT_EN_ZH_ENGINEERING_GLOSSARY
     glossary_obj = load_glossary(glossary) if glossary.exists() else None
+    if getattr(args, "engine", "inplace") == "babeldoc":
+        output, preflight, report = BabelDocPdfTranslationService().translate_file(
+            args.source, args.destination, source_language=args.source_language,
+            target_language=args.target_language, provider=args.provider, model=args.model,
+            glossary=glossary if glossary.exists() else None, style_profile=args.style_profile,
+            report_path=args.report, allow_cad_pdf=args.allow_cad_pdf,
+            allow_complex_pdf=args.allow_complex_pdf, minimum_font_size=args.minimum_font_size,
+        )
+        print(f"translated PDF with BabelDOC; class={preflight.classification}; output={output}; report={report}")
+        return 0
     with httpx.Client() as client:
         if args.provider == "gpt":
             provider = OpenAIProvider(OpenAIConfig(model=args.model), client=client, glossary=glossary_obj)
@@ -322,16 +340,28 @@ def _translate_pdf(args: argparse.Namespace) -> int:
             provider = DeepSeekProvider(DeepSeekConfig(model=args.model), client=client, glossary=glossary_obj)
         else:
             provider = QwenChatProvider(QwenChatConfig(model=args.model), client=client, glossary=glossary_obj)
-        output, preflight, report = MinerUPdfTranslationService(
-            provider, tier=args.mineru_tier
-        ).translate_file(
-            args.source, args.destination, source_language=args.source_language,
-            target_language=args.target_language, style_profile=args.style_profile,
-            report_path=args.report, allow_cad_pdf=args.allow_cad_pdf,
-            allow_complex_pdf=args.allow_complex_pdf,
-            minimum_font_size=args.minimum_font_size,
-        )
-    print(f"translated PDF with MinerU 4 ORIGINAL layout; class={preflight.classification}; output={output}; report={report}")
+        engine = getattr(args, "engine", "inplace")
+        cache_path = getattr(args, "cache", None)
+        cache = TranslationCache(cache_path) if cache_path is not None and engine == "inplace" else None
+        try:
+            service = (
+                InPlacePdfTranslationService(
+                    provider, cache=cache, progress=lambda message: print(message, file=sys.stderr, flush=True)
+                ) if engine == "inplace"
+                else MinerUPdfTranslationService(provider, tier=args.mineru_tier)
+            )
+            output, preflight, report = service.translate_file(
+                args.source, args.destination, source_language=args.source_language,
+                target_language=args.target_language, style_profile=args.style_profile,
+                report_path=args.report, allow_cad_pdf=args.allow_cad_pdf,
+                allow_complex_pdf=args.allow_complex_pdf,
+                minimum_font_size=args.minimum_font_size,
+            )
+        finally:
+            if cache is not None:
+                cache.close()
+    label = "in place on the original PDF" if engine == "inplace" else "with MinerU 4 ORIGINAL layout"
+    print(f"translated PDF {label}; class={preflight.classification}; output={output}; report={report}")
     return 0
 
 

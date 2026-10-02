@@ -245,7 +245,7 @@ def test_provider_routing_is_explicit_and_never_inferred_from_key_environment(mo
 
     assert qwen.credential_env == "DASHSCOPE_API_KEY"
     assert gpt.credential_env == "OPENAI_API_KEY"
-    with pytest.raises(ValueError, match="qwen or gpt"):
+    with pytest.raises(ValueError, match="qwen, gpt or deepseek"):
         GatewayConfig.from_provider(provider="openai", model="gpt-5.4")
 
 

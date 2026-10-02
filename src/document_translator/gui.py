@@ -67,6 +67,7 @@ def build_cli_command(
     source_language: str,
     target_language: str,
     glossary: str | Path | None = None,
+    pdf_cache: str | Path | None = None,
 ) -> list[str]:
     """Build the existing CLI command for one supported input file."""
     source_path = Path(source)
@@ -87,6 +88,8 @@ def build_cli_command(
         args.extend(("--glossary", str(glossary)))
     if suffix == ".pdf":
         args.extend(("--allow-complex-pdf", "--report", str(Path(destination).with_suffix(".report.json"))))
+        if pdf_cache is not None:
+            args.extend(("--cache", str(pdf_cache)))
     elif suffix == ".docx":
         args.extend(("--comparison-report", str(Path(destination).with_suffix(".comparison.json"))))
     elif suffix == ".pptx":
@@ -308,7 +311,7 @@ class TranslationApp:
                 temporary_path.unlink()
                 source_language = LANGUAGE_CODES[self.source_language.get()]
                 target_language = LANGUAGE_CODES[self.target_language.get()]
-                command = build_cli_command(source, temporary_path, provider=self.provider.get(), model=self.model.get(), source_language=source_language, target_language=target_language, glossary=self.glossary.get().strip() or None)
+                command = build_cli_command(source, temporary_path, provider=self.provider.get(), model=self.model.get(), source_language=source_language, target_language=target_language, glossary=self.glossary.get().strip() or None, pdf_cache=cache_dir.parent / "pdf_translation_cache.sqlite3")
                 self.root.after(0, self._write_log, f"开始：{source.name}（完成后预览并选择保存位置）\n")
                 self.root.after(0, self._start_file_progress)
                 environment = os.environ.copy()

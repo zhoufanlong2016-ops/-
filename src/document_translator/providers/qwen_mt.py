@@ -18,7 +18,7 @@ from document_translator.core import (
     validate_result_for_unit,
 )
 from document_translator.services.glossary import Glossary
-from document_translator.translation_rules import protect_for_translation, restore_after_translation
+from document_translator.translation_rules import protect_for_translation, restore_after_translation, restore_markers_best_effort
 
 from .translation_prompt import PROMPT_VERSION, compile_translation_policy, matched_glossary_entries
 from .batch_limits import split_semantic_batches
@@ -372,6 +372,7 @@ class QwenMTProvider:
                     translated_text, protected_by_id[unit.id],
                 )
             except ValueError as error:
+                translated_text = restore_markers_best_effort(translated_text, protected_by_id[unit.id])
                 invalid[unit.id] = [f"PROTECTED_PLACEHOLDER_RESTORE_FAILED: {error}"]
                 translated_text = text.strip()
             result = TranslationResult(unit_id=unit.id, translation=translated_text, provider=self.provider_name, model=self.config.model,

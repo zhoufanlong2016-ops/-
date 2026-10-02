@@ -75,8 +75,10 @@ def test_qwen_default_factory_and_success_summary(tmp_path, monkeypatch, capsys)
     assert cli.main(["translate-markdown", str(source), str(destination), "--source-language", "en", "--target-language", "zh"]) == 0
 
     service = FakeService.instances[0]
-    assert service.provider.__class__.__name__ == "QwenMTProvider"
-    assert service.provider.config.model == "qwen-mt-plus"
+    # The default is Qwen Chat on the low-cost qwen3.8-flash model; Qwen-MT
+    # is still available but only when asked for explicitly.
+    assert service.provider.__class__.__name__ == "QwenChatProvider"
+    assert service.provider.config.model == "qwen3.8-flash"
     assert service.cache is None
     assert service.max_attempts == 3
     assert "translated 2 units; cache hits=1; cache misses=1" in capsys.readouterr().out
@@ -104,11 +106,18 @@ def test_qwen_lite_is_rejected_without_output(tmp_path, monkeypatch, capsys):
 
     assert cli.main([
         "translate-markdown", str(source), str(destination), "--source-language", "en", "--target-language", "zh",
-        "--model", "qwen-mt-lite",
+        "--provider", "qwen-mt", "--model", "qwen-mt-lite",
     ]) == 1
-
     assert not destination.exists()
     assert "qwen-mt-plus or qwen-mt-flash" in capsys.readouterr().err
+
+    # The default Qwen Chat provider refuses a Qwen-MT model name outright.
+    assert cli.main([
+        "translate-markdown", str(source), str(destination), "--source-language", "en", "--target-language", "zh",
+        "--model", "qwen-mt-lite",
+    ]) == 1
+    assert not destination.exists()
+    assert "Qwen Chat requires a non-Qwen-MT model" in capsys.readouterr().err
 
 
 def test_required_languages_are_enforced(tmp_path):

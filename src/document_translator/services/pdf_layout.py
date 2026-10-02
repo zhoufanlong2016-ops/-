@@ -343,8 +343,10 @@ def normalize_document_reference_translation(
         return translated_text
     target = _SOFT_HYPHEN_RE.sub("", translated_text).replace("\n", " ")
     number_pattern = re.compile(
-        rf"(?P<prefix>.*?)\s*[〔\[\(（]\s*{re.escape(source_reference.year)}\s*"
-        rf"[〕\]\)）]\s*{re.escape(source_reference.serial)}\s*(?P<tail>.*)$",
+        # Providers sometimes drop the year brackets ("Fusheyuan 2024 No. 54");
+        # the profile's own brackets and marker are restored below.
+        rf"(?P<prefix>.*?)\s*[〔\[\(（]?\s*\b{re.escape(source_reference.year)}\s*"
+        rf"[〕\]\)）]?\s*(?:No\.?\s*)?{re.escape(source_reference.serial)}\b\s*(?P<tail>.*)$",
         re.S,
     )
     match = number_pattern.search(target)
@@ -620,6 +622,12 @@ def _font_name_key(value: object) -> str:
     return re.sub(r"[^a-z0-9]+", "", text)
 
 
+def _cached_font(fontfile: str) -> Any:
+    from .pdf_table import cached_font
+
+    return cached_font(str(fontfile))
+
+
 def _font_file(
     font_name: str,
     text: str,
@@ -689,7 +697,7 @@ def _font_file(
         if not path.is_file():
             continue
         try:
-            family = _font_name_key(fitz.Font(fontfile=candidate).name)
+            family = _font_name_key(_cached_font(candidate).name)
         except Exception:
             family = _font_name_key(path.stem)
         if family not in existing_families:
@@ -739,11 +747,22 @@ def _merge_reflow_candidate_blocks(
         4.0 if contract.role == "centered_text" and contract.one_line_preferred
         else max(8.0, contract.source_font_size * 0.75)
     )
-    if contract.role == "centered_text":
-        # A centered source block is often split into two candidate blocks;
-        # nearest-centre matching may land on the second line. Pull the
-        # preceding visual line into the same semantic block so the original
-        # first line is redacted instead of being left underneath.
+    if contract.role in {"centered_text", "article_text"}:
+        # A source paragraph is often split into several candidate blocks
+        # (one MinerU-rendered visual line each); nearest-centre matching in
+        # _choose_candidate_block() picks whichever one is closest to the
+        # WHOLE paragraph's vertical centre, which for a long, multi-line
+        # article can land on a block partway through it, not the first one
+        # -- confirmed directly on a real document: "Article 1"'s own
+        # contract spans several rendered lines, matched to a block
+        # starting mid-sentence, and the forward-only scan below then never
+        # swept up the earlier lines at all. Left unredacted, that original
+        # MinerU-rendered text stayed on the page directly underneath the
+        # newly-inserted full-paragraph translation, reading as heavily
+        # overlapping "garbled" double text. This was previously only
+        # guarded for centered_text (a short title split across two lines);
+        # the exact same failure shape applies to any multi-line prose
+        # contract, so article_text needs the same backward sweep.
         for item in reversed(ordered[:start_position]):
             if item["index"] in used:
                 continue
@@ -860,18 +879,58 @@ def _fit_rect(contract: LayoutContract, page: Any, blocks: list[dict[str, Any]],
         # Centered display blocks still obey the source page's content bounds;
         # centering is performed inside the preserved margins, not across the
         # physical trim box.
-        return (left, y0, right, y1)
-    # Keep the original left anchor while allowing the English expansion to use
-    # the unused right side.  This is what avoids needless wraps in salutations
-    # and article labels without centring ordinary paragraphs.
-    return (max(0.0, source[0] - 1.0), y0, right, y1)
+        rect = (left, y0, right, y1)
+    else:
+        # Keep the original left anchor while allowing the English expansion to
+        # use the unused right side.  This is what avoids needless wraps in
+        # salutations and article labels without centring ordinary paragraphs.
+        rect = (max(0.0, source[0] - 1.0), y0, right, y1)
+    if contract.role == "centered_text":
+        rect = _avoid_image_overlap(page, rect, next_y)
+    return rect
+
+
+def _avoid_image_overlap(
+    page: Any, rect: tuple[float, float, float, float], ceiling: float
+) -> tuple[float, float, float, float]:
+    """Shift a centered text rect below a page image it would otherwise overlap.
+
+    A signature line stamped with the company's official chop is a standard
+    Chinese document convention -- the SOURCE page already has the seal's
+    image overlapping the signature's own text on purpose, nothing to fix
+    there. English running wider than the original Chinese grows how much
+    of that same image area the translated line now crosses, though:
+    confirmed directly on a real notice page, the source only grazed the
+    seal's very top edge while the English translation of the same line cut
+    across the seal's middle, visibly breaking up the English itself. Moving
+    the text below the image's bottom edge -- only when the two genuinely
+    overlap, and only as far as the page's own remaining room (the same
+    ``next_y`` ceiling the caller already computed, so this never collides
+    with whatever comes after) allows -- keeps the translated text fully
+    legible without touching the seal.
+    """
+    x0, y0, x1, y1 = rect
+    try:
+        images = page.get_image_info()
+    except Exception:
+        return rect
+    height = y1 - y0
+    for image in images:
+        ix0, iy0, ix1, iy1 = image["bbox"]
+        if ix1 <= x0 or ix0 >= x1 or iy1 <= y0 or iy0 >= y1:
+            continue
+        new_y0 = iy1 + 4.0
+        new_y1 = new_y0 + height
+        if new_y1 <= ceiling:
+            y0, y1 = new_y0, new_y1
+    return (x0, y0, x1, y1)
 
 
 def _text_width(text: str, fontsize: float, fontfile: str | None) -> float:
     import fitz
 
     if fontfile:
-        return float(fitz.Font(fontfile=fontfile).text_length(text, fontsize=fontsize))
+        return float(_cached_font(fontfile).text_length(text, fontsize=fontsize))
     return float(fitz.get_text_length(text, fontname="helv", fontsize=fontsize))
 
 

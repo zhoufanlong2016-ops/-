@@ -32,7 +32,11 @@ def _count_token(text: str, token: str) -> int:
     # A numeric or engineering identifier must not be accepted as a substring
     # of a changed value, for example ``2015`` inside ``202015``.
     if token[0].isdigit() or token[-1].isdigit():
-        pattern = rf"(?<![A-Za-z0-9]){re.escape(token)}(?![A-Za-z0-9])"
+        # A list label such as "1. " already ends in a space; demanding a
+        # non-alphanumeric after it rejected "1. Kindly" in the source while
+        # accepting "1. 请" in the translation.
+        tail = "" if token[-1].isspace() else "(?![A-Za-z0-9])"
+        pattern = rf"(?<![A-Za-z0-9]){re.escape(token)}{tail}"
         return len(re.findall(pattern, text))
     return text.count(token)
 
@@ -45,10 +49,36 @@ def validate_result_for_unit(unit: TranslationUnit, result: TranslationResult) -
         errors.append("SOURCE_HASH_MISMATCH")
     if result.result_hash != sha256_text(result.translation):
         errors.append("RESULT_HASH_MISMATCH")
+    # A provider occasionally returns a blank (or whitespace-only) string as
+    # a "valid" translation for a very short, fragment-like unit -- observed
+    # directly on a real document whose layout splits a short trailing
+    # clause ("...as shown in Table 1" / "所示:") off into its own tiny
+    # unit. Nothing previously treated this as an error, so it sailed
+    # through the same "keep the best-effort translation" path as any other
+    # unit; for most formats that just leaves a blank paragraph, but MinerU's
+    # own middle_json schema requires non-empty text content for every
+    # block, so writing this straight back in crashed the ENTIRE PDF with
+    # an unrelated-looking Pydantic error at final serialization -- one odd
+    # short unit took down the whole document instead of just itself.
+    # Flagging it here feeds the existing remediation-retry path (unit.py's
+    # callers already give the same model one more attempt at anything with
+    # errors), and a caller that still gets an empty result after that is
+    # expected to fall back to the unit's own source text rather than ever
+    # writing blank content into the document.
+    if unit.source_text.strip() and not result.translation.strip():
+        errors.append("EMPTY_TRANSLATION: provider returned blank text for non-blank source")
     errors.extend(validate_placeholders(unit.source_text, result.translation, unit.protected_tokens))
     errors.extend(validate_name_retention(unit.source_text, result.translation, unit.source_language, unit.target_language))
     errors.extend(validate_translation_residue(unit.source_text, result.translation, unit.source_language, unit.target_language))
+    if unit.target_language.lower().startswith("en") and _LITERAL_DATE_RE.search(result.translation):
+        errors.append("LITERAL_DATE: 年/月/日 rendered word for word instead of as an English date")
     return errors
+
+
+# "12 Month, Day 5, 2024" -- a Chinese date translated character by
+# character. Real English never puts a bare number next to the word
+# "Month"/"Day" this way.
+_LITERAL_DATE_RE = re.compile(r"\b\d{1,2}\s+Month\b|\bMonth\s*,?\s*Day\b|\bDay\s+\d{1,2}\b|\b\d{4}\s+Year\b")
 
 
 def validate_glossary_terms(

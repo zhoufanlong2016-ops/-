@@ -392,6 +392,61 @@ class ProtectedText:
     replacements: tuple[tuple[str, str], ...]
 
 
+_EN_MONTH_NAMES = (
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December",
+)
+# Whitespace is tolerated between every part: PDF extraction turns the
+# source's own justified character spacing into spaces ("2024 年12 月5 日").
+_CN_FULL_DATE_RE = re.compile(r"(?<!\d)(\d{4})\s*年\s*(\d{1,2})\s*月\s*(\d{1,2})\s*[日号]")
+_CN_YEAR_MONTH_RE = re.compile(r"(?<!\d)(\d{4})\s*年\s*(\d{1,2})\s*月(?!\s*\d)")
+_CN_MONTH_DAY_RE = re.compile(r"(?<![\d年])(\d{1,2})\s*月\s*(\d{1,2})\s*[日号]")
+
+
+def localize_chinese_dates(text: str, source_language: str, target_language: str) -> tuple[str, list[str]]:
+    """Replace Chinese numeric dates with their one correct English form.
+
+    A Chinese date has exactly one English rendering, so it is never left
+    to the model: sent as-is, the numeric-token protection turned the year
+    into an opaque placeholder ("[[TRP_0000]] 年12 月5 日") and providers
+    produced "12 Month, Day 5, 2024" or dropped 年/月/日 entirely ("2024 12
+    5"), neither of which any check caught. Returns the rewritten text and
+    the English dates it inserted, which the caller protects so the model
+    must keep them verbatim. Only applies to Chinese-to-English units.
+    """
+    if not source_language.lower().startswith("zh") or not target_language.lower().startswith("en"):
+        return text, []
+    dates: list[str] = []
+
+    def emit(value: str) -> str:
+        if value not in dates:
+            dates.append(value)
+        return value
+
+    def full(match: re.Match[str]) -> str:
+        year, month, day = int(match.group(1)), int(match.group(2)), int(match.group(3))
+        if not (1 <= month <= 12 and 1 <= day <= 31):
+            return match.group(0)
+        return emit(f"{_EN_MONTH_NAMES[month - 1]} {day}, {year}")
+
+    def year_month(match: re.Match[str]) -> str:
+        year, month = int(match.group(1)), int(match.group(2))
+        if not 1 <= month <= 12:
+            return match.group(0)
+        return emit(f"{_EN_MONTH_NAMES[month - 1]} {year}")
+
+    def month_day(match: re.Match[str]) -> str:
+        month, day = int(match.group(1)), int(match.group(2))
+        if not (1 <= month <= 12 and 1 <= day <= 31):
+            return match.group(0)
+        return emit(f"{_EN_MONTH_NAMES[month - 1]} {day}")
+
+    text = _CN_FULL_DATE_RE.sub(full, text)
+    text = _CN_YEAR_MONTH_RE.sub(year_month, text)
+    text = _CN_MONTH_DAY_RE.sub(month_day, text)
+    return text, dates
+
+
 def rule_protected_tokens(text: str, existing: Iterable[str] = ()) -> list[str]:
     """Return stable, non-overlapping immutable tokens in source order.
 
@@ -402,7 +457,11 @@ def rule_protected_tokens(text: str, existing: Iterable[str] = ()) -> list[str]:
     candidates = [(match.start(), match.end(), match.group(0)) for match in _PROTECTED_RE.finditer(text)]
     candidates.sort(key=lambda item: (item[0], -(item[1] - item[0])))
     result = list(existing)
-    occupied: list[tuple[int, int]] = []
+    occupied: list[tuple[int, int]] = [
+        (match.start(), match.end())
+        for token in result if token
+        for match in re.finditer(re.escape(token), text)
+    ]
     for start, end, value in candidates:
         if not value or any(start < right and end > left for left, right in occupied):
             continue
@@ -448,3 +507,14 @@ def restore_after_translation(text: str, protected: ProtectedText) -> str:
             continue
         raise ValueError(f"protected placeholder was not preserved: {marker}")
     return restored
+
+
+def restore_markers_best_effort(text: str, protected: ProtectedText) -> str:
+    """Put back every surviving placeholder after a strict restore failed.
+
+    The result is still flagged for review by the caller, but a raw
+    ``[[TRP_nnnn]]`` marker must never reach the output document.
+    """
+    for marker, value in protected.replacements:
+        text = text.replace(marker, value)
+    return text

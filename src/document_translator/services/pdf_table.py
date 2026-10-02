@@ -13,6 +13,9 @@ has returned a validated batch.
 
 from __future__ import annotations
 
+import functools
+import threading
+
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 import hashlib
@@ -22,6 +25,77 @@ from pathlib import Path
 import tempfile
 import re
 from typing import Any, Callable
+
+
+@functools.lru_cache(maxsize=None)
+def cached_font(fontfile: str) -> Any:
+    """Load a font file once per process; fitz.Font objects are read-only here.
+
+    Loading a CJK face (about 10 MB) took ~20 ms per call and was repeated for
+    every cell and every candidate size.
+    """
+    import fitz
+
+    return fitz.Font(fontfile=fontfile)
+
+
+_PROBE_PAGE_SIZE = 14400.0
+_PROBES_PER_PAGE = 40
+_probe_pages: dict[tuple[str, str], dict[str, Any]] = {}
+_probe_lock = threading.Lock()
+
+
+def probe_textbox(
+    width: float,
+    height: float,
+    text: str,
+    *,
+    fontfile: str,
+    fontname: str,
+    fontsize: float,
+    align: int = 0,
+    count_lines: bool = False,
+) -> tuple[float, int]:
+    """insert_textbox()'s fit result (and line count) for a width x height box.
+
+    A fresh probe document per test re-embedded the font and recomputed every
+    glyph width (65k for a CJK face): ~0.1 s per probe.  Probes instead share
+    one large scratch page per font, each in its own non-overlapping strip,
+    so the font is embedded once.  The result does not depend on where the
+    box sits or on other text on the page (verified identical).
+    """
+    import fitz
+
+    if height + 30 > _PROBE_PAGE_SIZE or width + 20 > _PROBE_PAGE_SIZE:
+        probe = fitz.open()
+        try:
+            page = probe.new_page(width=width + 20, height=height + 20)
+            rect = fitz.Rect(0, 0, width, height)
+            result = page.insert_textbox(rect, text, fontname=fontname, fontfile=fontfile, fontsize=fontsize, align=align)
+            return result, _probe_line_count(page, None) if count_lines else 0
+        finally:
+            probe.close()
+    with _probe_lock:
+        key = (str(fontfile), fontname)
+        state = _probe_pages.get(key)
+        if state is None or state["y"] + height + 30 > _PROBE_PAGE_SIZE or state["count"] >= _PROBES_PER_PAGE:
+            if state is not None:
+                state["doc"].close()
+            doc = fitz.open()
+            state = _probe_pages[key] = {"doc": doc, "page": doc.new_page(width=_PROBE_PAGE_SIZE, height=_PROBE_PAGE_SIZE), "y": 0.0, "count": 0}
+        rect = fitz.Rect(10, state["y"], 10 + width, state["y"] + height)
+        state["y"] += height + 30
+        state["count"] += 1
+        result = state["page"].insert_textbox(rect, text, fontname=fontname, fontfile=fontfile, fontsize=fontsize, align=align)
+        return result, _probe_line_count(state["page"], rect) if count_lines else 0
+
+
+def _probe_line_count(page: Any, clip: Any) -> int:
+    return sum(
+        len(block.get("lines", []))
+        for block in page.get_text("dict", clip=clip).get("blocks", [])
+        if block.get("type") == 0
+    )
 
 
 class PdfTableError(ValueError):
@@ -38,6 +112,10 @@ class PdfTableMappingError(PdfTableError):
 
 class PdfTableFitError(PdfTableError):
     """Raised when translated text does not fit at the minimum font size."""
+
+    def __init__(self, message: str, *, cell_id: str | None = None) -> None:
+        super().__init__(message)
+        self.cell_id = cell_id
 
 
 _TABLE_LIST_ITEM_RE = re.compile(r"^\s*(?:\d+[.)]|[A-Za-z][.)]|[-*•])\s+")
@@ -682,7 +760,7 @@ def _font_alias(fontfile: Path) -> str:
     return f"pdfTable{digest}"
 
 
-# A run of 2-6 short Latin/digit "words" (a unit value like "3,500 mm", a
+# A run of 2-3 short Latin/digit "words" (a unit value like "3,500 mm", a
 # standard code like "NFPA 2001", a proper noun like "Gulshan e Ravi", a
 # project code like "0074-PAK-01") must never be split at one of its own
 # internal spaces. PyMuPDF's own insert_textbox() wraps CJK-mixed text by
@@ -697,8 +775,17 @@ def _font_alias(fontfile: Path) -> str:
 # regex identifies the same phrases for a DIFFERENT purpose: choosing
 # where _wrap_atomic_phrases() below is and is not allowed to place a line
 # break, using nothing but ordinary characters.
+#
+# Capped at 3 words (not the wider range every one of the examples above
+# actually needs): a plain narrow label column translated from Chinese
+# ("生产部门负责人" -> "Head of Production Department", observed directly
+# overflowing a table's narrow first column) is FOUR ordinary English
+# words with no digit and no proper noun in sight, and used to match this
+# same pattern at a 6-word cap -- silently forbidding a wrap point in the
+# middle of an ordinary phrase that has no reason at all to stay on one
+# line, in a column already too narrow to hold it as a single run.
 _ATOMIC_PHRASE_RE = re.compile(
-    r"[A-Za-z0-9][A-Za-z0-9.,&/-]{0,19}(?: [A-Za-z0-9][A-Za-z0-9.,&/-]{0,19}){1,5}"
+    r"[A-Za-z0-9][A-Za-z0-9.,&/-]{0,19}(?: [A-Za-z0-9][A-Za-z0-9.,&/-]{0,19}){1,2}"
 )
 
 
@@ -732,8 +819,51 @@ def _tokenize_atoms_with_seps(text: str) -> list[tuple[str, str]]:
                 atom, _ = tokens[-1]
                 tokens[-1] = (atom, " ")
             continue
+        if match.lastgroup == "phrase" and not _is_atomic_phrase(match.group(0)):
+            words = match.group(0).split(" ")
+            tokens.extend((word, " ") for word in words[:-1])
+            tokens.append((words[-1], ""))
+            continue
         tokens.append((match.group(0), ""))
     return tokens
+
+
+def _split_overwide_phrases(
+    pairs: list[tuple[str, str]], width_of: Callable[[str], float], max_width: float
+) -> list[tuple[str, str]]:
+    """Break a multi-word atom back into words when it cannot fit one line.
+
+    Keeping a phrase together is a preference, not a rule: placed whole on a
+    line it cannot fit, insert_textbox() splits it mid-word instead (a
+    translated job title like "Relevant Functional Departments" in a narrow
+    label column). Breaking between its own words is always better.
+    """
+    result: list[tuple[str, str]] = []
+    for atom, sep in pairs:
+        if " " in atom and width_of(atom) > max_width:
+            words = atom.split(" ")
+            result.extend((word, " ") for word in words[:-1])
+            result.append((words[-1], sep))
+        else:
+            result.append((atom, sep))
+    return result
+
+
+def _is_atomic_phrase(phrase: str) -> bool:
+    """Only values, codes and proper names stay unbroken -- not plain prose.
+
+    _ATOMIC_PHRASE_RE matches ANY run of 2-3 short words, so ordinary prose
+    ("for business projects") was being packed in rigid three-word chunks
+    that could only wrap between chunks, leaving visibly ragged, early line
+    breaks across a whole translated table. Keep a phrase together only when
+    it contains a digit ("3,500 mm", "NFPA 2001") or every substantive word
+    is capitalised ("Gulshan e Ravi", "Head of Production"); short connector
+    words of one or two letters are ignored for that test.
+    """
+    if any(ch.isdigit() for ch in phrase):
+        return True
+    words = [word for word in phrase.split(" ") if len(word) > 2]
+    return bool(words) and all(word[0].isupper() for word in words)
 
 
 def _wrap_atomic_phrases(
@@ -762,16 +892,14 @@ def _wrap_atomic_phrases(
     caller-supplied file, so it cannot see this project's own embedded CJK
     and Latin faces at all.
     """
-    import fitz
-
-    font = fitz.Font(fontfile=fontfile)
+    font = cached_font(fontfile)
 
     def width_of(candidate: str) -> float:
         return font.text_length(candidate, fontsize=fontsize)
 
     out_paragraphs: list[str] = []
     for paragraph in text.split("\n"):
-        pairs = _tokenize_atoms_with_seps(paragraph)
+        pairs = _split_overwide_phrases(_tokenize_atoms_with_seps(paragraph), width_of, max_width)
         if not pairs:
             out_paragraphs.append(paragraph)
             continue
@@ -832,28 +960,13 @@ def _fit_textbox(
         wrapped = _wrap_atomic_phrases(
             text, fontfile=fontfile, fontname=fontname, fontsize=candidate, max_width=rect.width
         )
-        probe = fitz.open()
-        try:
-            probe_page = probe.new_page(width=page.rect.width, height=page.rect.height)
-            result = probe_page.insert_textbox(
-                rect,
-                wrapped,
-                fontname=fontname,
-                fontfile=fontfile,
-                fontsize=candidate,
-                align=align,
-                overlay=True,
-            )
-            if result < -1e-6:
-                continue
-            line_count = sum(
-                len(block.get("lines", []))
-                for block in probe_page.get_text("dict").get("blocks", [])
-                if block.get("type") == 0
-            )
-            fitting.append((max(1, line_count), candidate))
-        finally:
-            probe.close()
+        result, line_count = probe_textbox(
+            rect.width, rect.height, wrapped,
+            fontfile=fontfile, fontname=fontname, fontsize=candidate, align=align, count_lines=True,
+        )
+        if result < -1e-6:
+            continue
+        fitting.append((max(1, line_count), candidate))
     if fitting:
         # Keep the largest fitting size.  Horizontal utilisation is handled by
         # the condensed font selected by the caller; shrinking solely to save
@@ -1101,8 +1214,16 @@ def render_table_translations(
     align: int | Mapping[str, int] | Callable[[PdfTableCell], int] = 0,
     page_numbers: Iterable[int] | None = None,
     page_links: Mapping[int, list[dict]] | None = None,
+    middle_aligned: Callable[[PdfTableCell], bool] | None = None,
+    spread_lines: bool = True,
+    fixed_cell_size: bool = False,
 ) -> PdfTableRenderReport:
     """Render complete table translations into a new PDF.
+
+    ``middle_aligned`` marks cells whose text is centred vertically in its
+    cell (a label column, a header row) rather than starting at the top.
+    ``spread_lines=False`` keeps every cell at the same natural line spacing
+    instead of loosening it to fill spare cell height.
 
     Only source text spans are redacted.  ``apply_redactions`` is explicitly
     called with ``images=0, graphics=0`` so table lines and other vector
@@ -1246,17 +1367,32 @@ def render_table_translations(
                 # a translation smaller than its own source whenever the
                 # source ran larger than that default.
                 cell_initial_size = max(cell.source_font_size or initial_font_size, minimum_font_size)
-                fitted_size, fitted_line_count = _fit_textbox(
-                    fit_page,
-                    fit_rect,
-                    translated,
-                    fontfile=str(cell_font),
-                    fontname=cell_alias,
-                    initial_font_size=cell_initial_size,
-                    minimum_font_size=minimum_font_size,
-                    font_step=font_step,
-                    align=_cell_alignment(align, cell),
-                )
+                # fixed_cell_size: the caller already chose each cell's size
+                # (one per table page), so several pages can be rendered in a
+                # single open/save instead of rewriting the whole PDF per page.
+                cell_minimum_size = cell_initial_size if fixed_cell_size else minimum_font_size
+                try:
+                    fitted_size, fitted_line_count = _fit_textbox(
+                        fit_page,
+                        fit_rect,
+                        translated,
+                        fontfile=str(cell_font),
+                        fontname=cell_alias,
+                        initial_font_size=cell_initial_size,
+                        minimum_font_size=cell_minimum_size,
+                        font_step=font_step,
+                        align=_cell_alignment(align, cell),
+                    )
+                except PdfTableFitError as exc:
+                    # Attach which cell actually failed: a caller translating
+                    # into a language that runs wider than the source (an
+                    # English translation of a Chinese table, observed
+                    # directly overflowing a column sized for short Chinese
+                    # phrases) can recover from this by growing that ONE
+                    # row's height rather than giving up on the whole table,
+                    # but only if it can identify which row that is without
+                    # parsing this exception's own message text back apart.
+                    raise PdfTableFitError(str(exc), cell_id=cell.id) from exc
                 fitted_sizes[cell.id] = fitted_size
                 wrapped_text = _wrap_atomic_phrases(
                     translated,
@@ -1266,7 +1402,7 @@ def render_table_translations(
                     max_width=fit_rect.width,
                 )
                 fitted_texts[cell.id] = wrapped_text
-                fitted_line_heights[cell.id] = _fill_line_height(
+                fitted_line_heights[cell.id] = None if not spread_lines else _fill_line_height(
                     fit_rect,
                     wrapped_text,
                     fontfile=str(cell_font),
@@ -1315,6 +1451,24 @@ def render_table_translations(
                     _cell_fit_padding(cell_rect, translated, padding),
                 )
                 render_text = fitted_texts.get(cell.id, translated)
+                if middle_aligned is not None and middle_aligned(cell):
+                    fitted_line_heights[cell.id] = None
+                    probe = fitz.open()
+                    try:
+                        leftover = probe.new_page(width=page.rect.width, height=page.rect.height).insert_textbox(
+                            fit_rect,
+                            render_text,
+                            fontname=cell_alias,
+                            fontfile=str(cell_font),
+                            fontsize=fitted_sizes[cell.id],
+                            align=_cell_alignment(align, cell),
+                        )
+                    finally:
+                        probe.close()
+                    # A hair short of half, so glyph-metric rounding on the
+                    # real page can never push the shifted text out of fit.
+                    if leftover > 1.0:
+                        fit_rect = fitz.Rect(fit_rect.x0, fit_rect.y0 + leftover / 2 - 0.5, fit_rect.x1, fit_rect.y1)
                 result = page.insert_textbox(
                     fit_rect,
                     render_text,
