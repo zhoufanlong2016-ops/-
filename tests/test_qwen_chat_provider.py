@@ -38,7 +38,7 @@ def test_qwen_chat_sends_json_batch_and_terms(monkeypatch) -> None:
     provider = QwenChatProvider(QwenChatConfig(model="qwen-plus"), client=httpx.Client(transport=httpx.MockTransport(handler)), glossary=glossary)
     result = provider.translate_batch([make_unit()])[0]
 
-    assert result.translation == "阀门长 2.4 m。"
+    assert result.translation == "阀门长2.4 m。"
     assert calls[0]["model"] == "qwen-plus"
     assert calls[0]["enable_thinking"] is False
     assert calls[0]["response_format"] == {"type": "json_object"}

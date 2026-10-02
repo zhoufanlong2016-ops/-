@@ -18,7 +18,7 @@ from document_translator.core import (
     validate_result_for_unit,
 )
 from document_translator.services.glossary import Glossary
-from document_translator.translation_rules import protect_for_translation, restore_after_translation, restore_markers_best_effort
+from document_translator.translation_rules import normalize_chinese_spacing, protect_for_translation, restore_after_translation, restore_markers_best_effort
 
 from .translation_prompt import PROMPT_VERSION, compile_translation_policy, matched_glossary_entries
 from .batch_limits import split_semantic_batches
@@ -136,6 +136,7 @@ class QwenMTProvider:
             request_count += correction_requests
             translation = self._repair_anonymous_name_marker(translation, unit)
             residual_source_script = bool(re.search(r"[\u3400-\u9fff]", translation))
+        translation = normalize_chinese_spacing(translation, unit.target_language)
         result = TranslationResult(
             unit_id=unit.id,
             translation=translation,
@@ -375,6 +376,7 @@ class QwenMTProvider:
                 translated_text = restore_markers_best_effort(translated_text, protected_by_id[unit.id])
                 invalid[unit.id] = [f"PROTECTED_PLACEHOLDER_RESTORE_FAILED: {error}"]
                 translated_text = text.strip()
+            translated_text = normalize_chinese_spacing(translated_text, unit.target_language)
             result = TranslationResult(unit_id=unit.id, translation=translated_text, provider=self.provider_name, model=self.config.model,
                 prompt_version=self.prompt_version, glossary_version=self.glossary_version, source_hash=sha256_text(unit.source_text),
                 result_hash=sha256_text(translated_text), request_count=calls, validation_status="valid")

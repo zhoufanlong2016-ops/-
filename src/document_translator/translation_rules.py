@@ -325,6 +325,35 @@ def validate_translation_residue(
     return list(dict.fromkeys(errors))
 
 
+_ZH_CHAR = r"㐀-鿿豈-﫿"
+_ZH_PUNCT = r"　-〿！-／：-＠［-｀｛-･‘’“”…—"
+_SPACE = r"[ \t 　]+"
+_ZH_SPACING_RES = (
+    # 汉字之间:"业主 要求"
+    re.compile(rf"(?<=[{_ZH_CHAR}]){_SPACE}(?=[{_ZH_CHAR}])"),
+    # 汉字 + 数字/英文:"第 1 卷"、"至 LW-TD-424"
+    re.compile(rf"(?<=[{_ZH_CHAR}]){_SPACE}(?=[A-Za-z0-9(\[<'\"])"),
+    re.compile(rf"(?<=[A-Za-z0-9)\]>%'\".]){_SPACE}(?=[{_ZH_CHAR}])"),
+    # 中文标点前后:"， 因此"、"规定 。"
+    re.compile(rf"(?<=[{_ZH_PUNCT}]){_SPACE}"),
+    re.compile(rf"{_SPACE}(?=[{_ZH_PUNCT}])"),
+)
+# A list label keeps its space ("1. 请参阅"): it is a protected token.
+_LIST_LABEL_BEFORE_RE = re.compile(r"(?:^|\n)[ \t]*(?:\(?\d{1,3}[.)]|\(?[A-Za-z][.)]|[-*•])$")
+
+
+def normalize_chinese_spacing(text: str, target_language: str) -> str:
+    """Chinese output carries no spaces between 汉字 and digits or Latin
+    letters, nor around Chinese punctuation ("第 1 卷，第一部分，第 2 节"
+    -> "第1卷，第一部分，第2节"). Spaces inside English or between a
+    word and a number ("ISO 9001") are left as the source has them."""
+    if not target_language.strip().casefold().startswith(("zh", "chinese")):
+        return text
+    for pattern in _ZH_SPACING_RES:
+        text = pattern.sub(lambda match: match.group(0) if _LIST_LABEL_BEFORE_RE.search(text[: match.start()]) else "", text)
+    return text
+
+
 def auto_correct_translation(
     source_text: str,
     translation: str,
@@ -337,7 +366,7 @@ def auto_correct_translation(
     if not ((source in {"auto", "english", "en"} or source.startswith("en-")) and (
         target in {"zh", "chinese"} or target.startswith("zh-")
     )):
-        return translation
+        return normalize_chinese_spacing(translation, target_language)
     corrected = translation
     if re.search(r"^\s*AREA\s*=", source_text, re.I) or re.search(r"\bACRE\b", source_text, re.I):
         corrected = re.sub(r"\bAREA\b", "面积", corrected, flags=re.I)
@@ -396,7 +425,7 @@ def auto_correct_translation(
         r"\2年\1月",
         corrected,
     )
-    return corrected
+    return normalize_chinese_spacing(corrected, target_language)
 
 
 @dataclass(frozen=True, slots=True)

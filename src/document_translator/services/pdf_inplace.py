@@ -698,7 +698,7 @@ def _page_footer_translation(unit: TranslationUnit) -> str | None:
     came back as "第 1 页，共 2 页" and page 2 as "2 / 2"."""
     text = unit.source_text.strip()
     if unit.target_language.lower().startswith("zh") and (match := _PAGE_OF_EN.fullmatch(text)):
-        return f"第 {match.group(1)} 页，共 {match.group(2)} 页"
+        return f"第{match.group(1)}页，共{match.group(2)}页"
     if unit.target_language.lower().startswith("en") and (match := _PAGE_OF_ZH.fullmatch(text)):
         return f"Page {match.group(1)} of {match.group(2)}"
     return None

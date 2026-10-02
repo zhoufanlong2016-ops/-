@@ -22,6 +22,7 @@ from document_translator.translation_rules import (
     protect_for_translation,
     restore_after_translation,
     restore_markers_best_effort,
+    normalize_chinese_spacing,
 )
 
 from .translation_prompt import PROMPT_VERSION, compile_translation_policy, matched_glossary_entries
@@ -174,6 +175,7 @@ class QwenChatProvider:
                 text = restore_after_translation(text, protected[unit.id])
             except ValueError as exc:
                 text = restore_markers_best_effort(text, protected[unit.id])
+                text = normalize_chinese_spacing(text, unit.target_language)
                 invalid[unit.id] = [f"PROTECTED_PLACEHOLDER_RESTORE_FAILED: {exc}"]
             else:
                 text = auto_correct_translation(unit.source_text, text, unit.source_language, unit.target_language)

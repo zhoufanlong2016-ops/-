@@ -227,9 +227,23 @@ def _normalise_render_text(text: str) -> str:
             if _TABLE_LIST_ITEM_RE.match(line) or not grouped:
                 grouped.append(line)
             else:
-                grouped[-1] += " " + line
+                grouped[-1] = _join_wrapped(grouped[-1], line)
         return "\n".join(grouped)
-    return " ".join(lines)
+    joined = lines[0]
+    for line in lines[1:]:
+        joined = _join_wrapped(joined, line)
+    return joined
+
+
+_CJK_EDGE_RE = re.compile(r"[　-〿㐀-鿿豈-﫿＀-￯]")
+
+
+def _join_wrapped(left: str, right: str) -> str:
+    """Rejoin a wrapped line: a space between English words, none where
+    either side is Chinese ("第一部分，" + "第2节", not "第一部分， 第2节")."""
+    if _CJK_EDGE_RE.match(left[-1:]) or _CJK_EDGE_RE.match(right[:1]):
+        return left + right
+    return left + " " + right
 
 
 @dataclass(frozen=True, slots=True)

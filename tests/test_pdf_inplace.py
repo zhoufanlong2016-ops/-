@@ -394,7 +394,7 @@ def test_multi_word_glossary_terms_match_in_any_case():
 def test_page_footers_have_one_fixed_form():
     from types import SimpleNamespace
 
-    assert pdf_inplace._page_footer_translation(SimpleNamespace(source_text="Page 2 of 2", target_language="zh")) == "第 2 页，共 2 页"
+    assert pdf_inplace._page_footer_translation(SimpleNamespace(source_text="Page 2 of 2", target_language="zh")) == "第2页，共2页"
     assert pdf_inplace._page_footer_translation(SimpleNamespace(source_text="第 1 页，共 2 页", target_language="en")) == "Page 1 of 2"
     assert pdf_inplace._page_footer_translation(SimpleNamespace(source_text="Page 2 of the report", target_language="zh")) is None
 

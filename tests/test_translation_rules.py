@@ -141,11 +141,11 @@ def test_translation_residue_detects_short_labels_and_dates(source, translation,
 
 
 def test_auto_corrects_deterministic_labels_and_ordinal_dates():
-    assert auto_correct_translation("AREA= 11 ACRE", "AREA= 11 ACRE", "en", "zh-CN") == "面积= 11 英亩"
+    assert auto_correct_translation("AREA= 11 ACRE", "AREA= 11 ACRE", "en", "zh-CN") == "面积= 11英亩"
     assert auto_correct_translation("LINE C", "LINE C", "en", "zh-CN") == "C线"
     assert auto_correct_translation("17th December 2025", "17th 2025年12月", "en", "zh-CN") == "2025年12月17日"
     assert auto_correct_translation("17th December 2025", "17th2025年12月", "en", "zh-CN") == "2025年12月17日"
-    assert auto_correct_translation("3rd Set of Clarifications", "3rd 澄清文件集", "en", "zh-CN") == "3rd 澄清文件集"
+    assert auto_correct_translation("3rd Set of Clarifications", "3rd 澄清文件集", "en", "zh-CN") == "3rd澄清文件集"
     assert auto_correct_translation("December, 2025", "12月，2025", "en", "zh-CN") == "2025年12月"
     assert auto_correct_translation("17th December 2025", "2025 12 17", "en", "zh-CN") == "2025年12月17日"
     assert auto_correct_translation("17th December 2025", "17 12 2025", "en", "zh-CN") == "2025年12月17日"
@@ -320,3 +320,13 @@ def test_english_full_dates_are_localised_before_translation():
     text, dates = localize_chinese_dates("extended to January 29, 2026 (Thursday); opening on 15th January 2026", "en", "zh")
     assert text == "extended to 2026年1月29日 (Thursday); opening on 2026年1月15日"
     assert dates == ["2026年1月29日", "2026年1月15日"]
+
+
+def test_chinese_output_has_no_spaces_between_hanzi_digits_latin_and_punctuation():
+    from document_translator.translation_rules import normalize_chinese_spacing as normalize
+
+    assert normalize("第 1 卷，第一部分，第 2 节 投标数据表", "zh") == "第1卷，第一部分，第2节投标数据表"
+    assert normalize("图纸编号 LW-TD-411 至 LW-TD-424", "zh") == "图纸编号LW-TD-411至LW-TD-424"
+    assert normalize("新制造的 MTBM ， 详见 ISO 9001 标准。", "zh") == "新制造的MTBM，详见ISO 9001标准。"
+    assert normalize("1. 请参阅第 6 节", "zh") == "1. 请参阅第6节"
+    assert normalize("Section 2 of the Contract", "en") == "Section 2 of the Contract"

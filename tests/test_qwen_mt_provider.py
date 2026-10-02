@@ -97,7 +97,7 @@ def test_rule_tokens_are_sent_as_official_qwen_verbatim_terms(monkeypatch) -> No
 
     result = QwenMTProvider(client=client).translate_unit(unit)
 
-    assert result.translation == "在 5% 处安装 105+820。"
+    assert result.translation == "在5%处安装105+820。"
     payload = json.loads(requests[0].content)
     assert {"source": "5%", "target": "5%"} in payload["translation_options"]["terms"]
     assert {"source": "105+820", "target": "105+820"} in payload["translation_options"]["terms"]
@@ -262,7 +262,7 @@ def test_batch_glossary_failure_is_repaired_as_a_second_batch(monkeypatch) -> No
     )
     result = provider.translate_batch([unit])[0]
 
-    assert result.translation.endswith("阀门 [[TOKEN_1]]。")
+    assert result.translation.endswith("阀门[[TOKEN_1]]。")
     assert len(calls) == 2
     for call in calls:
         assert {tuple(item.values()) for item in call["translation_options"]["terms"]} >= {
@@ -310,4 +310,4 @@ def test_single_unit_batch_accepts_raw_qwen_translation(monkeypatch) -> None:
     provider = QwenMTProvider(client=httpx.Client(transport=httpx.MockTransport(handler)))
     result = provider.translate_batch([unit])[0]
 
-    assert result.translation == "直接译文 [[TOKEN_1]]。"
+    assert result.translation == "直接译文[[TOKEN_1]]。"

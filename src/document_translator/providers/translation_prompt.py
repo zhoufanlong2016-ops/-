@@ -10,7 +10,7 @@ from document_translator.core import TranslationUnit
 from document_translator.translation_rules import source_name_constraints
 
 
-PROMPT_VERSION = "en-zh-general-rules-v5"
+PROMPT_VERSION = "en-zh-general-rules-v6"
 
 
 class GlossaryLike(Protocol):
