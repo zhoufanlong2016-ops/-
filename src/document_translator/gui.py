@@ -34,7 +34,10 @@ PROVIDER_MODELS = {
     "openai": ("gpt-5.6-luna", "gpt-5.6-terra"),
     "deepseek": ("deepseek-chat", "deepseek-reasoner", "deepseek-flash", "deepseek-v4-pro"),
 }
-LANGUAGE_CODES = {"中文": "zh", "英文": "en"}
+LANGUAGE_CODES = {"自动": "auto", "中文": "zh", "英文": "en"}
+LANGUAGE_NAMES = {"zh": "中文", "en": "英文"}
+# translate-dwg exit code: the drawing's language could not be decided.
+LANGUAGE_UNDETERMINED_EXIT = 3
 
 
 def detect_format(path: str | Path) -> str:
@@ -72,9 +75,7 @@ def build_cli_command(
     """Build the existing CLI command for one supported input file."""
     source_path = Path(source)
     suffix = source_path.suffix.casefold()
-    commands = {".md": "translate-markdown", ".markdown": "translate-markdown", ".docx": "translate-docx", ".pptx": "translate-pptx", ".xlsx": "translate-xlsx", ".pdf": "translate-pdf"}
-    if suffix == ".dwg":
-        raise ValueError("DWG 需要先通过 AutoCAD CadBridge 导出文本任务，界面暂不直接覆盖源图纸")
+    commands = {".md": "translate-markdown", ".markdown": "translate-markdown", ".docx": "translate-docx", ".pptx": "translate-pptx", ".xlsx": "translate-xlsx", ".pdf": "translate-pdf", ".dwg": "translate-dwg"}
     command = commands[suffix]
     if suffix == ".pdf" and provider == "qwen-mt":
         raise ValueError("PDF 需要选择 qwen（Chat）、openai 或 deepseek，不能使用 qwen-mt 翻译端点")
@@ -163,8 +164,8 @@ class TranslationApp:
         self.files: list[Path] = []
         self.provider = tk.StringVar(value="qwen")
         self.model = tk.StringVar(value="qwen3.8-flash")
-        self.source_language = tk.StringVar(value="中文")
-        self.target_language = tk.StringVar(value="英文")
+        self.source_language = tk.StringVar(value="自动")
+        self.target_language = tk.StringVar(value="自动")
         self.glossary = tk.StringVar()
         self.status = tk.StringVar(value="请拖入文件，或点击“选择文件”")
         self.elapsed = tk.StringVar(value="运行时间：00:00:00")
@@ -209,9 +210,9 @@ class TranslationApp:
         self.model_box = ttk.Combobox(settings, textvariable=self.model, state="readonly")
         self.model_box.grid(row=1, column=1, sticky="ew", padx=(0, 8)); self._provider_changed()
         ttk.Label(settings, text="源语言").grid(row=0, column=2, sticky="w")
-        ttk.Combobox(settings, textvariable=self.source_language, values=("中文", "英文"), state="readonly").grid(row=1, column=2, sticky="ew", padx=(0, 8))
+        ttk.Combobox(settings, textvariable=self.source_language, values=tuple(LANGUAGE_CODES), state="readonly").grid(row=1, column=2, sticky="ew", padx=(0, 8))
         ttk.Label(settings, text="目标语言").grid(row=0, column=3, sticky="w")
-        ttk.Combobox(settings, textvariable=self.target_language, values=("中文", "英文"), state="readonly").grid(row=1, column=3, sticky="ew")
+        ttk.Combobox(settings, textvariable=self.target_language, values=tuple(LANGUAGE_CODES), state="readonly").grid(row=1, column=3, sticky="ew")
         ttk.Label(settings, text="CSV/XLSX 术语库（可选）").grid(row=2, column=0, columnspan=2, sticky="w", pady=(10, 0))
         ttk.Entry(settings, textvariable=self.glossary).grid(row=3, column=0, columnspan=3, sticky="ew", padx=(0, 8))
         ttk.Button(settings, text="选择术语库", command=self.choose_glossary).grid(row=3, column=3, sticky="ew")
@@ -314,23 +315,26 @@ class TranslationApp:
                 temporary_path = Path(handle.name)
                 handle.close()
                 temporary_path.unlink()
-                source_language = LANGUAGE_CODES[self.source_language.get()]
-                target_language = LANGUAGE_CODES[self.target_language.get()]
-                command = build_cli_command(source, temporary_path, provider=self.provider.get(), model=self.model.get(), source_language=source_language, target_language=target_language, glossary=self.glossary.get().strip() or None, pdf_cache=cache_dir.parent / "pdf_translation_cache.sqlite3")
+                languages = self._resolve_languages(source)
+                if languages is None:
+                    self.root.after(0, self._write_log, f"跳过：{source.name}（未确定语言）\n")
+                    continue
+                source_language, target_language = languages
                 self.root.after(0, self._write_log, f"开始：{source.name}（完成后预览并选择保存位置）\n")
                 self.root.after(0, self._start_file_progress)
                 environment = os.environ.copy()
                 source_root = str(project_root / "src")
                 environment["PYTHONPATH"] = source_root + os.pathsep + environment.get("PYTHONPATH", "")
-                process = subprocess.Popen(command, cwd=str(project_root), env=environment, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=False)
-                with self._active_process_lock:
-                    self._active_process = process
-                assert process.stdout is not None
-                for line in process.stdout:
-                    self.root.after(0, self._write_log, line.decode("utf-8", errors="replace"))
-                code = process.wait()
-                with self._active_process_lock:
-                    self._active_process = None
+                while True:
+                    command = build_cli_command(source, temporary_path, provider=self.provider.get(), model=self.model.get(), source_language=source_language, target_language=target_language, glossary=self.glossary.get().strip() or None, pdf_cache=cache_dir.parent / "pdf_translation_cache.sqlite3")
+                    code = self._run_command(command, project_root, environment)
+                    # A DWG's language is only known after AutoCAD exports its text.
+                    if code != LANGUAGE_UNDETERMINED_EXIT or source.suffix.casefold() != ".dwg" or self._stop_requested.is_set():
+                        break
+                    answer = self._ask_language(source)
+                    if answer is None:
+                        break
+                    source_language, target_language = answer
                 self.root.after(0, self._stop_file_progress)
                 file_elapsed = time.monotonic() - file_started_at
                 self.root.after(0, self._write_log, f"完成：{source.name}，退出码 {code}，耗时 {self._format_elapsed(file_elapsed)}\n")
@@ -354,6 +358,61 @@ class TranslationApp:
                         pass
                 self.root.after(0, lambda completed=index: self.progress.configure(mode="determinate", value=completed))
         self.root.after(0, self._finish_elapsed)
+
+    def _run_command(self, command: list[str], project_root: Path, environment: dict[str, str]) -> int:
+        process = subprocess.Popen(command, cwd=str(project_root), env=environment, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=False)
+        with self._active_process_lock:
+            self._active_process = process
+        assert process.stdout is not None
+        for line in process.stdout:
+            self.root.after(0, self._write_log, line.decode("utf-8", errors="replace"))
+        code = process.wait()
+        with self._active_process_lock:
+            self._active_process = None
+        return code
+
+    def _resolve_languages(self, source: Path) -> tuple[str, str] | None:
+        """Explicit choices win; "自动" is decided from the file, and the user is
+        asked only when that is not possible. None means skip the file."""
+        from document_translator.language_detect import detect_document_language, other_language
+
+        source_language = LANGUAGE_CODES[self.source_language.get()]
+        target_language = LANGUAGE_CODES[self.target_language.get()]
+        if source_language == "auto" and source.suffix.casefold() == ".dwg":
+            # Decided by translate-dwg from the exported text.
+            return source_language, target_language
+        if source_language == "auto":
+            try:
+                detected = detect_document_language(source)
+            except Exception:
+                detected = None
+            if detected is None or detected == target_language:
+                return self._ask_language(source)
+            source_language = detected
+            self.root.after(0, self._write_log, f"自动判断：{source.name} 是{LANGUAGE_NAMES[detected]}\n")
+        if target_language == "auto" or target_language == source_language:
+            target_language = other_language(source_language)
+        return source_language, target_language
+
+    def _ask_language(self, source: Path) -> tuple[str, str] | None:
+        """Ask on the UI thread from the worker thread; wait for the answer."""
+        answer: dict[str, bool | None] = {}
+        done = threading.Event()
+
+        def ask() -> None:
+            answer["zh"] = messagebox.askyesnocancel(
+                "请确认语言",
+                f"无法自动判断“{source.name}”的语言。\n\n"
+                "是：这是中文文件，译为英文\n否：这是英文文件，译为中文\n取消：跳过这个文件",
+                parent=self.root,
+            )
+            done.set()
+
+        self.root.after(0, ask)
+        done.wait()
+        if answer.get("zh") is None:
+            return None
+        return ("zh", "en") if answer["zh"] else ("en", "zh")
 
     @staticmethod
     def _format_elapsed(seconds: float) -> str:

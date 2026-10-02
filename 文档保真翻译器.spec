@@ -9,7 +9,10 @@ pipeline is MinerU 4 + PyMuPDF; this spec collects those instead.
 
 from PyInstaller.utils.hooks import collect_all
 
-datas = [('src/document_translator/assets', 'document_translator/assets')]
+datas = [
+    ('src/document_translator/assets', 'document_translator/assets'),
+    ('cad/CadBridge.bundle/Contents/CadBridge.dll', 'cad/CadBridge.bundle/Contents'),
+]
 binaries = []
 hiddenimports = []
 for package in ('mineru', 'docvortex', 'fitz', 'dotenv', 'httpx', 'pydantic', 'latex2mathml', 'ziamath', 'ziafont'):

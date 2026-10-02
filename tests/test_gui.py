@@ -46,13 +46,14 @@ def test_pdf_rejects_qwen_mt_endpoint(tmp_path: Path) -> None:
         )
 
 
-def test_dwg_is_explicitly_not_treated_as_one_step_translation(tmp_path: Path) -> None:
-    with pytest.raises(ValueError, match="AutoCAD"):
-        build_cli_command(
-            tmp_path / "source.dwg",
-            tmp_path / "target.dwg",
-            provider="qwen",
-            model="qwen3.8-max",
-            source_language="en",
-            target_language="zh",
-        )
+def test_dwg_runs_the_one_step_autocad_pipeline(tmp_path: Path) -> None:
+    command = build_cli_command(
+        tmp_path / "source.dwg",
+        tmp_path / "target.dwg",
+        provider="qwen",
+        model="qwen3.8-flash",
+        source_language="auto",
+        target_language="auto",
+    )
+    assert command[3:6] == ["translate-dwg", str(tmp_path / "source.dwg"), str(tmp_path / "target.dwg")]
+    assert command[command.index("--source-language") + 1] == "auto"

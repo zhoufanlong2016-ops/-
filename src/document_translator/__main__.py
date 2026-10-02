@@ -140,6 +140,16 @@ def _parser() -> argparse.ArgumentParser:
     dwg_import.add_argument("--max-attempts", type=int, default=3)
     dwg_import.add_argument("--overwrite", action="store_true")
     dwg_import.add_argument("--font-map", type=Path, metavar="PATH", help="JSON source-style to target-font map")
+    dwg_translate = subparsers.add_parser(
+        "translate-dwg", help="translate a DWG end to end through headless AutoCAD 2025 and CadBridge",
+    )
+    dwg_translate.add_argument("source", type=Path, metavar="SOURCE_DWG")
+    dwg_translate.add_argument("destination", type=Path, metavar="DESTINATION_DWG")
+    dwg_translate.add_argument("--source-language", default="auto", help="zh, en or auto (decided from the drawing's text)")
+    dwg_translate.add_argument("--target-language", default="auto", help="zh, en or auto (the other language)")
+    dwg_translate.add_argument("--provider", choices=("qwen", "qwen-mt", "openai", "deepseek"), default="qwen")
+    dwg_translate.add_argument("--model")
+    dwg_translate.add_argument("--glossary", type=Path, metavar="PATH")
     validate = subparsers.add_parser("validate-output", help="validate a translated Markdown, Office, or XLSX output")
     validate.add_argument("output", type=Path, metavar="OUTPUT")
     validate.add_argument("--type", choices=("auto", "markdown", "docx", "pptx", "xlsx"), default="auto")
@@ -408,6 +418,37 @@ def _prepare_dwg_import(args: argparse.Namespace) -> int:
     return 0
 
 
+# Exit code the GUI reads as "ask the user which language the drawing is in".
+LANGUAGE_UNDETERMINED_EXIT = 3
+
+
+def _translate_dwg(args: argparse.Namespace) -> int:
+    from .services.dwg_pipeline import DwgLanguageUndetermined, translate_dwg_file
+
+    with httpx.Client() as client:
+        def provider_for(source_language: str, target_language: str):
+            resolved = argparse.Namespace(**{**vars(args), "source_language": source_language, "target_language": target_language})
+            glossary = _glossary_for(resolved)
+            if args.provider == "deepseek":
+                return DeepSeekProvider(DeepSeekConfig(model=args.model or "deepseek-chat"), client=client, glossary=glossary)
+            return _provider_for(resolved, client, glossary)
+
+        try:
+            outcome = translate_dwg_file(
+                provider_for, args.source, args.destination,
+                source_language=args.source_language, target_language=args.target_language,
+                progress=lambda message: print(message, flush=True),
+            )
+        except DwgLanguageUndetermined as error:
+            print(f"error: {error}", file=sys.stderr)
+            return LANGUAGE_UNDETERMINED_EXIT
+    print(
+        f"translated {outcome.item_count} DWG text items ({outcome.source_language} -> {outcome.target_language}); "
+        f"output={outcome.destination}"
+    )
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     # Keep CLI status/error paths readable when the GUI launches this process
     # on Windows, whose inherited console encoding may be a legacy code page.
@@ -433,6 +474,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             return _translate_pdf(args)
         if args.command == "prepare-dwg-import":
             return _prepare_dwg_import(args)
+        if args.command == "translate-dwg":
+            return _translate_dwg(args)
         return _validate_output(args)
     except Exception as error:
         print(f"error: {error}", file=sys.stderr)
