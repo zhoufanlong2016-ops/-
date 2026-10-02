@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import os
 from pathlib import Path
+import re
 import time
 from typing import Mapping
 
@@ -20,6 +22,20 @@ from document_translator.core import (
 
 from .markdown_translation import UnitTranslationProvider
 from document_translator.translation_rules import rule_protected_tokens
+
+
+_LETTER_RE = re.compile(r"[A-Za-z㐀-鿿豈-﫿]")
+
+
+def _needs_translation(text: str) -> bool:
+    return bool(_LETTER_RE.search(text))
+
+
+def _workers() -> int:
+    try:
+        return max(1, min(8, int(os.environ.get("DOCUMENT_TRANSLATOR_PDF_WORKERS", "6"))))
+    except ValueError:
+        return 6
 
 
 class DwgTranslationServiceError(RuntimeError):
@@ -180,10 +196,43 @@ class DwgTranslationService:
             # synthetic stable-ID envelopes, so use its original unit
             # protocol and keep validation around every result.
             return tuple(self._translate_and_validate_unit(unit) for unit in units)
+        # A drawing is mostly bare numbers (levels, areas, chainages) and the
+        # same label repeated: numbers keep their own text without a request,
+        # each distinct text is translated once, and batches run concurrently
+        # (one sequential request per 8 items took 4 minutes for 204 items).
+        by_text: dict[tuple[str, tuple[str, ...]], TranslationUnit] = {}
+        for unit in units:
+            if _needs_translation(unit.source_text):
+                by_text.setdefault((unit.source_text, tuple(unit.protected_tokens)), unit)
+        distinct = list(by_text.values())
+        batches = [tuple(distinct[start:start + batch_size]) for start in range(0, len(distinct), batch_size)]
+        translated: dict[tuple[str, tuple[str, ...]], str] = {}
+        if batches:
+            from concurrent.futures import ThreadPoolExecutor
+
+            with ThreadPoolExecutor(max_workers=min(_workers(), len(batches))) as pool:
+                for batch, batch_results in zip(
+                    batches, pool.map(lambda batch: self._translate_and_validate_batch(batch, translate_batch), batches)
+                ):
+                    for unit, result in zip(batch, batch_results, strict=True):
+                        translated[(unit.source_text, tuple(unit.protected_tokens))] = result.translation
         results: list[TranslationResult] = []
-        for start in range(0, len(units), batch_size):
-            batch = units[start:start + batch_size]
-            results.extend(self._translate_and_validate_batch(batch, translate_batch))
+        for unit in units:
+            text = translated.get((unit.source_text, tuple(unit.protected_tokens)), unit.source_text)
+            result = TranslationResult(
+                unit_id=unit.id,
+                translation=text,
+                provider=self._provider.provider_name,
+                model=self._provider.config.model,
+                prompt_version=self._provider.prompt_version,
+                glossary_version=self._provider.glossary_version,
+                source_hash=sha256_text(unit.source_text),
+                result_hash=sha256_text(text),
+                request_count=1,
+                validation_status="valid",
+            )
+            self._validate_provider_result(unit, result)
+            results.append(result)
         return tuple(results)
 
     def _translate_and_validate_batch(self, units, translate_batch) -> tuple[TranslationResult, ...]:

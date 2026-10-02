@@ -165,8 +165,11 @@ def test_cli_prepares_a_dwg_import_task_without_opening_autocad(tmp_path, monkey
 def test_service_submits_dwg_items_in_bounded_batches(tmp_path) -> None:
     export_json, exported = _write_export(tmp_path)
     item = exported.items[0]
-    repeated = exported.model_copy(update={"items": tuple(item.model_copy(update={"handle": f"{index + 10:X}"}) for index in range(17))})
-    export_json.write_text(repeated.model_dump_json(), encoding="utf-8")
+    distinct = exported.model_copy(update={"items": tuple(
+        item.model_copy(update={"handle": f"{index + 10:X}", "source_text": f"Hello {index}", "source_hash": dwg.sha256_text(f"Hello {index}")})
+        for index in range(17)
+    )})
+    export_json.write_text(distinct.model_dump_json(), encoding="utf-8")
 
     class RecordingBatchProvider(FakeProvider):
         def __init__(self):
@@ -182,7 +185,35 @@ def test_service_submits_dwg_items_in_bounded_batches(tmp_path) -> None:
         result_json=tmp_path / "result.json", command_script=tmp_path / "import.scr",
         source_language="en", target_language="zh-CN",
     )
-    assert provider.batch_sizes == [8, 8, 1]
+    assert sorted(provider.batch_sizes) == [1, 8, 8]
+
+
+def test_numbers_are_kept_and_repeated_labels_are_translated_once(tmp_path) -> None:
+    export_json, exported = _write_export(tmp_path)
+    item = exported.items[0]
+    texts = ["Hello", "71.719", "Hello", "0.00", "Hello"]
+    items = tuple(
+        item.model_copy(update={"handle": f"{index + 10:X}", "source_text": text, "source_hash": dwg.sha256_text(text)})
+        for index, text in enumerate(texts)
+    )
+    export_json.write_text(exported.model_copy(update={"items": items}).model_dump_json(), encoding="utf-8")
+
+    class CountingProvider(FakeProvider):
+        def __init__(self):
+            self.sent = []
+
+        def translate_batch(self, units):
+            self.sent.extend(unit.source_text for unit in units)
+            return super().translate_batch(units)
+
+    provider = CountingProvider()
+    outcome = DwgTranslationService(provider).prepare_import(
+        export_json, destination_dwg=tmp_path / "translated.dwg", task_json=tmp_path / "import.json",
+        result_json=tmp_path / "result.json", command_script=tmp_path / "import.scr",
+        source_language="en", target_language="zh-CN",
+    )
+    assert provider.sent == ["Hello"]
+    assert [result.translation for result in outcome.results] == ["你好", "71.719", "你好", "0.00", "你好"]
 
 
 def test_service_retries_a_rate_limited_batch_with_backoff(tmp_path, monkeypatch) -> None:
