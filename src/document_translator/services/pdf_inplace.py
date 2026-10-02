@@ -652,6 +652,18 @@ def _translate_all(
             if packed[offset : offset + _MAX_BATCH_ITEMS]:
                 batches.append(packed[offset : offset + _MAX_BATCH_ITEMS])
 
+    # A short document packs into one batch and so into one slow sequential
+    # request (a 3-page notice took 56 s on flash, 5 min on plus); halve the
+    # biggest batches until every worker has one.
+    _, workers = _pdf_runtime_limits()
+    while len(batches) < workers:
+        largest = max(batches, key=len, default=[])
+        if len(largest) < 8:
+            break
+        index = batches.index(largest)
+        half = len(largest) // 2
+        batches[index : index + 1] = [largest[:half], largest[half:]]
+
     def store(result: TranslationResult) -> None:
         unit = rep_by_id[result.unit_id]
         results[result.unit_id] = result
@@ -661,7 +673,6 @@ def _translate_all(
             except Exception:
                 pass
 
-    _, workers = _pdf_runtime_limits()
     done_units = len(results)
     total_units = len(representatives)
     if progress is not None:

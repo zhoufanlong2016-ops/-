@@ -6,7 +6,7 @@ from document_translator.gui import PROVIDER_MODELS, build_cli_command, default_
 
 
 def test_gui_exposes_only_the_three_recommended_qwen_models() -> None:
-    assert PROVIDER_MODELS["qwen"] == ("qwen3.7-plus", "qwen3.8-flash", "qwen3.8-max")
+    assert PROVIDER_MODELS["qwen"] == ("qwen3.8-flash", "qwen3.7-plus", "qwen3.8-max")
     assert "qwen-mt" not in PROVIDER_MODELS
 
 
