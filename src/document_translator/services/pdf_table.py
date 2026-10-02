@@ -189,7 +189,7 @@ def _break_inline_list_markers(text: str) -> str:
     return _INLINE_LIST_MARKER_RE.sub(lambda match: "\n" + match.group(1) + " ", text)
 
 
-def _normalise_render_text(text: str) -> str:
+def _normalise_render_text(text: str, *, keep_line_breaks: bool = False) -> str:
     """Convert provider visual line breaks into reflowable table text.
 
     A plain paragraph returned with embedded newlines must be allowed to wrap
@@ -218,6 +218,10 @@ def _normalise_render_text(text: str) -> str:
     lines = [line for line in lines if line]
     if not lines:
         return ""
+    if keep_line_breaks:
+        # The source was sent item by item (one item per line), so every
+        # line break in the translation is a real one.
+        return "\n".join(lines)
     if any(_TABLE_LIST_ITEM_RE.match(line) for line in lines):
         # Keep breaks only when a new numbered/bulleted item starts.  Provider
         # line extraction often inserts visual breaks inside the same item;
@@ -526,23 +530,27 @@ def _table_cells(table: Any, page_number: int, table_number: int) -> tuple[PdfTa
 
 
 def _merge_phantom_rows(
-    cells: tuple[PdfTableCell, ...], row_count: int, column_count: int
+    cells: tuple[PdfTableCell, ...],
+    row_count: int,
+    column_count: int,
+    dividers: tuple[float, ...] | None = None,
+    table_rect: tuple[float, float, float, float] | None = None,
 ) -> tuple[PdfTableCell, ...]:
-    """Fold a row whose real content sits in exactly one column back into
-    the nearest real cell above it in that same column.
+    """Fold a row created by a stray line back into the cell above it.
 
     PyMuPDF's vector-table finder (``strategy="lines_strict"``) treats any
     sufficiently long, thin line as a row divider -- including a
-    hyperlink's own decorative underline, which happens to run almost
-    the full width of one text column. That turns one genuine multi-line
-    reply into several one-column "rows": every OTHER column in such a
-    row comes back as a merged-cell placeholder (``rect=None``), because
-    nothing in the source actually divides them there. A genuine table
-    row -- or a genuine rowspan's own starting row -- always has its own
-    content, or a deliberate placeholder, in more than a single column;
-    this signature (exactly one real column, everything else a
-    placeholder) is specific enough to fold safely without ever touching
-    an intentional table structure.
+    hyperlink's own decorative underline, which runs across one text column
+    only. That turns one multi-line reply into several one-column "rows"
+    whose other columns are placeholders (``rect=None``).
+
+    What makes such a row fake is the line above it: a real row starts at a
+    divider ruled across the whole table, a phantom one at a line inside a
+    single column. Judging by the cell count alone (one real cell) also
+    folded genuine full-width rows -- a "Note:" spanning both columns was
+    glued under the cell to its upper left, and half of it was never
+    translated. With ``dividers`` (y positions of full-width rules) a row
+    starting on a full-width rule is never folded.
     """
     from dataclasses import replace
 
@@ -550,27 +558,16 @@ def _merge_phantom_rows(
     for cell in cells:
         by_row.setdefault(cell.row, []).append(cell)
 
+    def starts_on_divider(cell: PdfTableCell) -> bool:
+        return dividers is not None and cell.rect is not None and any(abs(cell.rect[1] - y) <= 1.5 for y in dividers)
+
     active: dict[int, str] = {}
     merged: dict[str, PdfTableCell] = {cell.id: cell for cell in cells}
     for row in range(1, row_count + 1):
         real = [cell for cell in by_row.get(row, ()) if cell.rect is not None]
-        target = merged[active[real[0].column]] if len(real) == 1 and real[0].column in active else None
-        # A row spanning several columns ("Note: ..." across the whole table)
-        # is a real row, not an underline artefact: its one cell is wider
-        # than the column it starts in.
-        widest = max((c.rect[2] - c.rect[0] for c in cells if c.rect is not None and c.column == 1), default=0.0)
-        narrowest = min((c.rect[2] - c.rect[0] for c in cells if c.rect is not None and c.column == 1), default=0.0)
-        spans_columns = (
-            target is not None and target.rect is not None and real[0].rect is not None
-            and (
-                real[0].rect[2] - real[0].rect[0] > (target.rect[2] - target.rect[0]) + 2.0
-                # a heading row across the table after another one
-                or (widest > narrowest + 2.0 and real[0].rect[2] - real[0].rect[0] >= widest - 2.0)
-            )
-        )
-        if len(real) == 1 and column_count > 1 and real[0].column in active and not spans_columns:
+        if len(real) == 1 and column_count > 1 and real[0].column in active and not starts_on_divider(real[0]):
             phantom = real[0]
-            assert target is not None
+            target = merged[active[phantom.column]]
             assert target.rect is not None and phantom.rect is not None
             merged_text = target.text + ("\n" + phantom.text if phantom.text.strip() else "")
             merged_rect = (target.rect[0], target.rect[1], target.rect[2], phantom.rect[3])
@@ -581,6 +578,38 @@ def _merge_phantom_rows(
             active[cell.column] = cell.id
 
     return tuple(merged[cell.id] for cell in cells)
+
+
+def _full_width_dividers(page: Any, rect: tuple[float, float, float, float]) -> tuple[float, ...]:
+    """y positions of horizontal rules that, joined up, cross the whole table.
+
+    A row divider is often drawn as one short segment per column; the
+    segments at one height are added up before comparing with the width.
+    """
+    width = rect[2] - rect[0]
+    segments: list[tuple[float, float, float]] = []
+    for drawing in page.get_drawings():
+        for item in drawing.get("items", ()):
+            if item[0] == "l" and abs(item[1].y - item[2].y) <= 1.0:
+                x0, x1 = sorted((item[1].x, item[2].x))
+                segments.append(((item[1].y + item[2].y) / 2, x0, x1))
+            elif item[0] == "re" and item[1].height <= 2.0:
+                box = item[1]
+                segments.append(((box.y0 + box.y1) / 2, box.x0, box.x1))
+    found: list[float] = []
+    for y, _, _ in segments:
+        if any(abs(y - other) <= 1.0 for other in found):
+            continue
+        spans = sorted((x0, x1) for sy, x0, x1 in segments if abs(sy - y) <= 1.0)
+        covered, reach = 0.0, rect[0]
+        for x0, x1 in spans:
+            x0, x1 = max(x0, reach), min(x1, rect[2])
+            if x1 > x0:
+                covered += x1 - x0
+                reach = x1
+        if covered >= 0.9 * width:
+            found.append(y)
+    return tuple(found)
 
 
 def extract_tables_from_document(
@@ -623,7 +652,9 @@ def extract_tables_from_document(
             rect = _rect_tuple(getattr(table, "bbox", None), allow_none=False)
             cells = _table_cells(table, page_number, table_number)
             if merge_phantom_rows:
-                cells = _merge_phantom_rows(cells, int(table.row_count), int(table.col_count))
+                cells = _merge_phantom_rows(
+                    cells, int(table.row_count), int(table.col_count), _full_width_dividers(page, rect), rect
+                )
             tables.append(
                 PdfTable(
                     page_number=page_number,
@@ -1303,6 +1334,7 @@ def render_table_translations(
     spread_lines: bool = True,
     fixed_cell_size: bool = False,
     keep_unchanged: bool = False,
+    keep_line_breaks: bool = False,
 ) -> PdfTableRenderReport:
     """Render complete table translations into a new PDF.
 
@@ -1418,7 +1450,7 @@ def render_table_translations(
             )
             fit_page = temporary_fit_doc.new_page(width=page.rect.width, height=page.rect.height)
             for cell in cells:
-                translated = _normalise_render_text(mapping[cell.id])
+                translated = _normalise_render_text(mapping[cell.id], keep_line_breaks=keep_line_breaks)
                 if not translated.strip() or cell.id in unchanged_ids:
                     continue
                 if cell.rect is None:
@@ -1537,7 +1569,7 @@ def render_table_translations(
                 raise PdfTableError(f"vector graphics changed while redacting page {page_number}")
 
             for cell in cells:
-                translated = _normalise_render_text(mapping[cell.id])
+                translated = _normalise_render_text(mapping[cell.id], keep_line_breaks=keep_line_breaks)
                 if not translated.strip() or cell.id in unchanged_ids:
                     continue
                 assert cell.rect is not None

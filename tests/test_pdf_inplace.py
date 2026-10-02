@@ -427,5 +427,17 @@ def test_full_width_rows_are_not_folded_into_the_cell_above():
         cell(2, 1, (82, 232, 514, 301), "Note: ..."), cell(2, 2, None, ""),
         cell(3, 1, (82, 301, 514, 338), "Schedule No. 4"), cell(3, 2, None, ""),
     )
-    folded = {c.id: c for c in _merge_phantom_rows(cells, 3, 2)}
+    folded = {c.id: c for c in _merge_phantom_rows(cells, 3, 2, dividers=(162.0, 232.0, 301.0, 338.0))}
     assert folded["r2c1"].text == "Note: ..." and folded["r3c1"].text == "Schedule No. 4"
+
+
+def test_cell_text_reaches_the_model_one_item_per_line():
+    structure = pdf_inplace._structure_cell_text
+    assert structure("2.1.1. Inception Report Approved\n2.1.2 Liaison with stakeholders for\nNOC\n2.1.3 Design Team mobilized") == (
+        "2.1.1. Inception Report Approved\n2.1.2 Liaison with stakeholders for NOC\n2.1.3 Design Team mobilized"
+    )
+    assert structure("prices.\n70% of proportion of each site on delivery of\ncomplete equipment") == (
+        "prices.\n70% of proportion of each site on delivery of complete equipment"
+    )
+    assert structure("Volume 1, Part I, Section\n2, Tender Data Sheet, ITT\n24.1") == "Volume 1, Part I, Section 2, Tender Data Sheet, ITT 24.1"
+    assert structure("payable within\n10 days after approval") == "payable within 10 days after approval"

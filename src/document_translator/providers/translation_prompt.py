@@ -10,7 +10,7 @@ from document_translator.core import TranslationUnit
 from document_translator.translation_rules import source_name_constraints
 
 
-PROMPT_VERSION = "en-zh-general-rules-v7"
+PROMPT_VERSION = "en-zh-general-rules-v8"
 
 
 class GlossaryLike(Protocol):
@@ -124,6 +124,7 @@ def general_translation_instruction(source_language: str, target_language: str) 
         "and never also write the literal itself in words, because the marker already becomes that literal. "
         "For an unverified proper name covered by the retained-name rule, keep the original English spelling and do not invent a Chinese alias. "
         "When the input contains <UNIT_n> markers, return every marker unchanged and keep its translated text under that marker. "
+        "A line break inside an item's text separates list entries (numbered sub-items, percentage shares, notes): keep every line break and translate every line. "
         "Output only the translation, with no explanation. "
         "Translate the complete input without summarizing, abbreviating, omitting clauses, or using ellipses (... or …). Preserve every sentence and list item. "
         "For English output, use parentheses instead of em dashes, ordinary hyphens only, and leave no Chinese characters."

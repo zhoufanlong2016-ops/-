@@ -316,7 +316,7 @@ def _translate_in_place(
             if not _needs_translation(text, source_language):
                 continue
             # "Drawing No. LW-" / "TD-401" broken across cell lines is one code.
-            cell_text = re.sub(r"(?<=[A-Za-z0-9])-\n(?=[A-Za-z0-9])", "-", text)
+            cell_text = _structure_cell_text(re.sub(r"(?<=[A-Za-z0-9])-\n(?=[A-Za-z0-9])", "-", text))
             unit = _unit(cell_text, f"page:{cell.page_number}", cell.id, "table_cell", source_hash, source_language, target_language)
             cell_units.append(unit)
             cell_by_unit[unit.id] = cell
@@ -411,6 +411,40 @@ def _continued_cells(tables: list[Any]) -> dict[str, Any]:
             ):
                 pairs[source.id] = cell
     return pairs
+
+
+# A line that starts a new item in a table cell: a numbered sub-item
+# ("2.1.2 Liaison", "3.41."), a lettered or bracketed one ("a)", "(ii)"), a
+# bullet, a percentage share ("70% of proportion ...") or a note.
+_CELL_ITEM_START = re.compile(
+    r"^\s*(?:\d+(?:\.\d+)*[.)]\s|\d+(?:\.\d+){1,}\.?(?=\s?[A-Za-z])|\(?[a-zA-Z]\)|\(?[ivxIVX]{1,4}\)|[-*•●▪]\s"
+    r"|\d+(?:\.\d+)?\s?%\s|(?:Note|NOTE|Notes)\s*:)"
+)
+
+
+def _structure_cell_text(text: str) -> str:
+    """Rejoin a cell's visual line wraps; keep only the breaks between items.
+
+    A PDF cell's text comes line by line as the cell wrapped it. Sent like
+    that, the model cannot tell a wrap from a new item: it ran the milestone
+    sub-items 2.1.1 / 2.1.2 / 2.1.3 into one sentence, and a half sentence
+    cut off at a wrap ("70% of proportion of each site on delivery of" /
+    "complete equipment") was at times copied back in English. Each item
+    now reaches it as one whole line.
+    """
+    lines = [line.strip() for line in text.split("\n")]
+    lines = [line for line in lines if line]
+    if len(lines) < 2:
+        return text
+    out = [lines[0]]
+    for line in lines[1:]:
+        if _CELL_ITEM_START.match(line):
+            out.append(line)
+        elif _CJK_RE.search(out[-1][-1:]) or _CJK_RE.search(line[:1]):
+            out[-1] += line
+        else:
+            out[-1] += " " + line
+    return "\n".join(out)
 
 
 _ITEM_NUMBER_AT_LINE_START = re.compile(r"(?m)^[ \t]*(\d+(?:\.\d+)+\.?)(?=\s*\S)")
@@ -1332,6 +1366,7 @@ def _render_tables(
             spread_lines=False,
             fixed_cell_size=True,
             keep_unchanged=True,
+            keep_line_breaks=True,
         )
     return {
         "status": "patched" if len(good) == len(tables) else "partially_patched",
@@ -1372,7 +1407,7 @@ def _table_font_size(tables: list[Any], cell_translations: dict[str, str]) -> fl
         if cell.rect is None or not text.strip():
             return True
         rect = fitz.Rect(cell.rect)
-        normalised = pdf_table._normalise_render_text(text)
+        normalised = pdf_table._normalise_render_text(text, keep_line_breaks=True)
         fontfile = str(_table_cell_font(cell, normalised))
         font = pdf_table.cached_font(fontfile)
         pad = pdf_table._cell_fit_padding(rect, normalised, 2.0)
