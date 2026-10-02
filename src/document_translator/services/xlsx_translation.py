@@ -23,11 +23,13 @@ class XlsxTranslationOutcome:
 
 
 class XlsxTranslationService:
-    def __init__(self, provider: UnitTranslationProvider, *, max_attempts: int = 3) -> None:
+    def __init__(self, provider: UnitTranslationProvider, *, max_attempts: int = 3, cache=None) -> None:
         if max_attempts < 1:
             raise ValueError("max_attempts must be at least 1")
         self._provider = provider
         self._max_attempts = max_attempts
+        self._cache = cache
+        self.warnings: list[dict[str, object]] = []
 
     def translate_file(
         self,
@@ -72,17 +74,14 @@ class XlsxTranslationService:
     def _translate_units(self, units: tuple[TranslationUnit, ...]) -> tuple[TranslationResult, ...]:
         batch_translate = getattr(self._provider, "translate_batch", None)
         if callable(batch_translate) and getattr(self._provider, "supports_stable_batch", True):
+            from .batch_runner import settle, translate_units
+
             try:
-                results = tuple(batch_translate(list(units)))
+                raw = translate_units(self._provider, units, cache=self._cache)
             except Exception as error:
-                raise XlsxTranslationServiceError(f"Qwen-MT batch translation failed: {error}") from error
-            if len(results) != len(units):
-                raise XlsxTranslationServiceError("Qwen-MT batch translation count mismatch")
-            for unit, result in zip(units, results, strict=True):
-                errors = validate_result_for_unit(unit, result)
-                if errors:
-                    raise XlsxTranslationServiceError("Qwen-MT batch result is invalid: " + ", ".join(errors))
-            return results
+                raise XlsxTranslationServiceError(f"batch translation failed: {error}") from error
+            settled, self.warnings = settle(self._provider, units, raw)
+            return tuple(settled)
         return tuple(self._translate_and_validate(unit) for unit in units)
 
     def _translate_and_validate(self, unit: TranslationUnit) -> TranslationResult:

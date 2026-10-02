@@ -94,12 +94,14 @@ def build_cli_command(
             "--engine", "inplace", "--allow-complex-pdf", "--allow-cad-pdf",
             "--report", str(Path(destination).with_suffix(".report.json")),
         ))
-        if pdf_cache is not None:
-            args.extend(("--cache", str(pdf_cache)))
     elif suffix == ".docx":
         args.extend(("--comparison-report", str(Path(destination).with_suffix(".comparison.json"))))
     elif suffix == ".pptx":
         args.extend(("--layout-report", str(Path(destination).with_suffix(".layout.json"))))
+    # One cache for every format: rerunning a file, or a similar one, skips
+    # texts already translated. DWG has none.
+    if pdf_cache is not None and suffix != ".dwg":
+        args.extend(("--cache", str(pdf_cache)))
     return args
 
 

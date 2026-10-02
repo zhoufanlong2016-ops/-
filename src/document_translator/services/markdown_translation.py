@@ -119,8 +119,10 @@ class MarkdownTranslationService:
 
         batch_translate = getattr(self._provider, "translate_batch", None)
         if uncached and callable(batch_translate) and getattr(self._provider, "supports_stable_batch", True):
+            from .batch_runner import translate_units
+
             try:
-                batch_results = list(batch_translate(uncached))
+                batch_results = translate_units(self._provider, uncached)
             except Exception as error:
                 raise MarkdownTranslationServiceError(
                     f"{self._provider.provider_name} batch translation failed",

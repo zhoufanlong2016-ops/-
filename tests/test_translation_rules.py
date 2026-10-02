@@ -193,6 +193,18 @@ def test_six_production_result_boundaries_reject_name_loss(format_name):
         from document_translator.services.translation_gateway import _structured_answer_with_retry
         request = {"messages": [{"role": "user", "content": '## Here is the input:\n' + json.dumps([{"id": unit.id, "input": unit.source_text}])}], "response_format": {"type": "json_object"}}
         run = lambda: _structured_answer_with_retry(request, lambda body: json.dumps([{"id": unit.id, "output": "拉维路"}]))
+    if format_name in {"docx", "xlsx", "pptx"}:
+        # Kept and reported (like PDF) instead of discarding the whole document.
+        service = {"docx": "DocxTranslationService", "xlsx": "XlsxTranslationService", "pptx": "PptxTranslationService"}[format_name]
+        module = __import__(f"document_translator.services.{format_name}_translation", fromlist=[service])
+        instance = getattr(module, service)(provider)
+        if format_name == "pptx":
+            with pytest.raises(IndexError):  # the fake paragraph has no text node: reached the write step
+                instance._apply_batch([(None, [], unit)])
+        else:
+            instance._translate_units((unit,))
+        assert any("PROPER_NAME_MISSING" in error for warning in instance.warnings for error in warning["errors"])
+        return
     with pytest.raises((ValueError, RuntimeError), match="PROPER_NAME_MISSING"):
         run()
 

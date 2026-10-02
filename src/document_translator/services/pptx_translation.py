@@ -18,8 +18,10 @@ _A_T = f"{{{_A_NS}}}t"
 
 
 class PptxTranslationService:
-    def __init__(self, provider):
+    def __init__(self, provider, *, cache=None):
         self.provider = provider
+        self.cache = cache
+        self.warnings: list[dict[str, object]] = []
 
     @staticmethod
     def _should_translate(text: str, target_language: str) -> bool:
@@ -98,7 +100,12 @@ class PptxTranslationService:
 
     def _apply_batch(self, pending):
         units = [item[2] for item in pending]
-        results = self.provider.translate_batch(units) if hasattr(self.provider, "translate_batch") else [self.provider.translate_unit(u) for u in units]
+        if hasattr(self.provider, "translate_batch"):
+            from .batch_runner import settle, translate_units
+
+            results, self.warnings = settle(self.provider, units, translate_units(self.provider, units, cache=self.cache))
+        else:
+            results = [self.provider.translate_unit(u) for u in units]
         if len(results) != len(pending):
             raise ValueError("batch translation count mismatch")
         if any(not isinstance(result, TranslationResult) for result in results):
@@ -106,13 +113,10 @@ class PptxTranslationService:
         mapped = {result.unit_id: result for result in results}
         if len(mapped) != len(results) or set(mapped) != {unit.id for unit in units}:
             raise ValueError("batch translation ID mismatch or duplicate IDs")
-        # Validate the entire batch before changing any text or formatting.
+        # settle() has already retried and reported any unit that fails
+        # validation; only a missing translation stops the write.
         for unit in units:
-            result = mapped[unit.id]
-            errors = validate_result_for_unit(unit, result)
-            if errors:
-                raise ValueError("invalid batch translation: " + "; ".join(errors))
-            if not result.translation.strip():
+            if not mapped[unit.id].translation.strip():
                 raise ValueError("empty batch translation")
         for paragraph, nodes, _unit in pending:
             result = mapped[_unit.id]

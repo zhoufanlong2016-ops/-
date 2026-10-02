@@ -85,8 +85,15 @@ def test_pptx_invalid_result_leaves_entire_batch_xml_untouched(defect):
                 results[1] = last.model_copy(update={"translation": text, "result_hash": sha256_text(text)})
             return results
 
+    service = PptxTranslationService(Provider(""))
+    if defect in {"name", "protected"}:
+        # Content defects are kept and reported; the rest of the deck is written.
+        service._apply_batch(pending)
+        assert [w["object_id"] for w in service.warnings] == [pending[1][2].location.object_id]
+        assert pending[0][1][0].text == "译文（RAVI Rd.）"
+        return
     with pytest.raises(ValueError):
-        PptxTranslationService(Provider(""))._apply_batch(pending)
+        service._apply_batch(pending)
     assert [ET.tostring(p) for p, _, _ in pending] == before
 
 

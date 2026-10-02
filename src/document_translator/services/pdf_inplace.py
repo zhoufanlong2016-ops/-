@@ -609,7 +609,6 @@ def _translate_all(
     from concurrent.futures import ThreadPoolExecutor, as_completed
 
     from document_translator.pdf_worker import _pdf_runtime_limits
-    from document_translator.providers.batch_limits import split_semantic_batches
 
     def text_key(unit: TranslationUnit) -> tuple[str, tuple[str, ...]]:
         return unit.source_text, tuple(unit.protected_tokens)
@@ -641,12 +640,13 @@ def _translate_all(
             pending.append(unit)
 
     config = getattr(provider, "config", None)
+    from .batch_runner import plan_batches, worker_count
+
     batches: list[list[TranslationUnit]] = []
-    for packed in split_semantic_batches(
-        pending,
-        model=identity["model"],
-        explicit_limit=int(getattr(config, "batch_input_characters", 0) or 0),
-        overhead=64,
+    # plan_batches also splits a short document across the workers: packed
+    # into one request, a 3-page notice took 56 s on flash.
+    for packed in plan_batches(
+        pending, identity["model"], int(getattr(config, "batch_input_characters", 0) or 0), worker_count(),
     ):
         for offset in range(0, len(packed), _MAX_BATCH_ITEMS):
             if packed[offset : offset + _MAX_BATCH_ITEMS]:

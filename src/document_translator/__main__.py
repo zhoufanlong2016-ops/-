@@ -62,7 +62,7 @@ def _parser() -> argparse.ArgumentParser:
     translate.add_argument("--target-language", required=True)
     translate.add_argument(
         "--provider",
-        choices=("qwen-mt", "qwen", "openai"),
+        choices=("qwen-mt", "qwen", "openai", "deepseek"),
         default="qwen",
         help="translation provider (default: qwen)",
     )
@@ -80,7 +80,8 @@ def _parser() -> argparse.ArgumentParser:
     docx.add_argument("destination", type=Path, metavar="DESTINATION")
     docx.add_argument("--source-language", required=True)
     docx.add_argument("--target-language", required=True)
-    docx.add_argument("--provider", choices=("qwen-mt", "qwen", "openai"), default="qwen")
+    docx.add_argument("--provider", choices=("qwen-mt", "qwen", "openai", "deepseek"), default="qwen")
+    docx.add_argument("--cache", type=Path, metavar="PATH", help="SQLite translation cache shared by all formats")
     docx.add_argument("--model")
     docx.add_argument("--max-attempts", type=int, default=3, help="provider attempts per paragraph")
     docx.add_argument("--comparison-report", type=Path, metavar="PATH", help="write source/translation/hash audit JSON")
@@ -90,7 +91,8 @@ def _parser() -> argparse.ArgumentParser:
     pptx.add_argument("destination", type=Path)
     pptx.add_argument("--source-language", required=True)
     pptx.add_argument("--target-language", required=True)
-    pptx.add_argument("--provider", choices=("qwen-mt", "qwen", "openai"), default="qwen")
+    pptx.add_argument("--provider", choices=("qwen-mt", "qwen", "openai", "deepseek"), default="qwen")
+    pptx.add_argument("--cache", type=Path, metavar="PATH", help="SQLite translation cache shared by all formats")
     pptx.add_argument("--model", default="qwen3.8-flash")
     pptx.add_argument("--glossary", type=Path)
     pptx.add_argument("--layout-report", type=Path, metavar="PATH", help="write PowerPoint layout audit JSON")
@@ -101,7 +103,8 @@ def _parser() -> argparse.ArgumentParser:
     xlsx.add_argument("destination", type=Path, metavar="DESTINATION")
     xlsx.add_argument("--source-language", required=True)
     xlsx.add_argument("--target-language", required=True)
-    xlsx.add_argument("--provider", choices=("qwen-mt", "qwen", "openai"), default="qwen")
+    xlsx.add_argument("--provider", choices=("qwen-mt", "qwen", "openai", "deepseek"), default="qwen")
+    xlsx.add_argument("--cache", type=Path, metavar="PATH", help="SQLite translation cache shared by all formats")
     xlsx.add_argument("--model")
     xlsx.add_argument("--glossary", type=Path, metavar="PATH", help="local CSV/XLSX terminology file")
     xlsx.add_argument("--max-attempts", type=int, default=3, help="provider attempts per cell")
@@ -184,6 +187,19 @@ def _provider_for(args: argparse.Namespace, client: httpx.Client, glossary: Glos
             client=client,
             glossary=glossary,
         )
+    if args.provider == "deepseek":
+        return DeepSeekProvider(DeepSeekConfig(model=args.model or "deepseek-chat"), client=client, glossary=glossary)
+    raise ValueError(f"unsupported provider: {args.provider}")
+
+
+def _open_cache(args: argparse.Namespace) -> TranslationCache | None:
+    path = getattr(args, "cache", None)
+    return TranslationCache(path) if path is not None else None
+
+
+def _print_warnings(warnings: list[dict[str, object]]) -> None:
+    for warning in warnings:
+        print(f"warning: {warning['object_id']}: {'; '.join(map(str, warning['errors']))} (kept for review)", file=sys.stderr)
 
 
 
@@ -229,14 +245,21 @@ def _translate_markdown(args: argparse.Namespace) -> int:
 def _translate_docx(args: argparse.Namespace) -> int:
     if args.source.resolve() == args.destination.resolve():
         raise ValueError("source and destination paths must differ")
-    with httpx.Client() as client:
-        outcome = DocxTranslationService(
-            _provider_for(args, client, _glossary_for(args)), max_attempts=args.max_attempts,
-        ).translate_file(
-            args.source, args.destination,
-            source_language=args.source_language, target_language=args.target_language,
-        )
+    cache = _open_cache(args)
+    try:
+        with httpx.Client() as client:
+            service = DocxTranslationService(
+                _provider_for(args, client, _glossary_for(args)), max_attempts=args.max_attempts, cache=cache,
+            )
+            outcome = service.translate_file(
+                args.source, args.destination,
+                source_language=args.source_language, target_language=args.target_language,
+            )
+    finally:
+        if cache is not None:
+            cache.close()
     print(f"translated {len(outcome.units)} paragraphs; output={args.destination}")
+    _print_warnings(service.warnings)
     if args.comparison_report is not None:
         write_docx_comparison_report(args.comparison_report, outcome)
         print(f"comparison report={args.comparison_report}")
@@ -289,10 +312,15 @@ def _validate_output(args: argparse.Namespace) -> int:
 def _translate_pptx(args: argparse.Namespace) -> int:
     if args.source.resolve() == args.destination.resolve():
         raise ValueError("source and destination paths must differ")
-    with httpx.Client() as client:
-        count = PptxTranslationService(
-            _provider_for(args, client, _glossary_for(args)),
-        ).translate_file(args.source, args.destination, source_language=args.source_language, target_language=args.target_language)
+    cache = _open_cache(args)
+    try:
+        with httpx.Client() as client:
+            service = PptxTranslationService(_provider_for(args, client, _glossary_for(args)), cache=cache)
+            count = service.translate_file(args.source, args.destination, source_language=args.source_language, target_language=args.target_language)
+    finally:
+        if cache is not None:
+            cache.close()
+    _print_warnings(service.warnings)
     if args.skip_layout_fit:
         print(f"translated {count} PPTX text paragraphs; output={args.destination}; layout fitting skipped")
         return 0
@@ -306,16 +334,23 @@ def _translate_pptx(args: argparse.Namespace) -> int:
 def _translate_xlsx(args: argparse.Namespace) -> int:
     if args.source.resolve() == args.destination.resolve():
         raise ValueError("source and destination paths must differ")
-    with httpx.Client() as client:
-        outcome = XlsxTranslationService(
-            _provider_for(args, client, _glossary_for(args)), max_attempts=args.max_attempts,
-        ).translate_file(
-            args.source,
-            args.destination,
-            source_language=args.source_language,
-            target_language=args.target_language,
-            include_hidden_sheets=args.include_hidden_sheets,
-        )
+    cache = _open_cache(args)
+    try:
+        with httpx.Client() as client:
+            service = XlsxTranslationService(
+                _provider_for(args, client, _glossary_for(args)), max_attempts=args.max_attempts, cache=cache,
+            )
+            outcome = service.translate_file(
+                args.source,
+                args.destination,
+                source_language=args.source_language,
+                target_language=args.target_language,
+                include_hidden_sheets=args.include_hidden_sheets,
+            )
+    finally:
+        if cache is not None:
+            cache.close()
+    _print_warnings(service.warnings)
     print(
         f"translated {len(outcome.units)} XLSX text cells; "
         f"skipped={len(outcome.skipped)}; output={args.destination}",

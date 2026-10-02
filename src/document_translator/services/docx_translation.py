@@ -45,20 +45,17 @@ class DocxTranslationService:
         *,
         max_attempts: int = 3,
         max_segment_chars: int = 160,
-        max_batch_units: int = 80,
-        max_batch_chars: int = 12_000,
+        cache=None,
     ) -> None:
         if max_attempts < 1:
             raise ValueError("max_attempts must be at least 1")
         if max_segment_chars < 1:
             raise ValueError("max_segment_chars must be positive")
-        if max_batch_units < 1 or max_batch_chars < 1:
-            raise ValueError("batch limits must be positive")
         self._provider = provider
         self._max_attempts = max_attempts
         self._max_segment_chars = max_segment_chars
-        self._max_batch_units = max_batch_units
-        self._max_batch_chars = max_batch_chars
+        self._cache = cache
+        self.warnings: list[dict[str, object]] = []
 
     def translate_file(
         self,
@@ -90,68 +87,13 @@ class DocxTranslationService:
 
     def _translate_units(self, units: tuple[TranslationUnit, ...]) -> tuple[TranslationResult, ...]:
         batch_translate = getattr(self._provider, "translate_batch", None)
-        if (
-            self._provider.provider_name in {"qwen_mt", "qwen", "openai"}
-            and callable(batch_translate)
-            and getattr(self._provider, "supports_stable_batch", True)
-        ):
-            translated: list[TranslationResult] = []
-            for batch in self._batch_units(units):
-                last_error: Exception | None = None
-                results: tuple[TranslationResult, ...] = ()
-                for _ in range(self._max_attempts):
-                    try:
-                        results = tuple(batch_translate(list(batch)))
-                        last_error = None
-                        break
-                    except Exception as error:
-                        last_error = error
-                if last_error is not None:
-                    raise DocxTranslationServiceError(
-                        f"{self._provider.provider_name} batch translation failed"
-                    ) from last_error
-                if len(results) != len(batch):
-                    raise DocxTranslationServiceError(
-                        f"{self._provider.provider_name} batch translation count mismatch"
-                    )
-                normalized_results: list[TranslationResult] = []
-                for unit, result in zip(batch, results, strict=True):
-                    normalized = self._normalize_translation(result.translation)
-                    if normalized != result.translation:
-                        result = result.model_copy(
-                            update={"translation": normalized, "result_hash": sha256_text(normalized)}
-                        )
-                    errors = validate_result_for_unit(unit, result)
-                    if errors:
-                        raise DocxTranslationServiceError(
-                            f"{self._provider.provider_name} batch result is invalid: " + ", ".join(errors)
-                        )
-                    normalized_results.append(result)
-                translated.extend(normalized_results)
-            return tuple(translated)
+        if callable(batch_translate) and getattr(self._provider, "supports_stable_batch", True):
+            from .batch_runner import settle, translate_units
+
+            raw = translate_units(self._provider, units, cache=self._cache)
+            settled, self.warnings = settle(self._provider, units, raw, normalize=self._normalize_translation)
+            return tuple(settled)
         return tuple(self._translate_and_validate(unit) for unit in units)
-
-    def _batch_units(self, units: tuple[TranslationUnit, ...]) -> tuple[tuple[TranslationUnit, ...], ...]:
-        """Group complete paragraphs into bounded provider requests."""
-
-        batches: list[tuple[TranslationUnit, ...]] = []
-        current: list[TranslationUnit] = []
-        current_chars = 0
-        for unit in units:
-            unit_chars = len(unit.source_text)
-            would_exceed = current and (
-                len(current) >= self._max_batch_units
-                or current_chars + unit_chars > self._max_batch_chars
-            )
-            if would_exceed:
-                batches.append(tuple(current))
-                current = []
-                current_chars = 0
-            current.append(unit)
-            current_chars += unit_chars
-        if current:
-            batches.append(tuple(current))
-        return tuple(batches)
 
     @staticmethod
     def _quality_issues(results: tuple[TranslationResult, ...], target_language: str) -> tuple[str, ...]:
