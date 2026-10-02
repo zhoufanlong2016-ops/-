@@ -397,3 +397,15 @@ def test_page_footers_have_one_fixed_form():
     assert pdf_inplace._page_footer_translation(SimpleNamespace(source_text="Page 2 of 2", target_language="zh")) == "第 2 页，共 2 页"
     assert pdf_inplace._page_footer_translation(SimpleNamespace(source_text="第 1 页，共 2 页", target_language="en")) == "Page 1 of 2"
     assert pdf_inplace._page_footer_translation(SimpleNamespace(source_text="Page 2 of the report", target_language="zh")) is None
+
+
+def test_right_aligned_running_header_stays_one_paragraph():
+    line = lambda x0, y, text: pdf_inplace._VisualLine([pdf_inplace._Segment(text, (x0, y, 785.0, y + 11), [{"size": 10.0, "color": 0}])])
+    lines = [line(379.0, 38.0, "Lahore Wastewater Project (LWDMP) - Sewerage System from"), line(449.0, 51.0, "Larechs Colony to Gulshan E Ravi, Lahore")]
+    assert len(pdf_inplace._segment(1, lines, (72.0, 785.0))) == 1
+
+
+def test_numbered_item_with_hanging_indent_stays_one_paragraph():
+    line = lambda x0, y, text: pdf_inplace._VisualLine([pdf_inplace._Segment(text, (x0, y, 523.0, y + 13), [{"size": 11.0, "color": 0}])])
+    lines = [line(72.0, 402.0, "1. In partial modification to the above referred SPN"), line(90.0, 416.0, "Section 2 - (Tender Data Sheet) Page 2-9"), line(90.0, 430.0, "Documents; the Tender submission deadline")]
+    assert len(pdf_inplace._segment(1, lines, (72.0, 526.0))) == 1

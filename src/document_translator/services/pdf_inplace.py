@@ -397,7 +397,13 @@ def _continued_cells(tables: list[Any]) -> dict[str, Any]:
             continue
         for column, cell in carried.items():
             source = last.get(column)
-            if source is not None and not cell.is_empty and not source.is_empty and cell.rect is not None:
+            # Only a cell broken off mid-sentence ("...shall procure,") runs
+            # on; one ending a sentence is complete, and merged with the next
+            # list item ("b) ...") the model dropped a sentence of it.
+            if (
+                source is not None and not cell.is_empty and not source.is_empty and cell.rect is not None
+                and source.text.rstrip()[-1:] not in ".;:!?。；：！？"
+            ):
                 pairs[source.id] = cell
     return pairs
 
@@ -510,7 +516,16 @@ def _visual_lines(page: Any, table_rects: list[Any]) -> tuple[list[_VisualLine],
             centre = fitz.Point((box.x0 + box.x1) / 2, (box.y0 + box.y1) / 2)
             if any(rect.contains(centre) for rect in table_rects):
                 continue
-            segments.append(_Segment("".join(str(s.get("text", "")) for s in spans), tuple(box), spans))
+            # Blank spans are dropped above, so a space that was its own span
+            # ("before" + " " + bold "January 29") must come back from the gap.
+            text = str(spans[0].get("text", ""))
+            for prev, span in zip(spans, spans[1:]):
+                piece = str(span.get("text", ""))
+                gap = span["bbox"][0] - prev["bbox"][2]
+                if gap > 0.1 * float(span.get("size") or 10.0) and not text.endswith(" ") and not piece.startswith(" "):
+                    text += " "
+                text += piece
+            segments.append(_Segment(text, tuple(box), spans))
     lines: list[_VisualLine] = []
     for segment in sorted(segments, key=lambda s: (s.bbox[1], s.bbox[0])):
         for line in lines:
@@ -613,10 +628,19 @@ def _segment(
                 or min(line.bbox[2], previous.bbox[2]) - max(line.bbox[0], previous.bbox[0]) <= 0
             )
             if not new and not centred:
-                new = (
-                    line.bbox[0] - left > 0.8 * size  # first-line indent
-                    or right - previous.bbox[2] > 1.5 * size  # previous line ended early
-                )
+                indented = line.bbox[0] - left > 0.8 * size  # first-line indent
+                # A numbered item's continuation lines hang under its text
+                # ("1. In partial..." / "   Section 2..."), they do not
+                # start new paragraphs.
+                first = current[0]
+                if indented and _LABEL_RE.match(first.text) and first.bbox[0] < line.bbox[0] <= first.bbox[0] + 4.0 * size:
+                    hang = current[1].bbox[0] if len(current) > 1 else line.bbox[0]
+                    indented = abs(line.bbox[0] - hang) > 1.5
+                # A right-aligned block (a running header) has ragged left
+                # edges; split, its first line came back as "从...的污水系统".
+                if indented and previous.bbox[0] - left > 0.8 * size and abs(line.bbox[2] - previous.bbox[2]) <= 2.0:
+                    indented = False
+                new = indented or right - previous.bbox[2] > 1.5 * size  # previous line ended early
             if new:
                 paragraphs.append(_Paragraph(page_number, current, current_centred))
                 current = []
@@ -1146,46 +1170,54 @@ def _rule_drawings(page: Any) -> list[tuple[Any, tuple[float, ...] | None, float
 
 
 def _refit_underline(page: Any, paragraph: _Paragraph, text: str, size: float, box: Any, rules: list) -> None:
-    """Shorten (or lengthen) a heading's underline to the translated text.
+    """Fit the underlines under a rewritten paragraph to its new text.
 
-    The rule was drawn for the English line; under a shorter Chinese title it
-    ran on well past the text. Only a single written line is refitted.
+    A heading's single underline is redrawn at the translated line's width
+    (under a shorter Chinese title it ran on well past the text). Underlines
+    of a few words inside running text ("January 29, 2026 (Thursday)") no
+    longer mark anything once the text reflows, and were left crossing the
+    new lines: those are removed.
     """
     import fitz
 
     from .pdf_table import cached_font
 
+    def under_line(line: _VisualLine) -> list:
+        x0, _, x1, y1 = line.bbox
+        return [
+            rule for rule in rules
+            if y1 - 0.4 * line.size <= rule[0].y0 <= y1 + 0.6 * line.size
+            and rule[0].x0 >= x0 - 2.0 and rule[0].x1 <= x1 + 2.0
+        ]
+
+    def remove(rule_rects: list) -> None:
+        # Only line art fully inside each box goes, never text.
+        for rect in rule_rects:
+            page.add_redact_annot(fitz.Rect(rect.x0 - 0.5, rect.y0 - 0.5, rect.x1 + 0.5, rect.y1 + 0.5), fill=False)
+        if rule_rects:
+            page.apply_redactions(images=0, graphics=1, text=1)
+
     line = paragraph.lines[-1]
-    x0, _, x1, y1 = line.bbox
-    width = x1 - x0
-    under = [
-        rule for rule in rules
-        if y1 - 0.4 * line.size <= rule[0].y0 <= y1 + 0.6 * line.size
-        and min(x1, rule[0].x1) - max(x0, rule[0].x0) >= 0.8 * width
-        # an underline, not a full-width separator rule below a short line
-        and rule[0].width <= 1.25 * width + 2.0
-    ]
-    if len(under) != 1:
-        return
-    content, fontfile, _, align = _layout(page, paragraph, text, size, paragraph.bounds, box.width)
-    if "\n" in content.strip():
-        return
-    text_width = cached_font(fontfile).text_length(content, fontsize=size)
-    if text_width > box.width:
-        return
-    if align == 1:
-        centre = (box.x0 + box.x1) / 2
-        left, right = centre - text_width / 2, centre + text_width / 2
-    elif align == 2:
-        left, right = box.x1 - text_width, box.x1
-    else:
-        left, right = box.x0, box.x0 + text_width
-    rect, color, thickness = under[0]
-    # Remove only that rule (line art fully inside the box), never text.
-    page.add_redact_annot(fitz.Rect(rect.x0 - 0.5, rect.y0 - 0.5, rect.x1 + 0.5, rect.y1 + 0.5), fill=False)
-    page.apply_redactions(images=0, graphics=1, text=1)
-    y = (rect.y0 + rect.y1) / 2
-    page.draw_line((left, y), (right, y), color=color or (0, 0, 0), width=thickness)
+    width = line.bbox[2] - line.bbox[0]
+    heading = [rule for rule in under_line(line) if rule[0].width >= 0.8 * width]
+    if len(paragraph.lines) == 1 and len(heading) == 1:
+        content, fontfile, _, align = _layout(page, paragraph, text, size, paragraph.bounds, box.width)
+        text_width = cached_font(fontfile).text_length(content, fontsize=size)
+        if "\n" not in content.strip() and text_width <= box.width:
+            if align == 1:
+                centre = (box.x0 + box.x1) / 2
+                left, right = centre - text_width / 2, centre + text_width / 2
+            elif align == 2:
+                left, right = box.x1 - text_width, box.x1
+            else:
+                left, right = box.x0, box.x0 + text_width
+            rect, color, thickness = heading[0]
+            remove([rect])
+            y = (rect.y0 + rect.y1) / 2
+            page.draw_line((left, y), (right, y), color=color or (0, 0, 0), width=thickness)
+            return
+    inline = [rule[0] for each in paragraph.lines for rule in under_line(each) if rule[0].width < 0.8 * (each.bbox[2] - each.bbox[0])]
+    remove(inline)
 
 
 def _fits(region: Any, text: str, fontfile: str, alias: str, size: float, align: int) -> bool:

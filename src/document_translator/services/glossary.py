@@ -81,34 +81,28 @@ class Glossary:
         return cls(entries=entries, version=version)
 
     def entries_for(self, source_text: str) -> tuple[GlossaryEntry, ...]:
-        """Return matched terms, tolerating ordinary English punctuation/number variants."""
-        normalized_text = _normalize_term_text(source_text)
-        folded_text = normalized_text.casefold()
-        matches = []
-        for entry in self.entries:
+        """Return matched terms, tolerating ordinary English punctuation/number variants.
+
+        Longer terms are matched first and the text they cover is set aside:
+        "Sr. No." (序号) must not also demand the shorter "No." (编号), just as
+        污水管 inside 污水管道 is not a second requirement.
+        """
+        remaining = _normalize_term_text(source_text)
+        candidates = sorted(self.entries, key=lambda entry: (-len(entry.source), entry.source))
+        selected: list[GlossaryEntry] = []
+        for entry in candidates:
             normalized_source = _normalize_term_text(entry.source)
             if not normalized_source:
                 continue
             # A multi-word term matches in any case ("Ultimate disposal
             # station" in running text); a short one such as "No." does not,
             # or every sentence ending in "no." would demand "编号".
-            text, term = (folded_text, normalized_source.casefold()) if case_insensitive_term(entry.source) else (normalized_text, normalized_source)
-            if term in text or (not term.endswith("s") and f"{term}s" in text):
-                matches.append(entry)
-        ordered = sorted(matches, key=lambda entry: (-len(entry.source), entry.source))
-        # For CJK terms, a shorter entry embedded in a longer matched term is
-        # normally a substring artifact (污水管 inside 污水管道), not a second
-        # translation requirement. Keep established nested behavior for
-        # English glossaries while selecting the longest Chinese phrase.
-        selected: list[GlossaryEntry] = []
-        for entry in ordered:
-            if _contains_cjk(entry.source) and any(
-                _contains_cjk(longer.source)
-                and _normalize_term_text(entry.source) in _normalize_term_text(longer.source)
-                for longer in selected
-            ):
-                continue
-            selected.append(entry)
+            flags = re.IGNORECASE if case_insensitive_term(entry.source) else 0
+            plural = "" if normalized_source.endswith("s") else "s?"
+            pattern = re.compile(re.escape(normalized_source) + plural, flags)
+            if pattern.search(remaining):
+                selected.append(entry)
+                remaining = pattern.sub("\x00", remaining)
         return tuple(selected)
 
 

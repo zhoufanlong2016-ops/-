@@ -1582,17 +1582,30 @@ def _source_cell_alignment(source_page: Any, cell: Any) -> tuple[int, bool]:
 
     cell_rect = fitz.Rect(cell.rect)
     text_rect = fitz.Rect()
+    line_rects = []
     for block in source_page.get_text("dict", clip=cell_rect).get("blocks", ()):
         for line in block.get("lines", ()) if block.get("type") == 0 else ():
+            line_rect = fitz.Rect()
             for span in line.get("spans", ()):
                 box = fitz.Rect(span["bbox"])
                 if span.get("text", "").strip() and cell_rect.contains(fitz.Point((box.x0 + box.x1) / 2, (box.y0 + box.y1) / 2)):
                     text_rect |= box
+                    line_rect |= box
+            if not line_rect.is_empty:
+                line_rects.append(line_rect)
     if text_rect.is_empty:
         return 0, False
+    tolerance = max(3.0, cell_rect.width * 0.08)
+    centre_x = (cell_rect.x0 + cell_rect.x1) / 2
     centred = (
-        abs((text_rect.x0 + text_rect.x1) / 2 - (cell_rect.x0 + cell_rect.x1) / 2) <= max(3.0, cell_rect.width * 0.08)
+        abs((text_rect.x0 + text_rect.x1) / 2 - centre_x) <= tolerance
         and text_rect.width <= cell_rect.width * 0.85
+    ) or (
+        # A title block of centred lines of different lengths: its widest
+        # line may fill the cell, but every line sits on the cell's centre.
+        len(line_rects) >= 2
+        and all(abs((r.x0 + r.x1) / 2 - centre_x) <= tolerance for r in line_rects)
+        and min(r.width for r in line_rects) <= cell_rect.width * 0.85
     )
     middle = (
         abs((text_rect.y0 + text_rect.y1) / 2 - (cell_rect.y0 + cell_rect.y1) / 2) <= max(3.0, cell_rect.height * 0.15)

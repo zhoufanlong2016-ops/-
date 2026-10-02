@@ -427,6 +427,8 @@ def localize_chinese_dates(text: str, source_language: str, target_language: str
     the English dates it inserted, which the caller protects so the model
     must keep them verbatim. Only applies to Chinese-to-English units.
     """
+    if source_language.lower().startswith("en") and target_language.lower().startswith("zh"):
+        return _localize_english_dates(text)
     if not source_language.lower().startswith("zh") or not target_language.lower().startswith("en"):
         return text, []
     dates: list[str] = []
@@ -457,6 +459,42 @@ def localize_chinese_dates(text: str, source_language: str, target_language: str
     text = _CN_FULL_DATE_RE.sub(full, text)
     text = _CN_YEAR_MONTH_RE.sub(year_month, text)
     text = _CN_MONTH_DAY_RE.sub(month_day, text)
+    return text, dates
+
+
+_EN_MONTH_PATTERN = (
+    r"(?P<month>Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|June?|July?|Aug(?:ust)?|"
+    r"Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\.?"
+)
+_EN_MONTH_DAY_YEAR_RE = re.compile(
+    r"\b" + _EN_MONTH_PATTERN + r"\s+(?P<day>\d{1,2})(?:st|nd|rd|th)?,?\s+(?P<year>\d{4})\b", re.I
+)
+_EN_DAY_MONTH_YEAR_RE = re.compile(
+    r"\b(?P<day>\d{1,2})(?:st|nd|rd|th)?\s+(?:of\s+)?" + _EN_MONTH_PATTERN + r",?\s+(?P<year>\d{4})\b", re.I
+)
+
+
+def _localize_english_dates(text: str) -> tuple[str, list[str]]:
+    """English full dates -> their one Chinese form, decided here, not by the model.
+
+    With the day and year protected as opaque placeholders the model could
+    not tell them apart: "January 29, 2026" came back as "2026年29月"
+    (January dropped, the day used as the month).
+    """
+    dates: list[str] = []
+
+    def emit(match: re.Match[str]) -> str:
+        month = next(i for i, name in enumerate(_EN_MONTH_NAMES, start=1) if name.lower().startswith(match.group("month").lower()[:3]))
+        day, year = int(match.group("day")), int(match.group("year"))
+        if not 1 <= day <= 31:
+            return match.group(0)
+        value = f"{year}年{month}月{day}日"
+        if value not in dates:
+            dates.append(value)
+        return value
+
+    text = _EN_MONTH_DAY_YEAR_RE.sub(emit, text)
+    text = _EN_DAY_MONTH_YEAR_RE.sub(emit, text)
     return text, dates
 
 
@@ -494,7 +532,16 @@ def protect_for_translation(text: str, tokens: Iterable[str]) -> ProtectedText:
     if not values:
         return ProtectedText(text, ())
     values = sorted(set(values), key=len, reverse=True)
-    pattern = re.compile("|".join(re.escape(token) for token in values))
+
+    def bounded(token: str) -> str:
+        # Whole tokens only, as validation counts them: the "2" of
+        # "Gulberg 2" also matched inside "29th January", the model dropped
+        # that marker, and the date came out as 1月9日.
+        before = r"(?<![A-Za-z0-9])" if token[:1].isalnum() else ""
+        after = r"(?![A-Za-z0-9])" if token[-1:].isalnum() else ""
+        return before + re.escape(token) + after
+
+    pattern = re.compile("|".join(bounded(token) for token in values))
     replacements: list[tuple[str, str]] = []
 
     def replace(match: re.Match[str]) -> str:

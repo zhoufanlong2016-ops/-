@@ -67,12 +67,34 @@ def validate_result_for_unit(unit: TranslationUnit, result: TranslationResult) -
     # writing blank content into the document.
     if unit.source_text.strip() and not result.translation.strip():
         errors.append("EMPTY_TRANSLATION: provider returned blank text for non-blank source")
+    incomplete = _incomplete_translation(unit, result.translation)
+    if incomplete:
+        errors.append(incomplete)
     errors.extend(validate_placeholders(unit.source_text, result.translation, unit.protected_tokens))
     errors.extend(validate_name_retention(unit.source_text, result.translation, unit.source_language, unit.target_language))
     errors.extend(validate_translation_residue(unit.source_text, result.translation, unit.source_language, unit.target_language))
     if unit.target_language.lower().startswith("en") and _LITERAL_DATE_RE.search(result.translation):
         errors.append("LITERAL_DATE: 年/月/日 rendered word for word instead of as an English date")
     return errors
+
+
+def _incomplete_translation(unit: TranslationUnit, translation: str) -> str | None:
+    """Flag a translation far too short for its source.
+
+    Nothing caught a model translating only part of a unit: a 600-character
+    table cell (two list items) came back as one 85-character sentence. A
+    complete English-to-Chinese translation runs a quarter to a third of the
+    source's length (0.23-0.3 measured on the tender documents), Chinese-to-English two to three times; well below that, text
+    is missing.
+    """
+    source, target = unit.source_language.lower(), unit.target_language.lower()
+    length = len(unit.source_text.strip())
+    produced = len(translation.strip())
+    if source.startswith("en") and target.startswith("zh") and length >= 150 and produced < 0.17 * length:
+        return f"TRANSLATION_INCOMPLETE: {produced} characters for a {length}-character source"
+    if source.startswith("zh") and target.startswith("en") and length >= 60 and produced < 1.0 * length:
+        return f"TRANSLATION_INCOMPLETE: {produced} characters for a {length}-character source"
+    return None
 
 
 # "12 Month, Day 5, 2024" -- a Chinese date translated character by

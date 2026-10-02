@@ -106,3 +106,12 @@ def test_list_label_before_latin_word_is_counted_in_source():
     source = "1. Kindly refer to Section 6"
     assert validate_placeholders(source, "1. 请参阅第6节", ["1. "]) == []
     assert validate_placeholders(source, "请参阅第6节", ["1. "])
+
+
+def test_far_too_short_translation_is_flagged_incomplete():
+    from document_translator.core.validation import _incomplete_translation
+    from types import SimpleNamespace
+
+    unit = SimpleNamespace(source_language="en", target_language="zh", source_text="x" * 600)
+    assert _incomplete_translation(unit, "译" * 85)
+    assert _incomplete_translation(unit, "译" * 150) is None

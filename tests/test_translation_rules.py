@@ -304,3 +304,19 @@ def test_value_written_inside_marker_brackets_is_restored_as_the_value():
 
     protected = protect_for_translation("福设院〔2024〕54号", ["2024", "54"])
     assert restore_after_translation("Fusheyuan [[2024]] No. [[54]]", protected) == "Fusheyuan 2024 No. 54"
+
+
+def test_short_number_token_is_not_masked_inside_a_longer_number():
+    from document_translator.translation_rules import protect_for_translation, rule_protected_tokens
+
+    text = "Gulberg 2, Lahore. Date: 29th January 2026"
+    protected = protect_for_translation(text, rule_protected_tokens(text))
+    assert "29th January" in protected.text
+
+
+def test_english_full_dates_are_localised_before_translation():
+    from document_translator.translation_rules import localize_chinese_dates
+
+    text, dates = localize_chinese_dates("extended to January 29, 2026 (Thursday); opening on 15th January 2026", "en", "zh")
+    assert text == "extended to 2026年1月29日 (Thursday); opening on 2026年1月15日"
+    assert dates == ["2026年1月29日", "2026年1月15日"]

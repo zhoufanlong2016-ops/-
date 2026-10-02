@@ -99,7 +99,9 @@ def test_xlsx_loading_from_standard_library_zip_fixture(tmp_path):
 
     glossary = Glossary.load(path)
 
-    assert [(entry.source, entry.target) for entry in glossary.entries_for("sewer pipe")] == [("sewer pipe", "污水管道"), ("sewer", "污水管")]
+    # A shorter term inside a matched longer one is not a second requirement.
+    assert [(entry.source, entry.target) for entry in glossary.entries_for("sewer pipe")] == [("sewer pipe", "污水管道")]
+    assert [(entry.source, entry.target) for entry in glossary.entries_for("sewer pipe and sewer")] == [("sewer pipe", "污水管道"), ("sewer", "污水管")]
 
 
 def test_suffix_and_version_behavior(tmp_path):
