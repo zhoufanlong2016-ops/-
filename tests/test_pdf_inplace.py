@@ -523,6 +523,7 @@ def test_characters_a_font_lacks_become_their_standard_form():
     assert pdf_inplace._with_font_glyphs("面积为404km²", simhei) == "面积为404km2"
     assert pdf_inplace._with_font_glyphs("• 中央排水渠", simhei) == "· 中央排水渠"
     assert pdf_inplace._with_font_glyphs("PP-142，PP-147", arial) == "PP-142,PP-147"
+    assert pdf_inplace._with_font_glyphs("PP-142、PP-147", arial) == "PP-142, PP-147"
     assert pdf_inplace._with_font_glyphs("404km²", arial) == "404km²"  # Arial has it
 
 

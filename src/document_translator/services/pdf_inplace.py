@@ -1606,6 +1606,14 @@ def _layout(
     return content, fontfile, _font_alias(fontfile), align
 
 
+# Chinese punctuation with no compatibility form, for a font without it
+# ("PP-142、PP-147" in Arial showed a box).
+_PUNCTUATION_FALLBACK = {
+    "•": "·", "、": ", ", "。": ". ", "《": "“", "》": "”", "「": "“", "」": "”",
+    "『": "‘", "』": "’", "【": "[", "】": "]", "〔": "[", "〕": "]", "…": "...", "—": "-",
+}
+
+
 def _with_font_glyphs(text: str, font: Any) -> str:
     """A character the font cannot draw becomes its standard equivalent.
 
@@ -1621,7 +1629,7 @@ def _with_font_glyphs(text: str, font: Any) -> str:
         if char.isspace() or font.has_glyph(ord(char)):
             result.append(char)
             continue
-        alternative = "·" if char == "•" else unicodedata.normalize("NFKC", char)
+        alternative = _PUNCTUATION_FALLBACK.get(char) or unicodedata.normalize("NFKC", char)
         drawable = alternative and alternative != char and all(font.has_glyph(ord(c)) for c in alternative)
         result.append(alternative if drawable else char)
     return "".join(result)
@@ -1844,6 +1852,13 @@ def _render_tables(
             c.id: ("" if c.is_empty else (cell_translations.get(c.id) or c.text))
             for t in sized for c in t.cells
         }
+        # A character the cell's font cannot draw, as in paragraphs; a cell
+        # left as the source has it is not touched.
+        for t in sized:
+            for c in t.cells:
+                text = mapping[c.id]
+                if text and text != c.text:
+                    mapping[c.id] = _with_font_glyphs(text, pdf_table.cached_font(str(_table_cell_font(c, text))))
         sizes = [float(page["font_size"]) for page in pages.values()]
         sizes += [float(v) for page in pages.values() for v in dict(page.get("smaller_cells", {})).values()]
         # Every table page in one pass: each cell keeps its page's size
