@@ -723,3 +723,41 @@ def test_a_page_stored_rotated_is_translated(tmp_path):
                                     target_language="zh", profile=None)
     assert "资本成本估算" in fitz.open(candidate)[0].get_text(), report
     assert not (tmp_path / "out.upright.pdf").exists()
+
+
+def test_a_value_starting_at_a_column_edge_is_its_own_piece():
+    doc = fitz.open()
+    page = doc.new_page(width=595, height=842)
+    page.insert_text((74, 100), "Weight (Battery & Propellers", fontsize=10)
+    page.insert_text((240, 100), "1388 g", fontsize=10)
+    for y in (140, 160, 180):  # the value column other rows start at
+        page.insert_text((240, y), "S-mode: 6 m/s", fontsize=10)
+    lines, _ = pdf_inplace._visual_lines(page, [])
+    assert "1388 g" in [line.text for line in lines]
+
+
+def test_key_value_lines_are_separate_entries():
+    doc = fitz.open()
+    page = doc.new_page(width=595, height=842)
+    page.insert_text((252, 100), "S-mode: 6 m/s", fontsize=10)
+    page.insert_text((252, 114), "P-mode: 5 m/s", fontsize=10)
+    lines, _ = pdf_inplace._visual_lines(page, [])
+    assert len(pdf_inplace._segment(1, lines, (252.0, lines[0].bbox[2] + 1))) == 2
+
+
+def test_a_dated_entry_keeps_its_hanging_continuation():
+    doc = fitz.open()
+    page = doc.new_page(width=595, height=842)
+    page.insert_text((95, 100), "May 17, 2024: Two surveyors were deployed to undertake the bathymetric survey", fontsize=11)
+    text_start = 95 + fitz.get_text_length("May 17, 2024: ", fontsize=11)
+    page.insert_text((text_start + 3, 116), "work.", fontsize=11)
+    page.insert_text((95, 132), "May 20, 2024: Establishment of Ground Control Points.", fontsize=11)
+    lines, _ = pdf_inplace._visual_lines(page, [])
+    right = lines[0].bbox[2] + 1
+    assert [len(p.lines) for p in pdf_inplace._segment(1, lines, (95.0, right))] == [2, 1]
+
+
+def test_contents_entries_keep_title_and_page_number():
+    match = pdf_inplace._TOC_ENTRY_RE.match("4. Reference Datum ..................................... 6")
+    assert match and (match.group("title"), match.group("page")) == ("4. Reference Datum", "6")
+    assert pdf_inplace._TOC_ENTRY_RE.match("The total length is 1.5 km") is None

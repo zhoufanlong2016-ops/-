@@ -155,6 +155,9 @@ class _Paragraph:
     left_anchored: bool = False
     # The CJK face for this page, chosen before anything is written on it.
     cjk_font: str | None = None
+    # A contents entry's page number: the title is translated, the dot
+    # leader and number are set again to end where they did.
+    toc_page: str | None = None
 
     @property
     def bbox(self) -> tuple[float, float, float, float]:
@@ -353,9 +356,14 @@ def _translate_in_place(
     # came back as two separate (and wrong) translations.
     across = _across_pages(translatable, page_heights)
     tails = set(across.values())
+    for paragraph in translatable:
+        entry = _TOC_ENTRY_RE.match(paragraph.text) if len(paragraph.lines) == 1 else None
+        if entry:
+            paragraph.toc_page = entry.group("page")
     paragraph_units = [
         _unit(
-            p.text + (" " + translatable[across[index]].text if index in across else ""),
+            (_TOC_ENTRY_RE.match(p.text).group("title") if p.toc_page else p.text)
+            + (" " + translatable[across[index]].text if index in across else ""),
             f"page:{p.page_number}", f"para:{index}", "paragraph", source_hash, source_language, target_language,
         )
         for index, p in enumerate(translatable)
@@ -776,6 +784,12 @@ def _visual_lines(page: Any, table_rects: list[Any]) -> tuple[list[_VisualLine],
     from .pdf_table import _visible_rules
 
     vertical_rules = _visible_rules(page)[0]
+    # Column edges: where several pieces of text on the page start. A piece
+    # starting there is a column of its own ("1388 g" beside "Weight
+    # (Battery & Propellers"), even when the gap before it is small.
+    from collections import Counter
+
+    starts = Counter(round(segment.bbox[0]) for segment in segments)
     lines: list[_VisualLine] = []
     for segment in sorted(segments, key=lambda s: (s.bbox[1], s.bbox[0])):
         for line in lines:
@@ -794,6 +808,15 @@ def _visual_lines(page: Any, table_rects: list[Any]) -> tuple[list[_VisualLine],
             )
             middle = (segment.bbox[1] + segment.bbox[3]) / 2
             rule_between = any(between[0] <= x <= between[1] and y0 <= middle <= y1 for x, y0, y1 in vertical_rules)
+            left_text = " ".join(other.text for other in line.segments).strip()
+            column_start = (
+                segment.bbox[0] > lx1 and gap > 0.5 * size
+                # a list label ("1.", "viii.") belongs with its text
+                and not _LIST_LABEL_RE.match(left_text) and not _LABEL_RE.match(left_text)
+                and not re.fullmatch(r"\d+(?:\.\d+)*\.?", left_text)  # section number "4.1"
+                and sum(count for x, count in starts.items() if abs(x - segment.bbox[0]) <= 1.5) >= 4
+            )
+            rule_between = rule_between or column_start
             if height > 0 and overlap >= 0.6 * height and gap <= 3.0 * size and not marker_between and not rule_between:
                 line.segments.append(segment)
                 break
@@ -931,6 +954,13 @@ def _segment(
                 # justified items read as one paragraph and two items were
                 # translated as one sentence.
                 or line.bulleted
+                # a contents entry ends at its page number; a list label
+                # starts the next item ("i." / "ii." right-aligned)
+                or _TOC_ENTRY_RE.match(previous.text) is not None
+                or (_label_text_start(line) is not None and not hanging)
+                # "S-mode: 6 m/s" / "P-mode: 5 m/s": entries of a list of
+                # key: value lines, one per line.
+                or (_KEY_VALUE_RE.match(line.text) is not None and _KEY_VALUE_RE.match(previous.text) is not None)
                 # Space before a paragraph: the gap to this line is wider
                 # than the paragraph's own line pitch (16.8pt after lines
                 # 13.8pt apart).
@@ -1028,6 +1058,9 @@ def _label_text_start(first: _VisualLine) -> float | None:
     return None
 
 
+_KEY_VALUE_RE = re.compile(r"^[A-Za-z][\w./()-]{0,20}(?: [\w./(),-]{1,20}){0,3}: \S")
+
+
 def _closes_open_bracket(current: list[_VisualLine], line: _VisualLine) -> bool:
     text = " ".join(item.text for item in current)
     opened = text.count("(") + text.count("（") - text.count(")") - text.count("）")
@@ -1038,13 +1071,34 @@ def _closes_open_bracket(current: list[_VisualLine], line: _VisualLine) -> bool:
 
 
 def _continues_hanging_item(first: _VisualLine, line: _VisualLine) -> bool:
-    """``line`` starts where the text of ``first`` does, after its label."""
-    text_start = _label_text_start(first)
-    return (
-        text_start is not None
-        and abs(line.bbox[0] - text_start) <= 1.5
+    """``line`` starts where the text of ``first`` does, after its label or
+    its lead-in ("May 17, 2024: Two surveyors ..." / "work.")."""
+    # A lead-in's text is followed by a tab stop the next lines hang at,
+    # a few points from where this line's text happened to start.
+    return any(
+        start is not None
+        and abs(line.bbox[0] - start) <= tolerance
         and line.bbox[0] > first.bbox[0] + 0.8 * first.size
+        for start, tolerance in ((_label_text_start(first), 1.5), (_lead_in_text_start(first), max(1.5, 0.5 * first.size)))
     )
+
+
+def _lead_in_text_start(first: _VisualLine) -> float | None:
+    """Where the text starts after a short lead-in ending in a colon."""
+    if not _KEY_VALUE_RE.match(first.text):
+        return None
+    chars = sorted(
+        (char for span in first.spans for char in span.get("chars", ())),
+        key=lambda char: char["bbox"][0],
+    )
+    after_colon = False
+    for char in chars:
+        value = str(char.get("c", ""))
+        if after_colon and value.strip():
+            return char["bbox"][0]
+        if value == ":":
+            after_colon = True
+    return None
 
 
 def _needs_translation(text: str, source_language: str) -> bool:
@@ -1390,9 +1444,18 @@ def _render_paragraphs(
         for paragraph, text, region in page_plans:
             if not text:
                 continue  # its text now ends on the previous page
+            if paragraph.toc_page is not None:
+                _insert_toc_entry(page, paragraph, text, group_size[_style_key(paragraph)])
+                continue
             hanging = _hanging_label(paragraph, text)
             if hanging is not None:
                 label, text, text_start = hanging
+                # A translated lead-in may be wider than the source's.
+                from .pdf_table import cached_font
+
+                label_font = paragraph.cjk_font if (_CJK_RE.search(label) and paragraph.cjk_font) else _latin_font(paragraph.lines[0].font, paragraph.size, page)
+                label_end = paragraph.lines[0].bbox[0] + cached_font(label_font).text_length(label, fontsize=group_size[_style_key(paragraph)])
+                text_start = max(text_start, label_end + 0.25 * paragraph.size)
                 region = fitz.Rect(text_start, region.y0, region.x1, region.y1)
             size, written_box = _insert(page, paragraph, text, region, group_size[_style_key(paragraph)], paragraph.bounds)
             if hanging is not None:
@@ -1407,6 +1470,53 @@ def _render_paragraphs(
     }
 
 
+# "4. Reference Datum ........ 6": a title, a dot leader and a page number.
+_TOC_ENTRY_RE = re.compile(r"^(?P<title>.*?\S)\s*(?:[.·…]\s?){4,}\s*(?P<page>\d{1,4})\s*$")
+
+
+def _insert_toc_entry(page: Any, paragraph: _Paragraph, title: str, size: float) -> None:
+    """Translated title, then dots up to the page number, which ends where
+    the source's did (the dots, sent to translation and reflowed, put the
+    numbers anywhere and wrapped entries onto two lines)."""
+    import fitz
+
+    from .pdf_table import cached_font
+
+    first = paragraph.lines[0]
+    title = re.sub(r"\s*(?:[.·…]\s?){3,}\s*\d{0,4}\s*$", "", title.strip())
+    label_start = _label_text_start(first)
+    label = ""
+    if label_start is not None:
+        label = "".join(
+            str(char.get("c", "")) for span in first.spans for char in span.get("chars", ())
+            if char["bbox"][2] <= label_start + 0.5
+        ).strip()
+        if title.startswith(label):
+            title = title[len(label):].strip()
+        else:
+            label, label_start = "", None
+    fontfile = paragraph.cjk_font if (_CJK_RE.search(title) and paragraph.cjk_font) else _latin_font(first.font, size, page)
+    title = _with_font_glyphs(title, cached_font(fontfile))
+    number = paragraph.toc_page or ""
+    x0, right = (label_start if label_start is not None else first.bbox[0]), first.bbox[2]
+    font = cached_font(fontfile)
+    while True:
+        dots = right - x0 - font.text_length(f"{title}  {number}", fontsize=size)
+        count = int(dots / max(font.text_length(".", fontsize=size), 0.1))
+        if count >= 3 or size <= 0.6 * paragraph.size:
+            break
+        size = round(size - _FONT_STEP, 2)
+    content = f"{title} {'.' * max(count, 3)} "
+    color = _rgb(first.color)
+    bold = {"render_mode": 2, "fill": color, "border_width": 0.04} if (_is_bold(paragraph) and fontfile == paragraph.cjk_font) else {}
+    alias = _font_alias(fontfile)
+    if label:
+        _insert_label(page, paragraph, label, size, fitz.Rect(first.bbox))
+    page.insert_text((x0, first.baseline), content, fontsize=size, fontfile=fontfile, fontname=alias, color=color, overlay=True, **bold)
+    number_x = right - font.text_length(number, fontsize=size)
+    page.insert_text((number_x, first.baseline), number, fontsize=size, fontfile=fontfile, fontname=alias, color=color, overlay=True, **bold)
+
+
 def _hanging_label(paragraph: _Paragraph, text: str) -> tuple[str, str, float] | None:
     """(label, rest of the text, x where the text starts) for a numbered
     item whose wrapped lines hang under its text ("3. Updated working on
@@ -1415,7 +1525,16 @@ def _hanging_label(paragraph: _Paragraph, text: str) -> tuple[str, str, float] |
     # does, not right after its own (narrower or wider) label.
     first = paragraph.lines[0]
     text_start = _label_text_start(first)
-    if text_start is None or not all(abs(line.bbox[0] - text_start) <= 1.5 for line in paragraph.lines[1:]):
+    if text_start is None:
+        # A lead-in ("May 17, 2024:"): translated, so split at its colon.
+        lead = _lead_in_text_start(first)
+        colon = min((i for i in (text.find("："), text.find(":")) if 0 < i <= 30), default=-1)
+        if lead is None or colon < 0 or len(paragraph.lines) < 2 or not all(
+            abs(line.bbox[0] - lead) <= max(1.5, 0.5 * first.size) for line in paragraph.lines[1:]
+        ):
+            return None
+        return text[: colon + 1].strip(), text[colon + 1:].strip(), paragraph.lines[1].bbox[0]
+    if not all(abs(line.bbox[0] - text_start) <= 1.5 for line in paragraph.lines[1:]):
         return None
     # The label is what stands before the text start ("3." of "3.Updated").
     label = "".join(
@@ -1609,7 +1728,7 @@ def _layout(
 # Chinese punctuation with no compatibility form, for a font without it
 # ("PP-142、PP-147" in Arial showed a box).
 _PUNCTUATION_FALLBACK = {
-    "•": "·", "、": ", ", "。": ". ", "《": "“", "》": "”", "「": "“", "」": "”",
+    "•": "·", "▪": "·", "◾": "·", "●": "·", "、": ", ", "。": ". ", "《": "“", "》": "”", "「": "“", "」": "”",
     "『": "‘", "』": "’", "【": "[", "】": "]", "〔": "[", "〕": "]", "…": "...", "—": "-",
 }
 

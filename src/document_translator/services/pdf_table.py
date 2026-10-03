@@ -960,6 +960,31 @@ def _span_rects_for_cell(page: Any, cell_rect: Any, *, bottom_tolerance: float =
     return spans
 
 
+def _overflow_glyph_rects(lines: list[dict[str, Any]], cell_rect: Any) -> list[Any]:
+    """Glyphs of the cell's own lines that run past its border.
+
+    A source line may overflow its cell (to the page edge, over a figure):
+    erasing only the cell left those tails standing beside the translation.
+    A line belongs to the cell when its centre is inside; only its glyphs
+    outside the cell are added, each as a thin band through its centre so
+    no neighbouring text is touched.
+    """
+    fitz = _fitz()
+    rects: list[Any] = []
+    for line in lines:
+        box = fitz.Rect(line["bbox"])
+        centre = fitz.Point((box.x0 + box.x1) / 2, (box.y0 + box.y1) / 2)
+        if not cell_rect.contains(centre) or cell_rect.contains(box):
+            continue
+        for span in line.get("spans", ()):
+            for char in span.get("chars", ()):
+                glyph = fitz.Rect(char["bbox"])
+                if str(char.get("c", "")).strip() and not cell_rect.contains(fitz.Point((glyph.x0 + glyph.x1) / 2, (glyph.y0 + glyph.y1) / 2)):
+                    middle = (glyph.y0 + glyph.y1) / 2
+                    rects.append(fitz.Rect(glyph.x0, middle - 0.5, glyph.x1, middle + 0.5))
+    return rects
+
+
 def _font_alias(fontfile: Path) -> str:
     digest = hashlib.sha1(str(fontfile).encode("utf-8")).hexdigest()[:10]
     return f"pdfTable{digest}"
@@ -1577,6 +1602,7 @@ def render_table_translations(
                 else list(page.get_links())
             )
             fit_page = temporary_fit_doc.new_page(width=page.rect.width, height=page.rect.height)
+            page_lines = [line for block in page.get_text("rawdict").get("blocks", ()) for line in block.get("lines", ())]
             for cell in cells:
                 translated = _normalise_render_text(mapping[cell.id], keep_line_breaks=keep_line_breaks)
                 if not translated.strip() or cell.id in unchanged_ids:
@@ -1599,6 +1625,7 @@ def render_table_translations(
                 # stale fragment (for example a clipped table header) survives
                 # the overlay.  ``graphics=0`` keeps the original grid lines.
                 redactions_by_page.setdefault(page_number, []).append(cell_rect)
+                redactions_by_page[page_number].extend(_overflow_glyph_rects(page_lines, cell_rect))
                 if _cell_is_bold(page, cell_rect):
                     bold_cells.add(cell.id)
                 matched_links = _links_for_cell(page_links_by_page[page_number], cell_rect)
