@@ -368,20 +368,24 @@ def _translate_in_place(
 
     requested = [unit for index, unit in enumerate(paragraph_units) if index not in tails]
     translations, warnings, translation_stats = _translate_all(provider, requested + cell_units, cache=cache, progress=progress)
+    # The whole translation is set as one paragraph: from the first page's
+    # place onward, continuing on the next page only if it does not fit.
+    flow: dict[int, _Paragraph] = {}
     for head, tail in across.items():
-        joined = translations.get(paragraph_units[head].id, "").strip()
-        if not joined:
-            continue
-        share = len(translatable[head].text) / max(1, len(translatable[head].text) + len(translatable[tail].text))
-        translations[paragraph_units[head].id], translations[paragraph_units[tail].id] = _split_continued(joined, share)
+        if translations.get(paragraph_units[head].id, "").strip():
+            translations[paragraph_units[tail].id] = ""
+            flow[id(translatable[head])] = translatable[tail]
 
     with fitz.open(source) as work:
+        flowed = {id(tail) for tail in flow.values()}
         for paragraph, unit in zip(translatable, paragraph_units):
+            if id(paragraph) in flowed:
+                continue  # filled with whatever the head paragraph leaves over
             paragraph_translation = translations.get(unit.id, "").strip() or unit.source_text
             translations[unit.id] = _normalise_structure(
                 paragraph, paragraph_translation, paragraph.bounds, profile, target_language
             )
-        rendered = _render_paragraphs(work, paragraphs, translatable, paragraph_units, translations, covered)
+        rendered = _render_paragraphs(work, paragraphs, translatable, paragraph_units, translations, covered, flow)
         staged = candidate.with_name(candidate.stem + ".paragraphs" + candidate.suffix)
         work.save(str(staged), garbage=1, deflate=True)
 
@@ -1292,6 +1296,7 @@ def _render_paragraphs(
     units: list[TranslationUnit],
     translations: dict[str, str],
     tables: list[Any],
+    flow: dict[int, _Paragraph] | None = None,
 ) -> dict[str, object]:
     import fitz
 
@@ -1323,7 +1328,12 @@ def _render_paragraphs(
         # with SimHei were written in YaHei).
         paragraph.cjk_font = _font_file(paragraph.lines[0].font, "中", page=page) or r"C:\Windows\Fonts\simhei.ttf"
         plans.append((paragraph, translations[unit.id], _region(page, paragraph, others, paragraph.bounds)))
-    fitted = [_fit_size(doc[p.page_number - 1], p, text, region, p.bounds) for p, text, region in plans]
+    if flow:
+        plans = _flow_over_pages(doc, plans, flow)
+    fitted = [
+        _fit_size(doc[p.page_number - 1], p, text, region, p.bounds) if text else p.size
+        for p, text, region in plans
+    ]
 
     # Paragraphs sharing a source style (body text, chapter headings, ...)
     # share one size, as the source does: the smallest any of them needed,
@@ -1349,6 +1359,8 @@ def _render_paragraphs(
         page.apply_redactions(images=0, graphics=0, text=0)
         rules = _rule_drawings(page)
         for paragraph, text, region in page_plans:
+            if not text:
+                continue  # its text now ends on the previous page
             size, written_box = _insert(page, paragraph, text, region, group_size[_style_key(paragraph)], paragraph.bounds)
             _refit_underline(page, paragraph, text, size, written_box, rules)
             if size < paragraph.size - 1e-6:
@@ -1358,6 +1370,50 @@ def _render_paragraphs(
         "style_sizes": [{"source_size": key[0], "font": key[1], "size": size} for key, size in group_size.items()],
         "size_reduced": shrunk,
     }
+
+
+def _flow_over_pages(doc: Any, plans: list[tuple[Any, str, Any]], flow: dict[int, _Paragraph]) -> list[tuple[Any, str, Any]]:
+    """A paragraph broken by a page is set like any paragraph: as much as
+    fits in the first page's place, the rest at the top of the next page
+    (nothing there when it all fits)."""
+    plans = list(plans)
+    index_of = {id(paragraph): index for index, (paragraph, _, _) in enumerate(plans)}
+    for head_id, tail in flow.items():
+        if head_id not in index_of or id(tail) not in index_of:
+            continue
+        head_index, tail_index = index_of[head_id], index_of[id(tail)]
+        head, text, region = plans[head_index]
+        page = doc[head.page_number - 1]
+        size = round(head.size * 2) / 2 or head.size
+        breaks = [i for i in range(1, len(text)) if _can_break(text, i)] + [len(text)]
+
+        def fits(cut: int) -> bool:
+            # At the line pitch the text will be written with, so the part on
+            # this page keeps the paragraph's spacing.
+            content, fontfile, alias, align = _layout(page, head, text[:cut].rstrip(), size, head.bounds, region.width)
+            pitch = _source_pitch(head, size, fontfile) if _CJK_RE.search(content) else None
+            return _fits(region, content, fontfile, alias, size, align, pitch)
+
+        low, high, best = 0, len(breaks) - 1, 0
+        while low <= high:
+            middle = (low + high) // 2
+            if fits(breaks[middle]):
+                best, low = breaks[middle], middle + 1
+            else:
+                high = middle - 1
+        if best == 0:
+            continue  # nothing fits up there: leave it to the normal fitting
+        plans[head_index] = (head, text[:best].rstrip(), region)
+        plans[tail_index] = (tail, text[best:].strip(), plans[tail_index][2])
+    return plans
+
+
+def _can_break(text: str, index: int) -> bool:
+    """A line may end before ``text[index]``: never inside a Latin word or number."""
+    before, after = text[index - 1], text[index]
+    if before.isspace() or after.isspace():
+        return True
+    return not (before.isascii() and before.isalnum() and after.isascii() and after.isalnum())
 
 
 def _glyph_centre_bands(span: dict[str, Any]) -> list[tuple[float, float, float, float]]:
