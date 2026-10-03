@@ -90,6 +90,8 @@ class _Segment:
 @dataclass
 class _VisualLine:
     segments: list[_Segment]
+    # A symbol-font bullet sits just left of the line: a list item starts.
+    bulleted: bool = False
 
     @property
     def bbox(self) -> tuple[float, float, float, float]:
@@ -102,7 +104,26 @@ class _VisualLine:
 
     @property
     def size(self) -> float:
-        return median(float(span.get("size") or 0.0) for span in self.spans)
+        # The size most of the line's characters have: a superscript ("18th")
+        # is a span of its own, and counted as one of three spans it made
+        # the line 10pt and split the 12pt paragraph around it.
+        sizes = sorted(
+            (float(span.get("size") or 0.0), max(1, len(str(span.get("text", "")).strip())))
+            for span in self.spans
+        )
+        half, seen = sum(weight for _, weight in sizes) / 2, 0
+        for value, weight in sizes:
+            seen += weight
+            if seen >= half:
+                return value
+        return sizes[-1][0] if sizes else 0.0
+
+    @property
+    def baseline(self) -> float:
+        """Baseline of the line's main text (a superscript sits above it)."""
+        main = max(self.spans, key=lambda span: len(str(span.get("text", "")).strip()))
+        origin = main.get("origin")
+        return float(origin[1]) if origin else float(self.bbox[3])
 
     @property
     def color(self) -> int:
@@ -132,6 +153,8 @@ class _Paragraph:
     page_width: float = 595.0
     bounds: tuple[float, float] = (72.0, 523.0)
     left_anchored: bool = False
+    # The CJK face for this page, chosen before anything is written on it.
+    cjk_font: str | None = None
 
     @property
     def bbox(self) -> tuple[float, float, float, float]:
@@ -282,11 +305,19 @@ def _translate_in_place(
             t for t in tables
             if not _is_drawing_frame(t, doc[t.page_number - 1]) and not doc[t.page_number - 1].rotation
         ]
+        # A cell holding a column of one-line rows (a Gantt chart's task
+        # names, with no rule between the rows) is not one paragraph: its
+        # lines go through the paragraph path, each where it stands.
+        row_cells = {cell.id for t in tables for cell in _row_list_cells(doc[t.page_number - 1], t)}
+        covered = [
+            _Covered(cell.page_number, cell.rect)
+            for t in tables for cell in t.cells if cell.rect is not None and cell.id not in row_cells
+        ]
         bounds_by_size = _content_bounds(doc, tables)
         paragraphs: list[_Paragraph] = []
         skipped_rotated = 0
         for page_number, page in enumerate(doc, start=1):
-            table_rects = [fitz.Rect(t.rect) for t in tables if t.page_number == page_number]
+            table_rects = [fitz.Rect(c.rect) for c in covered if c.page_number == page_number]
             lines, rotated = _visual_lines(page, table_rects)
             skipped_rotated += rotated
             page_bounds = _body_edges(lines, bounds_by_size[_page_key(page)])
@@ -316,7 +347,7 @@ def _translate_in_place(
     continuations = set(continued.values())
     for table in tables:
         for cell in table.cells:
-            if cell.is_empty or cell.id in continuations:
+            if cell.is_empty or cell.id in continuations or cell.id in row_cells:
                 continue
             text = cell.text + ("\n" + continued[cell.id].text if cell.id in continued else "")
             if not _needs_translation(text, source_language):
@@ -335,7 +366,7 @@ def _translate_in_place(
             translations[unit.id] = _normalise_structure(
                 paragraph, paragraph_translation, paragraph.bounds, profile, target_language
             )
-        rendered = _render_paragraphs(work, paragraphs, translatable, paragraph_units, translations, tables)
+        rendered = _render_paragraphs(work, paragraphs, translatable, paragraph_units, translations, covered)
         staged = candidate.with_name(candidate.stem + ".paragraphs" + candidate.suffix)
         work.save(str(staged), garbage=1, deflate=True)
 
@@ -370,6 +401,48 @@ def _translate_in_place(
 
 
 # ---------------------------------------------------------------- structure
+
+
+@dataclass
+class _Covered:
+    """Part of a page a table renders (one of its cells)."""
+
+    page_number: int
+    rect: tuple[float, float, float, float]
+
+
+def _row_list_cells(page: Any, table: Any) -> list[Any]:
+    """Cells whose text is six or more separate one-line rows.
+
+    Rows set at least 1.5 times their font size apart are a list of items
+    (task names in a Gantt chart), not a paragraph wrapped in a cell:
+    reflowed as one, they overlapped forty rows of the chart.
+    """
+    import fitz
+
+    result = []
+    for cell in table.cells:
+        if cell.rect is None or cell.is_empty or len(cell.text.splitlines()) < 6:
+            continue
+        rows: list[tuple[float, float]] = []
+        widths: list[float] = []
+        for block in page.get_text("dict", clip=fitz.Rect(cell.rect)).get("blocks", ()):
+            for line in block.get("lines", ()):
+                spans = [span for span in line.get("spans", ()) if str(span.get("text", "")).strip()]
+                if spans and not any(abs(line["bbox"][1] - top) <= 1.0 for top, _ in rows):
+                    rows.append((float(line["bbox"][1]), float(spans[0].get("size") or 0.0)))
+                    widths.append(float(line["bbox"][2] - line["bbox"][0]))
+        if len(rows) < 6:
+            continue
+        tops = sorted(top for top, _ in rows)
+        steps = sorted(b - a for a, b in zip(tops, tops[1:]))
+        size = sorted(size for _, size in rows)[len(rows) // 2]
+        # A wrapped paragraph fills the cell's width (justified prose with
+        # wide spacing); one-line rows mostly do not.
+        filled = sum(1 for width in widths if width >= 0.85 * (cell.rect[2] - cell.rect[0]))
+        if size > 0 and steps[len(steps) // 2] >= 1.5 * size and filled * 2 < len(widths):
+            result.append(cell)
+    return result
 
 
 def _continued_cells(tables: list[Any]) -> dict[str, Any]:
@@ -556,7 +629,14 @@ def _visual_lines(page: Any, table_rects: list[Any]) -> tuple[list[_VisualLine],
         for line in block.get("lines", ()):
             spans = []
             for span in line.get("spans", ()):
-                span["text"] = "".join(str(char.get("c", "")) for char in span.get("chars", ()))
+                # Fake bold prints each glyph twice, a fraction of a point
+                # apart ("MMTTBBMM"): the copy is read once (and still removed).
+                kept = []
+                for char in span.get("chars", ()):
+                    if kept and char.get("c") == kept[-1].get("c") and abs(char["bbox"][0] - kept[-1]["bbox"][0]) < 0.3 * max(0.1, kept[-1]["bbox"][2] - kept[-1]["bbox"][0]):
+                        continue
+                    kept.append(char)
+                span["text"] = "".join(str(char.get("c", "")) for char in kept)
                 if not str(span.get("text", "")).strip():
                     continue
                 # Map symbols ("!(" in ESRIDefaultMarker is a point marker)
@@ -579,7 +659,13 @@ def _visual_lines(page: Any, table_rects: list[Any]) -> tuple[list[_VisualLine],
             box = fitz.Rect(spans[0]["bbox"])
             for span in spans[1:]:
                 box |= fitz.Rect(span["bbox"])
-            centre = fitz.Point((box.x0 + box.x1) / 2, (box.y0 + box.y1) / 2)
+            # The line starts at its first visible glyph: a heading padded
+            # with leading spaces starts where its text does, not 18pt left
+            # of the body text.
+            visible = [char["bbox"][0] for span in spans for char in span.get("chars", ()) if str(char.get("c", "")).strip()]
+            if visible:
+                box.x0 = max(box.x0, min(visible))
+            centre =fitz.Point((box.x0 + box.x1) / 2, (box.y0 + box.y1) / 2)
             if any(rect.contains(centre) for rect in table_rects):
                 continue
             # Blank spans are dropped above, so a space that was its own span
@@ -591,7 +677,23 @@ def _visual_lines(page: Any, table_rects: list[Any]) -> tuple[list[_VisualLine],
                 if gap > 0.1 * float(span.get("size") or 10.0) and not text.endswith(" ") and not piece.startswith(" "):
                     text += " "
                 text += piece
+            # A second copy of the same text over the first (fake bold drawn
+            # as two whole strings) is read once; its glyphs are still erased.
+            copy_of = next(
+                (other for other in segments
+                 if other.text == text and fitz.Rect(other.bbox).intersect(box).get_area() >= 0.8 * box.get_area()),
+                None,
+            )
+            if copy_of is not None:
+                copy_of.spans.extend(spans)
+                continue
             segments.append(_Segment(text, tuple(box), spans))
+    # Visible vertical rules: pieces of text on either side of one sit in
+    # different cells (a Gantt chart's "1st Half" | "2nd Half" headers were
+    # joined into one line and translated as one overflowing string).
+    from .pdf_table import _visible_rules
+
+    vertical_rules = _visible_rules(page)[0]
     lines: list[_VisualLine] = []
     for segment in sorted(segments, key=lambda s: (s.bbox[1], s.bbox[0])):
         for line in lines:
@@ -608,11 +710,20 @@ def _visual_lines(page: Any, table_rects: list[Any]) -> tuple[list[_VisualLine],
                 and min(m[3], segment.bbox[3]) - max(m[1], segment.bbox[1]) > 0
                 for m in markers
             )
-            if height > 0 and overlap >= 0.6 * height and gap <= 3.0 * size and not marker_between:
+            middle = (segment.bbox[1] + segment.bbox[3]) / 2
+            rule_between = any(between[0] <= x <= between[1] and y0 <= middle <= y1 for x, y0, y1 in vertical_rules)
+            if height > 0 and overlap >= 0.6 * height and gap <= 3.0 * size and not marker_between and not rule_between:
                 line.segments.append(segment)
                 break
         else:
             lines.append(_VisualLine([segment]))
+    for line in lines:
+        x0, y0, _, y1 = line.bbox
+        line.bulleted = any(
+            m[2] <= x0 + 1.0 and x0 - m[2] <= 3.0 * line.size
+            and min(m[3], y1) - max(m[1], y0) >= 0.5 * min(m[3] - m[1], y1 - y0)
+            for m in markers
+        )
     lines.sort(key=lambda line: (line.bbox[1], line.bbox[0]))
     return lines, rotated
 
@@ -698,10 +809,28 @@ def _segment(
     current_centred = False
     for line in lines:
         centred = own_centred = _is_centred(line, bounds)
+        # A list item whose text starts where other lines do is aligned to
+        # that edge ("ii. Provide technical directions..." happened to sit
+        # in the middle of the margins and was set centred).
+        if centred and line.bulleted:
+            centred = own_centred = False
+        if centred:
+            text_start = _label_text_start(line)
+            if text_start is not None and sum(
+                1 for other in lines
+                if other is not line and (abs(other.bbox[0] - text_start) <= 1.5 or abs((_label_text_start(other) or -99.0) - text_start) <= 1.5)
+            ) >= 1:
+                centred = own_centred = False
         # The widest line of a centred block is what sets the margins, so it
         # has no open margins of its own; it must not split that block.
         if not centred and current and current_centred and (line.bbox[2] - line.bbox[0]) >= 0.95 * (right - left):
             centred = True
+        # A list item's next line starts where its text does, after a short
+        # label set apart ("viii." right-aligned, text at 101pt): it continues
+        # the item whatever the label style, and is never centred.
+        hanging = bool(current) and _continues_hanging_item(current[0], line)
+        if hanging:
+            centred = own_centred = current_centred
         if current:
             previous = current[-1]
             size = previous.size
@@ -716,12 +845,30 @@ def _segment(
                 # is a title and its own paragraph, not one sentence.
                 or (centred and _is_bold(_Paragraph(0, [line], True)) != _is_bold(_Paragraph(0, [previous], True)))
                 or bool(_LABEL_RE.match(line.text))
+                # Symbol-font bullets are set aside as markers, so a list of
+                # justified items read as one paragraph and two items were
+                # translated as one sentence.
+                or line.bulleted
+                # Space before a paragraph: the gap to this line is wider
+                # than the paragraph's own line pitch (16.8pt after lines
+                # 13.8pt apart).
+                or (
+                    len(current) >= 2
+                    and (line.baseline - previous.baseline) - (previous.baseline - current[-2].baseline) > 0.2 * size
+                )
                 or _underlined(previous, rules)
                 # lines of one paragraph sit under each other
                 or min(line.bbox[2], previous.bbox[2]) - max(line.bbox[0], previous.bbox[0]) <= 0
             )
             if not new and not centred:
                 indented = line.bbox[0] - left > 0.8 * size  # first-line indent
+                # Body text (in the left quarter of the text area) is
+                # indented only against the line above it: on a page whose
+                # lines start at 65, 72, 90 and 108pt there is no margin to
+                # measure from, and every line counted as indented. Text
+                # further right (a legend column) keeps the margin rule.
+                if line.bbox[0] - left <= 0.25 * (right - left):
+                    indented = line.bbox[0] - previous.bbox[0] > 0.8 * size
                 # A numbered item's continuation lines hang under its text
                 # ("1. In partial..." / "   Section 2..."), they do not
                 # start new paragraphs.
@@ -732,6 +879,21 @@ def _segment(
                 # A right-aligned block (a running header) has ragged left
                 # edges; split, its first line came back as "从...的污水系统".
                 if indented and previous.bbox[0] - left > 0.8 * size and abs(line.bbox[2] - previous.bbox[2]) <= 2.0:
+                    indented = False
+                # The short last line of an indented, justified block (a list
+                # item's text) starts under the lines above it; two justified
+                # lines are the evidence -- after one, a map legend's next
+                # entry looks the same.
+                if indented and hanging:
+                    indented = False
+                # A bulleted item's next line starts under its text.
+                if indented and current[0].bulleted and abs(line.bbox[0] - current[0].bbox[0]) <= 1.5:
+                    indented = False
+                if (
+                    indented and len(current) >= 2
+                    and abs(line.bbox[0] - previous.bbox[0]) <= 1.5
+                    and all(abs(c.bbox[2] - current[0].bbox[2]) <= 2.0 and abs(c.bbox[0] - previous.bbox[0]) <= 1.5 for c in current[-2:])
+                ):
                     indented = False
                 new = indented or right - previous.bbox[2] > 1.5 * size  # previous line ended early
             if new:
@@ -748,6 +910,45 @@ def _segment(
     if current:
         paragraphs.append(_Paragraph(page_number, current, current_centred))
     return paragraphs
+
+
+# "1.", "a)", "(iv)", "viii.", "[2]", or a bullet character.
+_LIST_LABEL_RE = re.compile(r"^(?:[(\[]?(?:\d{1,3}(?:\.\d{1,3})*|[ivxlcdm]{1,6}|[IVXLCDM]{1,6}|[A-Za-z])[.)\]]|[•·▪●○■□◆◇\-–—])$")
+
+
+def _label_text_start(first: _VisualLine) -> float | None:
+    """Where the text starts after a short leading label ("viii.", "(a)", "1.")."""
+    chars = sorted(
+        (char for span in first.spans for char in span.get("chars", ())),
+        key=lambda char: char["bbox"][0],
+    )
+    label: list[str] = []
+    previous_end = None
+    for char in chars:
+        value = str(char.get("c", ""))
+        if not value.strip():
+            if label:
+                label.append(" ")
+            continue
+        # The label and its text may be separate pieces with no space
+        # between them, only a gap ("iii." right-aligned, text at 101pt).
+        if label and previous_end is not None and char["bbox"][0] - previous_end > 0.3 * first.size:
+            label.append(" ")
+        if label and label[-1] == " ":
+            return char["bbox"][0] if _LIST_LABEL_RE.match("".join(label).strip()) else None
+        label.append(value)
+        previous_end = char["bbox"][2]
+    return None
+
+
+def _continues_hanging_item(first: _VisualLine, line: _VisualLine) -> bool:
+    """``line`` starts where the text of ``first`` does, after its label."""
+    text_start = _label_text_start(first)
+    return (
+        text_start is not None
+        and abs(line.bbox[0] - text_start) <= 1.5
+        and line.bbox[0] > first.bbox[0] + 0.8 * first.size
+    )
 
 
 def _needs_translation(text: str, source_language: str) -> bool:
@@ -959,6 +1160,10 @@ def _alignment_of(paragraph: _Paragraph, bounds: tuple[float, float]) -> int:
         return 1
     block = {"lines": [{"spans": line.spans} for line in paragraph.lines]}
     align = _alignment(_PageWidth(paragraph.page_width), block, bounds, paragraph.size)
+    # A list item is set from its left edge, wherever it happens to end.
+    first = paragraph.lines[0]
+    if align in (1, 2) and (first.bulleted or _label_text_start(first) is not None):
+        return 0
     return 0 if align == 2 and paragraph.left_anchored else align
 
 
@@ -1049,6 +1254,11 @@ def _render_paragraphs(
             fitz.Rect(info["bbox"]) for info in page.get_image_info()
             if not fitz.Rect(info["bbox"]).intersects(fitz.Rect(paragraph.bbox))
         ]
+        # Chosen now, before any paragraph is written: once SimHei was on the
+        # page, the clash check took it for a source font and set the next
+        # paragraph in YaHei, so one page mixed two faces (and sizes fitted
+        # with SimHei were written in YaHei).
+        paragraph.cjk_font = _font_file(paragraph.lines[0].font, "中", page=page) or r"C:\Windows\Fonts\simhei.ttf"
         plans.append((paragraph, translations[unit.id], _region(page, paragraph, others, paragraph.bounds)))
     fitted = [_fit_size(doc[p.page_number - 1], p, text, region, p.bounds) for p, text, region in plans]
 
@@ -1162,7 +1372,7 @@ def _layout(
 
     first = paragraph.lines[0]
     if _CJK_RE.search(text):
-        fontfile = _font_file(first.font, text, page=page) or r"C:\Windows\Fonts\simhei.ttf"
+        fontfile = paragraph.cjk_font or _font_file(first.font, text, page=page) or r"C:\Windows\Fonts\simhei.ttf"
     else:
         fontfile = _latin_font(first.font, paragraph.size, page)
     align = _alignment_of(paragraph, bounds)
@@ -1178,10 +1388,7 @@ def _layout(
     # CJK fonts such as SimHei have no NBSP glyph (it shows as a box); use
     # the ideographic space there.
     pad = "\u3000" if cjk or not font.has_glyph(0xA0) else "\u00a0"
-    # Nor has it the list bullet "\u2022" (a box in "\u25a1 Central Drain\uff08\u4e3b\u6e20\uff09");
-    # the middle dot is the bullet it has.
-    if "\u2022" in text and not font.has_glyph(0x2022):
-        text = text.replace("\u2022", "\u00b7")
+    text = _with_font_glyphs(text, font)
     if indent > 0.8 * size:
         spaces = int(round(indent / max(font.text_length(pad, fontsize=size), 0.1)))
     content = pad * spaces + text if spaces else text
@@ -1191,6 +1398,27 @@ def _layout(
         # an English word. Break it ourselves, between CJK characters only.
         content = _wrap_atomic_phrases(content, fontfile=fontfile, fontname=_font_alias(fontfile), fontsize=size, max_width=width - 1.0)
     return content, fontfile, _font_alias(fontfile), align
+
+
+def _with_font_glyphs(text: str, font: Any) -> str:
+    """A character the font cannot draw becomes its standard equivalent.
+
+    A missing glyph is drawn as a box: "PP-142□PP-147" (a Chinese comma in
+    an English line set in Arial), "404km□" (SimHei has no "²"), "□ Central
+    Drain" (nor the bullet "•"). The compatibility form ("," and "2") is
+    used instead, and the middle dot for a bullet.
+    """
+    import unicodedata
+
+    result = []
+    for char in text:
+        if char.isspace() or font.has_glyph(ord(char)):
+            result.append(char)
+            continue
+        alternative = "·" if char == "•" else unicodedata.normalize("NFKC", char)
+        drawable = alternative and alternative != char and all(font.has_glyph(ord(c)) for c in alternative)
+        result.append(alternative if drawable else char)
+    return "".join(result)
 
 
 def _on_source_baseline(region: Any, paragraph: _Paragraph, fontfile: str, size: float) -> Any:
@@ -1238,13 +1466,18 @@ def _insert(page: Any, paragraph: _Paragraph, text: str, region: Any, size: floa
         content, fontfile, alias, align = _layout(page, paragraph, text, size, bounds, region.width)
         anchored = _on_source_baseline(region, paragraph, fontfile, size)
         box = anchored if _fits(anchored, content, fontfile, alias, size, align) else region
+        # Chinese keeps the source's line pitch where it still fits: at the
+        # font's own 1.0 spacing a body set at 1.4x read cramped and small.
+        pitch = _source_pitch(paragraph, size, fontfile) if _CJK_RE.search(content) else None
+        if pitch is not None and not _fits(box, content, fontfile, alias, size, align, pitch):
+            pitch = None
         color = _rgb(paragraph.lines[0].color)
         # A bold source heading stays bold: CJK faces here have no bold
         # file, so the glyphs are filled and outlined in the same colour.
         bold = _CJK_RE.search(content) and _is_bold(paragraph)
         written = page.insert_textbox(
             box, content, fontname=alias, fontfile=fontfile, fontsize=size,
-            color=color, align=align, overlay=True,
+            color=color, align=align, overlay=True, lineheight=pitch,
             **({"render_mode": 2, "fill": color, "border_width": 0.04} if bold else {}),
         )
         if written >= 0 or size - _FONT_STEP < _ABSOLUTE_MIN_SIZE:
@@ -1322,10 +1555,27 @@ def _refit_underline(page: Any, paragraph: _Paragraph, text: str, size: float, b
     remove(inline)
 
 
-def _fits(region: Any, text: str, fontfile: str, alias: str, size: float, align: int) -> bool:
+def _fits(region: Any, text: str, fontfile: str, alias: str, size: float, align: int, lineheight: float | None = None) -> bool:
     from .pdf_table import probe_textbox
 
-    return probe_textbox(region.width, region.height, text, fontfile=fontfile, fontname=alias, fontsize=size, align=align)[0] >= 0
+    return probe_textbox(region.width, region.height, text, fontfile=fontfile, fontname=alias, fontsize=size, align=align, lineheight=lineheight)[0] >= 0
+
+
+def _source_pitch(paragraph: _Paragraph, size: float, fontfile: str) -> float | None:
+    """insert_textbox()'s ``lineheight`` that reproduces the source's line
+    pitch (1.0-1.6 times ``size``), if the paragraph has several lines.
+
+    ``lineheight`` multiplies the font's ascender, not its size: 1.5 in
+    SimHei (ascender 0.86) gave 1.29x, not the source's 1.5x.
+    """
+    from .pdf_table import cached_font
+
+    tops = [line.bbox[1] for line in paragraph.lines]
+    steps = sorted(b - a for a, b in zip(tops, tops[1:]) if b > a)
+    ascender = cached_font(fontfile).ascender
+    if not steps or ascender <= 0:
+        return None
+    return min(1.6, max(1.0, steps[len(steps) // 2] / size)) / ascender
 
 
 def _render_tables(
@@ -1371,12 +1621,14 @@ def _render_tables(
         for page_number in sorted({t.page_number for t in good}):
             page_tables = [t for t in good if t.page_number == page_number]
             alignment.update(_table_alignment(source_doc[page_number - 1], page_tables))
-            size = _table_font_size(page_tables, cell_translations)
+            size, outliers = _table_font_size(page_tables, cell_translations)
             sized.extend(
-                dataclasses.replace(t, cells=tuple(dataclasses.replace(c, source_font_size=size) for c in t.cells))
+                dataclasses.replace(t, cells=tuple(dataclasses.replace(c, source_font_size=outliers.get(c.id, size)) for c in t.cells))
                 for t in page_tables
             )
             pages[page_number] = {"font_size": size, "tables": len(page_tables)}
+            if outliers:
+                pages[page_number]["smaller_cells"] = outliers
     if not sized:
         shutil.copyfile(staged, output)
     else:
@@ -1387,6 +1639,7 @@ def _render_tables(
             for t in sized for c in t.cells
         }
         sizes = [float(page["font_size"]) for page in pages.values()]
+        sizes += [float(v) for page in pages.values() for v in dict(page.get("smaller_cells", {})).values()]
         # Every table page in one pass: each cell keeps its page's size
         # (fixed_cell_size); rewriting the whole PDF once per table page made
         # a 777-page file take hours.
@@ -1440,7 +1693,7 @@ def _table_alignment(source_page: Any, tables: list[Any]) -> dict[str, tuple[int
     return alignment
 
 
-def _table_font_size(tables: list[Any], cell_translations: dict[str, str]) -> float:
+def _table_font_size(tables: list[Any], cell_translations: dict[str, str]) -> tuple[float, dict[str, float]]:
     """Largest size (from the source's own) at which every cell fits its original cell."""
     import fitz
 
@@ -1480,6 +1733,23 @@ def _table_font_size(tables: list[Any], cell_translations: dict[str, str]) -> fl
                 return False
         return True
 
+    start = size
+    # A cell that fits only far below the start size (a one-line header cell
+    # whose translation is long) gets its own size; sized with it, a whole
+    # table dropped from 12pt to 6.5pt. The rest share the largest size at
+    # which all of them fit.
+    outliers: dict[str, float] = {}
+    for cell in list(cells):
+        if not fits(cell, round(0.75 * start * 2) / 2):
+            own = round(0.75 * start * 2) / 2
+            while own - _FONT_STEP >= _ABSOLUTE_MIN_SIZE and not fits(cell, own):
+                own = round(own - _FONT_STEP, 2)
+            outliers[cell.id] = own
+    # Only a handful: when many cells are that tight the table is simply
+    # set small, in one size, rather than as a patchwork of sizes.
+    if len(outliers) > max(2, 0.05 * len(cells)):
+        outliers = {}
+    cells = [cell for cell in cells if cell.id not in outliers]
     while size - _FONT_STEP >= _ABSOLUTE_MIN_SIZE and not all_fit(size):
         size = round(size - _FONT_STEP, 2)
-    return size
+    return size, outliers

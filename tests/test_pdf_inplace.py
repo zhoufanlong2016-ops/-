@@ -515,3 +515,137 @@ def test_column_headers_under_a_title_row_keep_their_own_alignment(monkeypatch):
     alignment = pdf_inplace._table_alignment(None, [Cell(cells=cells)])
     assert [alignment[f"h{c}"] for c in (1, 2, 3)] == [(1, True)] * 3  # centred headers, left-aligned body
     assert alignment["b2"] == (0, False)
+
+
+def test_characters_a_font_lacks_become_their_standard_form():
+    simhei = fitz.Font(fontfile=r"C:\Windows\Fonts\simhei.ttf")
+    arial = fitz.Font(fontfile=r"C:\Windows\Fonts\arial.ttf")
+    assert pdf_inplace._with_font_glyphs("面积为404km²", simhei) == "面积为404km2"
+    assert pdf_inplace._with_font_glyphs("• 中央排水渠", simhei) == "· 中央排水渠"
+    assert pdf_inplace._with_font_glyphs("PP-142，PP-147", arial) == "PP-142,PP-147"
+    assert pdf_inplace._with_font_glyphs("404km²", arial) == "404km²"  # Arial has it
+
+
+def test_a_heading_padded_with_spaces_starts_at_its_text(tmp_path):
+    doc = fitz.open()
+    page = doc.new_page()
+    page.insert_text((72, 100), "      STORM WATER DRAINS", fontsize=12)
+    lines, _ = pdf_inplace._visual_lines(page, [])
+    assert lines[0].bbox[0] > 90
+
+
+def test_symbol_font_bullets_start_list_items():
+    doc = fitz.open()
+    page = doc.new_page(width=595, height=842)
+    items = [
+        "Elimination of pumping requirement at the intermediate disposal stations, thus saving in higher energy "
+        "costs cum maintenance costs and manpower requirements that used to be deployed earlier at the stations.",
+        "Existing primary drains, which are presently being used as sullage carriers, will start acting as storm "
+        "water channels, which can be perceived as the primary purpose of the project.",
+    ]
+    y = 100
+    for text in items:
+        page.insert_text((92, y + 10), "\u2022", fontname="symb", fontsize=11)
+        rect = fitz.Rect(108, y, 544, y + 60)
+        left = page.insert_textbox(rect, text, fontsize=11, align=3)
+        y = rect.y1 - left + 6
+    for x in range(12):  # body text elsewhere on the page sets the margins
+        page.insert_text((72, 400 + 15 * x), "Body text of the page, set at the left margin of the page.", fontsize=11)
+    lines, _ = pdf_inplace._visual_lines(page, [])
+    paragraphs = pdf_inplace._segment(1, [l for l in lines if l.bbox[1] < 300], (72.0, 544.0))
+    assert [p.text.split()[0] for p in paragraphs] == ["Elimination", "Existing"]
+
+
+def test_a_superscript_does_not_change_the_line_size():
+    doc = fitz.open()
+    page = doc.new_page()
+    page.insert_text((72, 100), "approved by PDWP in its 18", fontsize=12)
+    page.insert_text((72 + fitz.get_text_length("approved by PDWP in its 18", fontsize=12), 96), "th", fontsize=8)
+    lines, _ = pdf_inplace._visual_lines(page, [])
+    assert len(lines) == 1 and lines[0].size == 12
+
+
+def test_roman_numeral_items_keep_their_continuation_lines():
+    doc = fitz.open()
+    page = doc.new_page(width=595, height=842)
+    rows = [("iii.", "Overall financial and administrative management of the project as per rules of the"),
+            (None, "Government and Guidelines of the funding agencies/banks."),
+            ("iv.", "Review and approval of detailed estimates and variations.")]
+    y = 100
+    for label, text in rows:
+        if label:
+            page.insert_text((96 - fitz.get_text_length(label, fontsize=12), y), label, fontsize=12)
+        page.insert_text((101, y), text, fontsize=12)
+        y += 17
+    lines, _ = pdf_inplace._visual_lines(page, [])
+    right = lines[0].bbox[2] + 1.0  # the first line is a full justified line
+    paragraphs = pdf_inplace._segment(1, lines, (38.0, right))
+    assert [len(p.lines) for p in paragraphs] == [2, 1]
+
+
+def test_text_on_either_side_of_a_ruled_divider_stays_apart():
+    doc = fitz.open()
+    page = doc.new_page()
+    page.insert_text((100, 100), "1st Half", fontsize=6)
+    page.insert_text((128, 100), "2nd Half", fontsize=6)
+    page.draw_line((125, 90), (125, 104), color=(0, 0, 0), width=0.5)
+    lines, _ = pdf_inplace._visual_lines(page, [])
+    assert sorted(line.text for line in lines) == ["1st Half", "2nd Half"]
+
+
+def _justified(page, x0, x1, y, text, size=12):
+    """A line of ``text`` words reaching (nearly) ``x1``, as a justified line does."""
+    words, line = (text + " ") * 20, ""
+    for word in words.split():
+        if fitz.get_text_length(f"{line} {word}".strip(), fontsize=size) > x1 - x0:
+            break
+        line = f"{line} {word}".strip()
+    page.insert_text((x0, y), line, fontsize=size)
+
+
+def test_first_line_indent_is_measured_against_the_line_above():
+    doc = fitz.open()
+    page = doc.new_page(width=595, height=842)
+    long = "Human Resource Management involves management functions like planning, plus more"
+    _justified(page, 90, 544, 120, long)
+    page.insert_text((72, 137), "organizing, directing and controlling", fontsize=12)
+    lines, _ = pdf_inplace._visual_lines(page, [])
+    right = max(line.bbox[2] for line in lines) + 1
+    paragraphs = pdf_inplace._segment(1, lines, (38.0, right))  # no margin to measure from
+    assert [len(p.lines) for p in paragraphs] == [2]
+
+
+def test_space_before_a_paragraph_starts_a_new_one():
+    doc = fitz.open()
+    page = doc.new_page(width=595, height=842)
+    text = "Laying of sewer line from Karachi Phattak and Gurumangat Road to Gulshan e Ravi and more"
+    for y in (100, 114, 128):
+        _justified(page, 180, 524, y, text)
+    page.insert_text((180, 145), "Procurement of Works under Engineering", fontsize=12)
+    lines, _ = pdf_inplace._visual_lines(page, [])
+    right = max(line.bbox[2] for line in lines) + 1
+    paragraphs = pdf_inplace._segment(1, lines, (72.0, right))
+    assert [len(p.lines) for p in paragraphs] == [3, 1]
+
+
+def test_fake_bold_glyphs_are_read_once():
+    doc = fitz.open()
+    page = doc.new_page()
+    for dx in (0, 0.4):
+        page.insert_text((72 + dx, 100), "MTBM", fontsize=10)
+    lines, _ = pdf_inplace._visual_lines(page, [])
+    assert [line.text for line in lines] == ["MTBM"]
+
+
+def test_a_column_of_one_line_rows_is_not_one_cell_paragraph():
+    from types import SimpleNamespace
+
+    doc = fitz.open()
+    page = doc.new_page()
+    names = [f"A10{i} Task name number {i}" for i in range(8)]
+    for i, name in enumerate(names):
+        page.insert_text((40, 100 + 12 * i), name, fontsize=6)
+    cell = SimpleNamespace(id="c", rect=(36, 90, 314, 200), is_empty=False, text="\n".join(names))
+    assert pdf_inplace._row_list_cells(page, SimpleNamespace(cells=[cell])) == [cell]
+    prose = SimpleNamespace(id="p", rect=(36, 90, 314, 200), is_empty=False, text="one line")
+    assert pdf_inplace._row_list_cells(page, SimpleNamespace(cells=[prose])) == []

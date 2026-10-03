@@ -657,12 +657,23 @@ def _boundaries(table: Any, axis: int) -> list[float]:
     return values
 
 
-def _extra_boundaries_ruled(coarse: Any, fine: Any, rect: tuple[float, float, float, float], page: Any) -> bool:
-    vertical: list[tuple[float, float, float]] = []  # (x, y0, y1)
-    horizontal: list[tuple[float, float, float]] = []  # (y, x0, x1)
+def _visible(paint: Any) -> bool:
+    return paint is not None and any(value < 0.9 for value in paint)
+
+
+def _visible_rules(page: Any) -> tuple[list[tuple[float, float, float]], list[tuple[float, float, float]]]:
+    """Vertical (x, y0, y1) and horizontal (y, x0, x1) rules a reader sees.
+
+    White boxes behind each line of a list are paint too: their edges made
+    a bullet list a 6-row "table" whose text was then jumbled together.
+    """
+    vertical: list[tuple[float, float, float]] = []
+    horizontal: list[tuple[float, float, float]] = []
     for drawing in page.get_drawings():
+        stroked = "s" in str(drawing.get("type", "")) and _visible(drawing.get("color"))
+        filled = "f" in str(drawing.get("type", "")) and _visible(drawing.get("fill"))
         for item in drawing.get("items", ()):
-            if item[0] == "l":
+            if item[0] == "l" and stroked:
                 a, b = item[1], item[2]
                 if abs(a.x - b.x) <= 1.0:
                     vertical.append(((a.x + b.x) / 2, min(a.y, b.y), max(a.y, b.y)))
@@ -670,17 +681,29 @@ def _extra_boundaries_ruled(coarse: Any, fine: Any, rect: tuple[float, float, fl
                     horizontal.append(((a.y + b.y) / 2, min(a.x, b.x), max(a.x, b.x)))
             elif item[0] == "re":
                 r = item[1]
-                if r.width <= 2.0:
+                if filled and r.width <= 2.0:
                     vertical.append(((r.x0 + r.x1) / 2, r.y0, r.y1))
-                elif r.height <= 2.0:
+                elif filled and r.height <= 2.0:
                     horizontal.append(((r.y0 + r.y1) / 2, r.x0, r.x1))
+                elif stroked:
+                    vertical += [(r.x0, r.y0, r.y1), (r.x1, r.y0, r.y1)]
+                    horizontal += [(r.y0, r.x0, r.x1), (r.y1, r.x0, r.x1)]
+    return vertical, horizontal
+
+
+def _extra_boundaries_ruled(
+    coarse: Any | None, fine: Any, rect: tuple[float, float, float, float], page: Any, share: float = 0.5,
+) -> bool:
+    """Every boundary of ``fine`` not already one of ``coarse`` (all of them
+    without ``coarse``) is a visible rule along ``share`` of the table."""
+    vertical, horizontal = _visible_rules(page)
 
     def ruled(position: float, rules: list[tuple[float, float, float]], low: float, high: float) -> bool:
         covered = sum(max(0.0, min(end, high) - max(start, low)) for at, start, end in rules if abs(at - position) <= 1.5)
-        return covered >= 0.5 * (high - low)
+        return covered >= share * (high - low)
 
     for axis, rules, low, high in ((0, vertical, rect[1], rect[3]), (1, horizontal, rect[0], rect[2])):
-        known = _boundaries(coarse, axis)
+        known = _boundaries(coarse, axis) if coarse is not None else []
         for value in _boundaries(fine, axis):
             if not any(abs(value - k) <= 2.0 for k in known) and not ruled(value, rules, low, high):
                 return False
@@ -720,7 +743,13 @@ def extract_tables_from_document(
             page_tables = tuple(getattr(finder, "tables", ()) or ())
             loose = tuple(getattr(page.find_tables(strategy="lines"), "tables", ()) or ())
             if not page_tables:
-                page_tables = loose
+                # Only a grid a reader can see: invisible white boxes behind
+                # list lines also form a "table" for "lines". A row rule may
+                # run through one column only (cells merged across rows).
+                page_tables = tuple(
+                    table for table in loose
+                    if _extra_boundaries_ruled(None, table, _rect_tuple(table.bbox, allow_none=False), page, share=0.1)
+                )
             else:
                 # "lines_strict" ignores rules drawn as thin filled
                 # rectangles (Word's cell borders): a 7-column risk table
