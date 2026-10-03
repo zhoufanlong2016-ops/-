@@ -44,16 +44,6 @@ def _workers() -> int:
         return 6
 
 
-# Average advance per character in units of text height: CJK glyphs are
-# square, Latin letters and digits about 0.6 wide (Arial, SimHei's Latin).
-_OVERFLOW_TOLERANCE = 1.1
-_MIN_WIDTH_RATIO = 0.5
-
-
-def _text_width(text: str) -> float:
-    return sum(1.0 if "⺀" <= char <= "￯" else 0.6 for char in text if char.isprintable())
-
-
 class DwgTranslationServiceError(RuntimeError):
     """Raised when an exported DWG cannot safely become an import task."""
 
@@ -111,7 +101,7 @@ class DwgTranslationService:
             dwg.make_translation(
                 item,
                 result.translation,
-                font_decision=self._fit_width(item, result.translation, self._font_decision(item, font_policy)),
+                font_decision=self._font_decision(item, font_policy),
             )
             for item, result in zip(exported.items, results, strict=True)
         )
@@ -169,34 +159,6 @@ class DwgTranslationService:
                 f"font policy contains an empty target for style {item.metadata.style_name}",
             )
         return dwg.FontDecision(target_font_file=target)
-
-    def _fit_width(
-        self, item: dwg.TextItem, translation: str, decision: dwg.FontDecision | None,
-    ) -> dwg.FontDecision | None:
-        """Keep a single-line label inside the width its source text took.
-
-        DBText does not wrap, so a translation wider than its source runs
-        into the neighbouring linework. Such a label is narrowed through its
-        width factor (MText wraps in its own box and is left alone); below
-        half the original width the text would be unreadable, so it is
-        narrowed to that and reported for review instead.
-        """
-        if item.entity_type == "MText" or translation == item.source_text:
-            return decision
-        source, target = _text_width(item.source_text), _text_width(translation)
-        if source <= 0 or target <= source * _OVERFLOW_TOLERANCE:
-            return decision
-        ratio = source / target
-        original = (decision.width_factor if decision is not None else None) or item.metadata.width_factor or 1.0
-        update: dict[str, object] = {"width_factor": round(original * max(ratio, _MIN_WIDTH_RATIO), 3)}
-        if ratio < _MIN_WIDTH_RATIO:
-            reason = f"TEXT_OVERFLOW: translation {target / source:.1f}x the source width"
-            update.update(review_required=True, review_reason=reason)
-            with self._warnings_lock:
-                self.warnings.append({"object_id": item.handle, "text": item.source_text, "errors": [reason]})
-        if decision is None:
-            return dwg.FontDecision(**update)
-        return decision.model_copy(update=update)
 
     def _unit_from_item(
         self,
@@ -268,7 +230,8 @@ class DwgTranslationService:
                             translated[(unit.source_text, tuple(unit.protected_tokens))] = result.translation
         results: list[TranslationResult] = []
         for unit in units:
-            text = translated.get((unit.source_text, tuple(unit.protected_tokens)), unit.source_text)
+            key = (unit.source_text, tuple(unit.protected_tokens))
+            text = translated.get(key, unit.source_text)
             result = TranslationResult(
                 unit_id=unit.id,
                 translation=text,
@@ -281,7 +244,10 @@ class DwgTranslationService:
                 request_count=1,
                 validation_status="valid",
             )
-            self._validate_provider_result(unit, result)
+            # Numbers keep their text without a request, and an item that
+            # kept failing keeps its source text and is already in warnings.
+            if key in translated:
+                self._validate_provider_result(unit, result)
             results.append(result)
         return tuple(results)
 

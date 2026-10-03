@@ -369,3 +369,11 @@ def test_office_units_reach_the_model_with_dates_already_localised():
     prepared = _with_local_dates(unit)
     assert prepared.source_text == "Deadline: 2026年1月29日, Gulberg 2"
     assert "2026年1月29日" in prepared.protected_tokens
+
+
+def test_list_label_protected_with_spaces_survives_chinese_spacing() -> None:
+    from document_translator.core.validation import validate_placeholders
+
+    source = "Note: 1. Unspecified material is Q345B; 2. Welds are E43."
+    assert validate_placeholders(source, "注：1.未注明材料为Q345B；2.焊条为E43。", [" 1. ", " 2. "]) == []
+    assert validate_placeholders(source, "注：未注明材料为Q345B；2.焊条为E43。", [" 1. "])

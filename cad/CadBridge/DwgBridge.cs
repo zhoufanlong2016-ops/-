@@ -519,8 +519,22 @@ internal static class DwgBridge
                     MTextProtector.Restore(item.TranslatedText, item.ProtectedSequences),
                     item.FontDecision)
                 : item.TranslatedText;
-            if (!string.Equals(ReadRawText(entity), expected, StringComparison.Ordinal))
-                throw new InvalidDataException($"Saved text verification failed for handle {handle}.");
+            var actual = ReadRawText(entity);
+            // AutoCAD rewrites MText formatting codes on save: it drops
+            // redundant ones ("\pxsm0.7;", a font switch before "。") and
+            // recases font names (simhei -> SimHei). Formatting is therefore
+            // compared as AutoCAD renders it: the plain text, read the same
+            // way from the saved entity and from the expected contents.
+            if (entity is MText saved)
+            {
+                using var probe = new MText();
+                probe.Contents = expected;
+                expected = probe.Text;
+                actual = saved.Text;
+            }
+            if (!string.Equals(actual, expected, StringComparison.Ordinal))
+                throw new InvalidDataException(
+                    $"Saved text verification failed for handle {handle}: expected \"{expected}\", saved \"{actual}\".");
         }
         transaction.Commit();
     }
@@ -655,8 +669,10 @@ internal static class DwgBridge
                 throw new InvalidDataException($"{paths[left].Field} and {paths[right].Field} must be distinct.");
     }
 
+    // Blank text (an empty block attribute) has nothing to translate, and an
+    // import cannot carry an empty translation for it, so it is not exported.
     private static bool ContainsUnsupportedTextControls(string text) =>
-        text.Contains("%%", StringComparison.Ordinal) || text.Contains(@"\U+", StringComparison.OrdinalIgnoreCase);
+        string.IsNullOrWhiteSpace(text) || text.Contains("%%", StringComparison.Ordinal) || text.Contains(@"\U+", StringComparison.OrdinalIgnoreCase);
 
     private static void ValidateLayerLists(string[] allow, string[] deny)
     {

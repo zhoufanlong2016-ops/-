@@ -253,21 +253,6 @@ class LongProvider(FakeProvider):
         return result.model_copy(update={"translation": self.translation, "result_hash": sha256_text(self.translation)})
 
 
-@pytest.mark.parametrize(("translation", "factor", "review"), [("你好", None, False), ("你好世界", 0.75, False), ("你好世界你好世界", 0.5, True)])
-def test_single_line_text_wider_than_its_source_is_narrowed(tmp_path, translation, factor, review) -> None:
-    export_json, _ = _write_export(tmp_path)
-    service = DwgTranslationService(LongProvider(translation))
-    outcome = service.prepare_import(
-        export_json, destination_dwg=tmp_path / "translated.dwg", task_json=tmp_path / "import.json",
-        result_json=tmp_path / "result.json", command_script=tmp_path / "import.scr",
-        source_language="en", target_language="zh-CN",
-    )
-    decision = outcome.import_task.translations[0].font_decision
-    assert (decision.width_factor if decision else None) == factor
-    assert bool(decision and decision.review_required) is review
-    assert bool(service.warnings) is review
-
-
 class CopiesInBatchProvider(FakeProvider):
     def translate_batch(self, units):
         if len(units) == 1:
@@ -284,3 +269,18 @@ def test_label_copied_unchanged_in_a_batch_is_asked_again_on_its_own(tmp_path) -
     )
     results = service._translate_batch_or_items(units, service._provider.translate_batch)
     assert [result.translation for result in results] == ["你好 Door", "MAM"]
+
+
+class FailingProvider(FakeProvider):
+    def translate_batch(self, units):
+        raise RuntimeError("timed out")
+
+
+def test_item_that_keeps_failing_keeps_its_source_text_and_is_reported(tmp_path) -> None:
+    service = DwgTranslationService(FailingProvider(), max_attempts=1)
+    _, exported = _write_export(tmp_path)
+    text = "all material in the drawing is new"
+    unit = service._unit_from_item(exported, exported.items[0].model_copy(update={"source_text": text, "source_hash": sha256_text(text)}), "en", "zh-CN")
+    results = service._translate_and_validate_batches((unit,))
+    assert results[0].translation == text
+    assert service.warnings and service.warnings[0]["text"] == text

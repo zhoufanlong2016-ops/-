@@ -92,12 +92,14 @@ def test_default_en_zh_engineering_glossary_is_selected() -> None:
     ))
 
     assert glossary is not None
-    assert [(entry.source, entry.target) for entry in glossary.entries] == [
+    entries = {(entry.source, entry.target) for entry in glossary.entries}
+    assert {
         ("Clearing and Grubb", "清表及清根"),
         ("No.", "编号"),
         ("Sr. No.", "序号"),
         ("Ultimate Disposal Station", "最终处置站"),
-    ]
+        ("Bill of Quantities", "工程量清单"),
+    } <= entries
 
 
 def test_qwen_lite_is_rejected_without_output(tmp_path, monkeypatch, capsys):

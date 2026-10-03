@@ -23,6 +23,10 @@ def _count_token(text: str, token: str) -> int:
     # Formatting sentinels are intentionally glued to neighbouring text.
     if token.startswith(("⟦", "[[")):
         return text.count(token)
+    # A list label is protected with the spaces around it (" 1. "), which
+    # Chinese output drops ("注：1.未注明…"); the label itself is what counts.
+    if token.strip() and token != token.strip():
+        token = token.strip()
     # Hierarchical list labels may legitimately touch their following word in
     # the source (for example, ``2.2.1Design``).  Count the full label
     # literally so normalising the following spacing in translation does not
