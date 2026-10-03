@@ -761,3 +761,26 @@ def test_contents_entries_keep_title_and_page_number():
     match = pdf_inplace._TOC_ENTRY_RE.match("4. Reference Datum ..................................... 6")
     assert match and (match.group("title"), match.group("page")) == ("4. Reference Datum", "6")
     assert pdf_inplace._TOC_ENTRY_RE.match("The total length is 1.5 km") is None
+
+
+def test_a_page_footer_does_not_hide_a_paragraph_broken_by_the_page():
+    doc = fitz.open()
+    for _ in range(3):
+        doc.new_page(width=595, height=842)
+    pages = [doc[i] for i in range(3)]
+    words = "Construction of sewer through trenchless technology will aid in minimum disruption of traffic"
+    for y in (700, 717, 734):
+        _justified(pages[0], 72, 523, y, words)
+    pages[1].insert_text((72, 90), "resettlement of people or reconstruction of civic infrastructure.", fontsize=12)
+    pages[2].insert_text((72, 90), "Another page of text that ends here.", fontsize=12)
+    for number, page in enumerate(pages, 1):  # footer at 91% of the page height
+        page.insert_text((450, 768), f"Page {number} of 3", fontsize=9)
+    paragraphs = []
+    for number, page in enumerate(pages, 1):
+        lines, _ = pdf_inplace._visual_lines(page, [])
+        right = max(line.bbox[2] for line in lines if line.bbox[1] < 760) + 1
+        for paragraph in pdf_inplace._segment(number, lines, (72.0, right)):
+            paragraph.bounds = (72.0, right)
+            paragraphs.append(paragraph)
+    across = pdf_inplace._across_pages(paragraphs, {1: 842.0, 2: 842.0, 3: 842.0})
+    assert [(paragraphs[h].page_number, paragraphs[t].text[:12]) for h, t in across.items()] == [(1, "resettlement")]

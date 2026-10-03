@@ -604,11 +604,27 @@ def _across_pages(paragraphs: list[_Paragraph], page_heights: dict[int, float]) 
     first paragraph continues in the same size, from the same margin, with
     no label or bullet, not centred, and not starting a sentence.
     """
+    # Running headers and footers ("Page 9 of 213") are the same text, but
+    # for its numbers, on many pages: a fixed margin missed a footer set at
+    # 91% of the page, which then counted as every page's last paragraph.
+    from collections import Counter
+
+    def signature(paragraph: _Paragraph) -> str:
+        return re.sub(r"\d+", "#", " ".join(paragraph.text.split()))
+
+    pages_with = Counter()
+    for signature_text, page_number in {(signature(p), p.page_number) for p in paragraphs}:
+        pages_with[signature_text] += 1
+    page_count = len({p.page_number for p in paragraphs})
+    furniture = {text for text, count in pages_with.items() if count >= max(3, 0.3 * page_count)}
+
     def body(index: int) -> bool:
         paragraph = paragraphs[index]
         height = page_heights.get(paragraph.page_number, 842.0)
-        # Running headers and page numbers are not body text.
-        return 0.07 * height < paragraph.bbox[1] and paragraph.bbox[3] < 0.93 * height and not paragraph.centred
+        return (
+            0.07 * height < paragraph.bbox[1] and paragraph.bbox[3] < 0.95 * height
+            and not paragraph.centred and signature(paragraph) not in furniture
+        )
 
     by_page: dict[int, list[int]] = {}
     for index, paragraph in enumerate(paragraphs):
