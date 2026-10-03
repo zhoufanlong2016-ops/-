@@ -275,7 +275,13 @@ def _translate_in_place(
         tables = []
     doc = fitz.open(source)
     try:
-        tables = [t for t in tables if not _is_drawing_frame(t, doc[t.page_number - 1])]
+        # A page stored rotated (/Rotate 90) has all its text rotated, which
+        # the paragraph path leaves untouched; its tables stay too: written
+        # unrotated, their cells came out as scattered vertical words.
+        tables = [
+            t for t in tables
+            if not _is_drawing_frame(t, doc[t.page_number - 1]) and not doc[t.page_number - 1].rotation
+        ]
         bounds_by_size = _content_bounds(doc, tables)
         paragraphs: list[_Paragraph] = []
         skipped_rotated = 0
@@ -283,7 +289,7 @@ def _translate_in_place(
             table_rects = [fitz.Rect(t.rect) for t in tables if t.page_number == page_number]
             lines, rotated = _visual_lines(page, table_rects)
             skipped_rotated += rotated
-            page_bounds = bounds_by_size[_page_key(page)]
+            page_bounds = _body_edges(lines, bounds_by_size[_page_key(page)])
             page_paragraphs = _segment(page_number, lines, page_bounds, _horizontal_rules(page))
             for paragraph in page_paragraphs:
                 paragraph.page_width = float(page.rect.width)
@@ -611,6 +617,29 @@ def _visual_lines(page: Any, table_rects: list[Any]) -> tuple[list[_VisualLine],
     return lines, rotated
 
 
+def _body_edges(lines: list[_VisualLine], bounds: tuple[float, float]) -> tuple[float, float]:
+    """The edges this page's body text starts and ends at.
+
+    The margins are the extremes of every page of this size; a body set
+    inside them (text from 90pt to 527pt where other pages reach 36pt and
+    549pt) made every line look indented and ended early, so each line was
+    translated on its own, and justified paragraphs were set as centred. Most lines of a body share both edges (justified
+    text); on a drawing, where labels share an edge only by chance (no edge
+    is shared by a third of the lines), the margins stand.
+    """
+    from collections import Counter
+
+    left, right = bounds
+    if len(lines) >= 8:
+        edge, count = Counter(round(line.bbox[0]) for line in lines).most_common(1)[0]
+        if count >= max(4, 0.3 * len(lines)) and edge - 1.0 > left:
+            left = edge - 1.0
+        edge, count = Counter(round(line.bbox[2]) for line in lines).most_common(1)[0]
+        if count >= max(4, 0.3 * len(lines)) and edge + 1.0 < right:
+            right = edge + 1.0
+    return left, right
+
+
 def _is_centred(line: _VisualLine, bounds: tuple[float, float]) -> bool:
     left, right = bounds
     x0, _, x1, _ = line.bbox
@@ -682,6 +711,10 @@ def _segment(
                 or line.bbox[1] - previous.bbox[1] > 2.0 * size
                 or line.bbox[1] < previous.bbox[1]
                 or centred != current_centred
+                # A centred bold title over centred plain lines ("PHYSICAL
+                # PHASING OF PROJECT" / "Total Proposed Sewer Length= ...")
+                # is a title and its own paragraph, not one sentence.
+                or (centred and _is_bold(_Paragraph(0, [line], True)) != _is_bold(_Paragraph(0, [previous], True)))
                 or bool(_LABEL_RE.match(line.text))
                 or _underlined(previous, rules)
                 # lines of one paragraph sit under each other
@@ -1145,6 +1178,10 @@ def _layout(
     # CJK fonts such as SimHei have no NBSP glyph (it shows as a box); use
     # the ideographic space there.
     pad = "\u3000" if cjk or not font.has_glyph(0xA0) else "\u00a0"
+    # Nor has it the list bullet "\u2022" (a box in "\u25a1 Central Drain\uff08\u4e3b\u6e20\uff09");
+    # the middle dot is the bullet it has.
+    if "\u2022" in text and not font.has_glyph(0x2022):
+        text = text.replace("\u2022", "\u00b7")
     if indent > 0.8 * size:
         spaces = int(round(indent / max(font.text_length(pad, fontsize=size), 0.1)))
     content = pad * spaces + text if spaces else text

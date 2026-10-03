@@ -441,3 +441,23 @@ def test_cell_text_reaches_the_model_one_item_per_line():
     )
     assert structure("Volume 1, Part I, Section\n2, Tender Data Sheet, ITT\n24.1") == "Volume 1, Part I, Section 2, Tender Data Sheet, ITT 24.1"
     assert structure("payable within\n10 days after approval") == "payable within 10 days after approval"
+
+
+def test_body_set_inside_the_page_margins_keeps_its_paragraphs(tmp_path):
+    doc = fitz.open()
+    page = doc.new_page(width=595, height=842)
+    page.insert_text((72, 100), "STORM WATER DRAINS IN CENTRAL ZONE", fontsize=12)
+    body = [
+        "The drainage network of Central Zone comprises mainly of Cantonment Drain",
+        "and its tributaries. Total catchment area for Cantonment Drain has been",
+        "estimated to be 23,653 acres. Some secondary and tertiary drains catering",
+        "to specific areas are as below",
+    ]
+    for index, text in enumerate(body):
+        page.insert_textbox(fitz.Rect(90, 110 + 17 * index, 527, 130 + 17 * index), text, fontsize=10.5, align=3 if index < 3 else 0)
+    lines, _ = pdf_inplace._visual_lines(page, [])
+    for line in lines[1:4]:
+        line.segments[0].bbox = (90.0, line.bbox[1], 527.0, line.bbox[3])
+    bounds = (36.0, 549.0)  # margins of other pages of this size
+    paragraphs = pdf_inplace._segment(1, lines, pdf_inplace._body_edges(lines * 2, bounds), [])
+    assert [len(p.lines) for p in paragraphs] == [1, 4]
