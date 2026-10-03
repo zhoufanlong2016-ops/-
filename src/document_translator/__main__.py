@@ -13,20 +13,11 @@ from typing import Sequence
 
 import httpx
 
-try:
-    from dotenv import find_dotenv, load_dotenv
-except ImportError:  # pragma: no cover - python-dotenv is a declared dependency
-    find_dotenv = load_dotenv = None
+from .api_keys import load_api_keys
 
-if load_dotenv is not None:
-    # Loaded once at import time, before any provider reads its own
-    # os.getenv(api_key_env): a provider API key (DASHSCOPE_API_KEY,
-    # OPENAI_API_KEY, DEEPSEEK_API_KEY) previously only worked for a
-    # session that had it exported by hand into the shell, gone the moment
-    # that terminal closed. find_dotenv() walks up from the current
-    # working directory, so this also works when the CLI is invoked from
-    # a subdirectory of the project, not just its root.
-    load_dotenv(find_dotenv(usecwd=True))
+# Before any provider reads os.getenv(api_key_env): keys\api_keys.env next
+# to the program, then a project .env as a fallback.
+load_api_keys()
 
 from .providers import DeepSeekConfig, DeepSeekProvider, OpenAIConfig, OpenAIProvider, QwenChatConfig, QwenChatProvider, QwenMTConfig, QwenMTProvider
 from .services import (

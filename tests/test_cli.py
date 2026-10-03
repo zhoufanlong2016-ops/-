@@ -199,3 +199,16 @@ def test_failure_returns_nonzero_without_destination(tmp_path, monkeypatch, caps
 
     assert not destination.exists()
     assert "provider unavailable" in capsys.readouterr().err
+
+
+def test_api_keys_load_from_keys_folder(tmp_path, monkeypatch):
+    from document_translator import api_keys
+
+    keys = tmp_path / "keys"
+    keys.mkdir()
+    (keys / "api_keys.env").write_text("DASHSCOPE_API_KEY=test-from-file\n", encoding="utf-8")
+    monkeypatch.delenv("DASHSCOPE_API_KEY", raising=False)
+    monkeypatch.setattr(api_keys, "key_file_candidates", lambda: [keys / "api_keys.env"])
+    assert api_keys.load_api_keys() == keys / "api_keys.env"
+    import os
+    assert os.environ["DASHSCOPE_API_KEY"] == "test-from-file"

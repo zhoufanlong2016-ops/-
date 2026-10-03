@@ -41,3 +41,6 @@ models/
 *.asd
 *.wbk
 *.tmp
+# API keys: only the template is committed
+keys/*
+!keys/api_keys.example.env
