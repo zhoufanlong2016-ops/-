@@ -33,6 +33,11 @@ _LETTER_RE = re.compile(r"[A-Za-z㐀-鿿豈-﫿]")
 _ORDINARY_WORD_RE = re.compile(r"(?<![A-Za-z⟦_])[A-Za-z][a-z]{3,}(?![A-Za-z])")
 
 
+# AutoCAD text codes: %%c (diameter), %%d, %%p, %%% and %%nnn character
+# codes, and \U+2205 Unicode escapes. Each is kept verbatim.
+_CAD_CODE_RE = re.compile(r"%%(?:\d{3}|[A-Za-z%])|\\[Uu]\+[0-9A-Fa-f]{4}")
+
+
 def _needs_translation(text: str) -> bool:
     return bool(_LETTER_RE.search(text))
 
@@ -69,6 +74,8 @@ class DwgTranslationService:
         self._max_attempts = max_attempts
         self.warnings: list[dict[str, object]] = []
         self._warnings_lock = threading.Lock()
+        # Items put together paragraph by paragraph; each paragraph was validated.
+        self._assembled: set[tuple[str, tuple[str, ...]]] = set()
 
     def prepare_import(
         self,
@@ -167,7 +174,8 @@ class DwgTranslationService:
         source_language: str,
         target_language: str,
     ) -> TranslationUnit:
-        protected_tokens = rule_protected_tokens(item.source_text, [sequence.token for sequence in item.protected_sequences])
+        codes = list(dict.fromkeys(_CAD_CODE_RE.findall(item.source_text)))
+        protected_tokens = rule_protected_tokens(item.source_text, [*(sequence.token for sequence in item.protected_sequences), *codes])
         location = DocumentLocation(
             part=item.space,
             object_id=item.handle,
@@ -246,7 +254,7 @@ class DwgTranslationService:
             )
             # Numbers keep their text without a request, and an item that
             # kept failing keeps its source text and is already in warnings.
-            if key in translated:
+            if key in translated and key not in self._assembled:
                 self._validate_provider_result(unit, result)
             results.append(result)
         return tuple(results)
@@ -266,9 +274,7 @@ class DwgTranslationService:
                 try:
                     results.append(self._translate_and_validate_batch((unit,), translate_batch)[0])
                 except DwgTranslationServiceError as error:
-                    results.append(None)
-                    with self._warnings_lock:
-                        self.warnings.append({"object_id": unit.location.object_id, "text": unit.source_text, "errors": [str(error) or str(batch_error)]})
+                    results.append(self._translate_by_paragraphs(unit, translate_batch, str(error) or str(batch_error)))
             return results
         # In a batch of codes and names ("MAM", "LW - TDW - 003") a model
         # copied ordinary labels too ("50% Clogged", "Lower Door"); asked on
@@ -282,6 +288,44 @@ class DwgTranslationService:
                     continue
                 results[index] = retry
         return results
+
+    def _translate_by_paragraphs(self, unit: TranslationUnit, translate_batch, error: str) -> TranslationResult | None:
+        """A long note fails whole for one sentence ("Class 2" written 二级):
+        an MText of several paragraphs is translated paragraph by paragraph,
+        and only a paragraph that still fails keeps its English."""
+        parts = re.split(r"(⟦MT_\d+⟧)", unit.source_text)
+        texts = [index for index, part in enumerate(parts) if not part.startswith("⟦MT_") and _needs_translation(part)]
+        kept: list[str] = []
+        if len(texts) >= 2:
+            for index in texts:
+                part = parts[index]
+                codes = [token for token in unit.protected_tokens if token in part and not token.startswith("⟦")]
+                data = unit.model_dump(exclude={"id"})
+                data.update(source_text=part, protected_tokens=rule_protected_tokens(part, codes))
+                piece = TranslationUnit(id=generate_unit_id(**{k: data[k] for k in (
+                    "document_hash", "format", "location", "source_language", "target_language", "source_text",
+                    "protected_tokens", "style_signature", "context_before", "context_after",
+                ) if k in data}), **data)
+                try:
+                    parts[index] = self._translate_and_validate_batch((piece,), translate_batch)[0].translation
+                except DwgTranslationServiceError as part_error:
+                    kept.append(f"{part.strip()[:80]!r}: {part_error}")
+        if len(texts) < 2 or len(kept) == len(texts):
+            with self._warnings_lock:
+                self.warnings.append({"object_id": unit.location.object_id, "text": unit.source_text, "errors": [error]})
+            return None
+        if kept:
+            with self._warnings_lock:
+                self.warnings.append({"object_id": unit.location.object_id, "text": unit.source_text, "errors": ["paragraphs kept in English: " + "; ".join(kept)]})
+        text = "".join(parts)
+        with self._warnings_lock:
+            self._assembled.add((unit.source_text, tuple(unit.protected_tokens)))
+        return TranslationResult(
+            unit_id=unit.id, translation=text, provider=self._provider.provider_name, model=self._provider.config.model,
+            prompt_version=self._provider.prompt_version, glossary_version=self._provider.glossary_version,
+            source_hash=sha256_text(unit.source_text), result_hash=sha256_text(text), request_count=len(texts),
+            validation_status="valid",
+        )
 
     def _translate_and_validate_batch(self, units, translate_batch) -> tuple[TranslationResult, ...]:
         last_error: Exception | None = None

@@ -671,8 +671,11 @@ internal static class DwgBridge
 
     // Blank text (an empty block attribute) has nothing to translate, and an
     // import cannot carry an empty translation for it, so it is not exported.
+    // AutoCAD special codes (%%c diameter, %%p, %%%, \U+2205) are exported:
+    // the translation keeps each one as a protected token. Skipping them
+    // left whole notes in English ("1. For the elevation of %%p0.000 ...").
     private static bool ContainsUnsupportedTextControls(string text) =>
-        string.IsNullOrWhiteSpace(text) || text.Contains("%%", StringComparison.Ordinal) || text.Contains(@"\U+", StringComparison.OrdinalIgnoreCase);
+        string.IsNullOrWhiteSpace(text);
 
     private static void ValidateLayerLists(string[] allow, string[] deny)
     {

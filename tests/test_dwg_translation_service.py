@@ -144,9 +144,12 @@ def test_service_keeps_source_text_when_a_provider_drops_mtext_tokens(tmp_path) 
         result_json=tmp_path / "result.json", command_script=tmp_path / "import.scr",
         source_language="en", target_language="zh-CN",
     )
-    # The broken translation is never written: the item keeps its source and is reported.
-    assert outcome.results[0].translation == exported.items[0].source_text
-    assert "PLACEHOLDER_MISMATCH" in service.warnings[0]["errors"][0]
+    # The broken translation is never written: each paragraph is then
+    # translated on its own between the item's own formatting tokens.
+    source = exported.items[0].source_text
+    tokens = [sequence.token for sequence in exported.items[0].protected_sequences]
+    assert [token for token in tokens if token in outcome.results[0].translation] == tokens
+    assert outcome.results[0].translation != source
 
 
 def test_cli_prepares_a_dwg_import_task_without_opening_autocad(tmp_path, monkeypatch, capsys) -> None:
@@ -284,3 +287,48 @@ def test_item_that_keeps_failing_keeps_its_source_text_and_is_reported(tmp_path)
     results = service._translate_and_validate_batches((unit,))
     assert results[0].translation == text
     assert service.warnings and service.warnings[0]["text"] == text
+
+
+def test_autocad_special_codes_are_protected(tmp_path) -> None:
+    service = DwgTranslationService(FakeProvider())
+    _, exported = _write_export(tmp_path)
+    text = "1. For the elevation of %%p0.000, see %%C12 bar and 5%%% slope"
+    unit = service._unit_from_item(exported, exported.items[0].model_copy(update={"source_text": text, "source_hash": sha256_text(text)}), "en", "zh-CN")
+    assert {"%%p", "%%C", "%%%"} <= set(unit.protected_tokens)
+    bad = "1. 本工程±0.000标高见%%C12钢筋，坡度5%"
+    result = FakeProvider().translate_unit(unit).model_copy(update={"translation": bad, "result_hash": sha256_text(bad)})
+    with pytest.raises(DwgTranslationServiceError, match="PLACEHOLDER_MISMATCH"):
+        service._validate_provider_result(unit, result)
+
+
+def test_marker_copied_from_another_item_is_rejected() -> None:
+    from document_translator.core.validation import validate_result_for_unit
+    from document_translator.core import DocumentFormat, DocumentLocation, TranslationUnit, generate_unit_id
+
+    data = dict(document_hash="0" * 64, format=DocumentFormat.DWG, location=DocumentLocation(part="Model", object_id="A"),
+                source_language="en", target_language="zh", source_text="that of the corresponding anchor bolt.",
+                protected_tokens=[], style_signature="s")
+    unit = TranslationUnit(id=generate_unit_id(**data), **data)
+    text = "相应锚栓的直径大[[TRP_0001]]。"
+    result = FakeProvider().translate_unit(unit).model_copy(update={"translation": text, "result_hash": sha256_text(text)})
+    assert any(error.startswith("MARKER_LEAK") for error in validate_result_for_unit(unit, result))
+
+
+class OneBadSentenceProvider(FakeProvider):
+    """Writes "Class 2" as 二级: any item containing it fails validation."""
+
+    def translate_unit(self, unit):
+        text = unit.source_text.replace("Class 2", "二级").replace("Hello", "你好")
+        return super().translate_unit(unit).model_copy(update={"translation": text, "result_hash": sha256_text(text)})
+
+
+def test_long_mtext_falls_back_to_paragraphs(tmp_path) -> None:
+    service = DwgTranslationService(OneBadSentenceProvider(), max_attempts=1)
+    _, exported = _write_export(tmp_path, mtext=True)
+    item = exported.items[0]
+    token = item.protected_sequences[0].token
+    text = f"Hello world 1.{token}The grade is Class 2.{token}Hello again 3."
+    unit = service._unit_from_item(exported, item.model_copy(update={"source_text": text}), "en", "zh-CN")
+    results = service._translate_and_validate_batches((unit,))
+    assert results[0].translation == f"你好 world 1.{token}The grade is Class 2.{token}你好 again 3."
+    assert "paragraphs kept in English" in service.warnings[0]["errors"][0]

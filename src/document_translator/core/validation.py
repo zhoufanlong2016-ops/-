@@ -82,6 +82,12 @@ def validate_result_for_unit(unit: TranslationUnit, result: TranslationResult) -
     # writing blank content into the document.
     if unit.source_text.strip() and not result.translation.strip():
         errors.append("EMPTY_TRANSLATION: provider returned blank text for non-blank source")
+    # Markers are restored before validation, so one left in the text was
+    # copied from another item of the batch ("直径大[[TRP_0001]]。" for a
+    # line with no protected values); it must never reach a document.
+    leaked = sorted(set(re.findall(r"\[\[TRP_\d+\]\]", result.translation)) - set(re.findall(r"\[\[TRP_\d+\]\]", unit.source_text)))
+    if leaked:
+        errors.append(f"MARKER_LEAK: {', '.join(leaked)} is not part of this item")
     incomplete = _incomplete_translation(unit, result.translation)
     if incomplete:
         errors.append(incomplete)
