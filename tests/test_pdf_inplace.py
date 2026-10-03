@@ -670,3 +670,55 @@ def test_a_paragraph_broken_by_a_page_is_one_sentence():
             paragraphs.append(paragraph)
     across = pdf_inplace._across_pages(paragraphs, {1: 842.0, 2: 842.0})
     assert [(paragraphs[h].page_number, paragraphs[t].text[:12]) for h, t in across.items()] == [(1, "resettlement")]
+
+
+def test_a_line_closing_an_open_bracket_continues_the_paragraph():
+    doc = fitz.open()
+    page = doc.new_page(width=595, height=842)
+    page.insert_text((72, 100), "Package C (Disposal Station: 350 Cfs, 10 Pumps of 50 Cfs each with 3 Standby", fontsize=11)
+    page.insert_text((144, 116), "Pumps).", fontsize=11)
+    lines, _ = pdf_inplace._visual_lines(page, [])
+    assert len(pdf_inplace._segment(1, lines, (72.0, 560.0))) == 1
+
+
+def test_a_numbered_item_hangs_its_wrapped_lines_under_its_text():
+    doc = fitz.open()
+    page = doc.new_page(width=595, height=842)
+    page.insert_text((51, 100), "3.", fontsize=12)
+    page.insert_text((64.3, 100), "Updated working on MTBM Quantity since insufficient MTBMs were taken", fontsize=12)
+    page.insert_text((64.3, 116), "the assignment within stipulated time frame.", fontsize=12)
+    lines, _ = pdf_inplace._visual_lines(page, [])
+    (paragraph,) = pdf_inplace._segment(1, lines, (51.0, lines[0].bbox[2] + 1))
+    label, rest, start = pdf_inplace._hanging_label(paragraph, "3.MTBM数量的更新计算，因为上一版不足，无法完成该任务。")
+    assert (label, rest[:4], round(start)) == ("3.", "MTBM", 64)
+
+
+def test_a_page_stored_rotated_is_translated(tmp_path):
+    doc = fitz.open()
+    page = doc.new_page(width=595, height=842)
+    # Stored turned a quarter, as a landscape page kept in a portrait file.
+    page.insert_text((300, 700), "Capital cost estimates", fontsize=12, rotate=90)
+    page.set_rotation(90)
+    source = tmp_path / "rotated.pdf"
+    doc.save(source)
+
+    class Provider:
+        provider_name, prompt_version, glossary_version = "fake", "v", "none"
+
+        class config:
+            model = "m"
+            batch_input_characters = 0
+
+        def translate_batch(self, units):
+            from document_translator.core import TranslationResult, sha256_text
+
+            return [TranslationResult(
+                unit_id=u.id, translation="资本成本估算", provider="fake", model="m", prompt_version="v",
+                glossary_version="none", source_hash=sha256_text(u.source_text), result_hash=sha256_text("资本成本估算"),
+                request_count=1, validation_status="valid") for u in units]
+
+    candidate = tmp_path / "out.pdf"
+    report = pdf_inplace._translate_in_place(Provider(), source, candidate, source_hash="0" * 64, source_language="en",
+                                    target_language="zh", profile=None)
+    assert "资本成本估算" in fitz.open(candidate)[0].get_text(), report
+    assert not (tmp_path / "out.upright.pdf").exists()

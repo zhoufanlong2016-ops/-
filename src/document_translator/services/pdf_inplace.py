@@ -35,7 +35,7 @@ from document_translator.core import (
     sha256_text,
     validate_result_for_unit,
 )
-from document_translator.translation_rules import localize_chinese_dates, rule_protected_tokens
+from document_translator.translation_rules import localize_chinese_dates, restore_list_markers, rule_protected_tokens
 
 from .mineru_pdf import (
     TranslationBatchProvider,
@@ -292,6 +292,17 @@ def _translate_in_place(
 
     from . import pdf_table
 
+    # A page stored rotated (/Rotate 90) is rewritten, on a working copy, to
+    # look the same with its text horizontal; it was left untranslated.
+    with fitz.open(source) as original:
+        if any(page.rotation for page in original):
+            for page in original:
+                if page.rotation:
+                    page.remove_rotation()
+            upright = candidate.with_name(candidate.stem + ".upright" + candidate.suffix)
+            original.save(str(upright), garbage=1, deflate=True)
+            source = upright
+
     try:
         tables = pdf_table.extract_pdf_tables(source)
     except pdf_table.PdfTableError:
@@ -382,6 +393,8 @@ def _translate_in_place(
             if id(paragraph) in flowed:
                 continue  # filled with whatever the head paragraph leaves over
             paragraph_translation = translations.get(unit.id, "").strip() or unit.source_text
+            # Also for a cached result from before the provider restored them.
+            paragraph_translation = restore_list_markers(unit.source_text, paragraph_translation)
             translations[unit.id] = _normalise_structure(
                 paragraph, paragraph_translation, paragraph.bounds, profile, target_language
             )
@@ -392,7 +405,7 @@ def _translate_in_place(
     cell_translations: dict[str, str] = {}
     for unit in cell_units:
         cell = cell_by_unit[unit.id]
-        translation = translations.get(unit.id, "").strip()
+        translation = restore_list_markers(unit.source_text, translations.get(unit.id, "").strip())
         if cell.id in continued and translation:
             tail = continued[cell.id]
             cell_translations[cell.id], cell_translations[tail.id] = _split_continued(
@@ -403,6 +416,8 @@ def _translate_in_place(
     table_report = _render_tables(source, staged, candidate, tables, cell_translations, source_language, target_language, warnings)
     try:
         staged.unlink(missing_ok=True)
+        if source.name.endswith(".upright" + source.suffix):
+            source.unlink(missing_ok=True)
     except OSError:
         # Windows can still hold the intermediate file a moment (a virus
         # scanner); it lives in a temporary folder that is removed anyway.
@@ -963,6 +978,10 @@ def _segment(
                 ):
                     indented = False
                 new = indented or right - previous.bbox[2] > 1.5 * size  # previous line ended early
+            # A line closing a bracket the paragraph left open continues it
+            # ("... with 3 Standby" / "Pumps).", set indented).
+            if new and _closes_open_bracket(current, line) and abs(line.size - size) <= 0.6 and line.color == previous.color:
+                new = False
             if new:
                 paragraphs.append(_Paragraph(page_number, current, current_centred))
                 current = []
@@ -999,13 +1018,23 @@ def _label_text_start(first: _VisualLine) -> float | None:
             continue
         # The label and its text may be separate pieces with no space
         # between them, only a gap ("iii." right-aligned, text at 101pt).
-        if label and previous_end is not None and char["bbox"][0] - previous_end > 0.3 * first.size:
+        gap = char["bbox"][0] - previous_end if previous_end is not None else 0.0
+        if label and (gap > 0.3 * first.size or (gap > 0.1 * first.size and _LIST_LABEL_RE.match("".join(label)))):
             label.append(" ")
         if label and label[-1] == " ":
             return char["bbox"][0] if _LIST_LABEL_RE.match("".join(label).strip()) else None
         label.append(value)
         previous_end = char["bbox"][2]
     return None
+
+
+def _closes_open_bracket(current: list[_VisualLine], line: _VisualLine) -> bool:
+    text = " ".join(item.text for item in current)
+    opened = text.count("(") + text.count("（") - text.count(")") - text.count("）")
+    head = line.text
+    close = min((i for i in (head.find(")"), head.find("）")) if i >= 0), default=-1)
+    open_ = min((i for i in (head.find("("), head.find("（")) if i >= 0), default=len(head))
+    return opened > 0 and 0 <= close < open_
 
 
 def _continues_hanging_item(first: _VisualLine, line: _VisualLine) -> bool:
@@ -1361,7 +1390,13 @@ def _render_paragraphs(
         for paragraph, text, region in page_plans:
             if not text:
                 continue  # its text now ends on the previous page
+            hanging = _hanging_label(paragraph, text)
+            if hanging is not None:
+                label, text, text_start = hanging
+                region = fitz.Rect(text_start, region.y0, region.x1, region.y1)
             size, written_box = _insert(page, paragraph, text, region, group_size[_style_key(paragraph)], paragraph.bounds)
+            if hanging is not None:
+                _insert_label(page, paragraph, label, size, written_box)
             _refit_underline(page, paragraph, text, size, written_box, rules)
             if size < paragraph.size - 1e-6:
                 shrunk.append({"page": page_number, "source_size": round(paragraph.size, 2), "size": size, "text": text[:60]})
@@ -1370,6 +1405,58 @@ def _render_paragraphs(
         "style_sizes": [{"source_size": key[0], "font": key[1], "size": size} for key, size in group_size.items()],
         "size_reduced": shrunk,
     }
+
+
+def _hanging_label(paragraph: _Paragraph, text: str) -> tuple[str, str, float] | None:
+    """(label, rest of the text, x where the text starts) for a numbered
+    item whose wrapped lines hang under its text ("3. Updated working on
+    ..." / "   the assignment within ..."), if the translation keeps the label."""
+    # A one-line item too: its text starts where the other items' text
+    # does, not right after its own (narrower or wider) label.
+    first = paragraph.lines[0]
+    text_start = _label_text_start(first)
+    if text_start is None or not all(abs(line.bbox[0] - text_start) <= 1.5 for line in paragraph.lines[1:]):
+        return None
+    # The label is what stands before the text start ("3." of "3.Updated").
+    label = "".join(
+        str(char.get("c", "")) for span in first.spans for char in span.get("chars", ())
+        if char["bbox"][2] <= text_start + 0.5
+    ).strip()
+    stripped = text.lstrip()
+    if not label or not stripped.startswith(label):
+        return None
+    return label, stripped[len(label):].lstrip(), text_start
+
+
+def _insert_label(page: Any, paragraph: _Paragraph, label: str, size: float, written_box: Any) -> None:
+    """The label on the baseline its text was actually written on, in the
+    same face (on the source baseline it sat lower than a CJK heading)."""
+    first = paragraph.lines[0]
+    baseline, font_name = first.baseline, ""
+    for block in page.get_text("dict", clip=written_box).get("blocks", ()):
+        for line in block.get("lines", ()):
+            for span in line.get("spans", ()):
+                if str(span.get("text", "")).strip():
+                    baseline, font_name = float(span["origin"][1]), str(span.get("font", ""))
+                    break
+            if font_name:
+                break
+        if font_name:
+            break
+    from .pdf_table import cached_font
+
+    # "viii." in a Latin face (SimHei spaced it out as "v i i i ."); a bullet
+    # in the text's face, as a glyph that face has.
+    fontfile = _latin_font(first.font, size, page) if label.isascii() or not paragraph.cjk_font else paragraph.cjk_font
+    if fontfile != paragraph.cjk_font and _is_bold(paragraph):
+        bold = Path(fontfile).with_name(Path(fontfile).stem.rstrip("bd") + "bd" + Path(fontfile).suffix)
+        fontfile = str(bold) if bold.is_file() else fontfile
+    label = _with_font_glyphs(label, cached_font(fontfile))
+    page.insert_text(
+        (first.bbox[0], baseline), label, fontsize=size, fontfile=fontfile,
+        fontname=_font_alias(fontfile), color=_rgb(first.color), overlay=True,
+        **({"render_mode": 2, "fill": _rgb(first.color), "border_width": 0.04} if _is_bold(paragraph) and fontfile == paragraph.cjk_font else {}),
+    )
 
 
 def _flow_over_pages(doc: Any, plans: list[tuple[Any, str, Any]], flow: dict[int, _Paragraph]) -> list[tuple[Any, str, Any]]:
@@ -1802,8 +1889,12 @@ def _table_alignment(source_page: Any, tables: list[Any]) -> dict[str, tuple[int
         header_rows = {row for row in real_by_row if row <= header_row}
         for column in {c.column for c in table.cells}:
             body = [detected[c.id] for c in table.cells if c.column == column and c.row not in header_rows and c.id in detected]
+            # The column's most common alignment: centred over half of it
+            # as before, right-aligned when most of it is, else left.
+            centred_count = sum(1 for h, _ in body if h == 1)
+            right_count = sum(1 for h, _ in body if h == 2)
             majority = (
-                1 if sum(h for h, _ in body) * 2 > len(body) else 0,
+                1 if centred_count * 2 > len(body) else 2 if right_count * 2 > len(body) else 0,
                 sum(1 for _, m in body if m) * 2 > len(body),
             ) if body else None
             for cell in table.cells:

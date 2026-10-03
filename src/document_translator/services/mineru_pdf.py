@@ -1611,7 +1611,14 @@ def _source_cell_alignment(source_page: Any, cell: Any) -> tuple[int, bool]:
         abs((text_rect.y0 + text_rect.y1) / 2 - (cell_rect.y0 + cell_rect.y1) / 2) <= max(3.0, cell_rect.height * 0.15)
         and text_rect.height <= cell_rect.height * 0.75
     )
-    return (1 if centred else 0), middle
+    # Set against the right border ("PKR Million" over the amounts):
+    # written from the left it moved across the whole table.
+    right = (
+        not centred
+        and cell_rect.x1 - text_rect.x1 <= tolerance
+        and text_rect.x0 - cell_rect.x0 > 0.3 * cell_rect.width
+    )
+    return (1 if centred else 2 if right else 0), middle
 
 
 def _render_on_source_skeleton(

@@ -378,6 +378,26 @@ UNIT_WORDS = (
 _NUMBER_UNIT_SPACE_RE = re.compile(rf"(?<=\d)[ \t ]+(?=(?:{UNIT_WORDS})(?![A-Za-z]))")
 
 
+# The marker may touch its text ("1.Increased": label and text set apart
+# by position, not by a space); a decimal ("1.5") is not a marker.
+_LIST_MARKER_RE = re.compile(r"(?m)^(\s*)(\d{1,3})([.)])(?=\s|$|[^\W\d_])")
+
+
+def restore_list_markers(source_text: str, translation: str) -> str:
+    """A list number keeps its own mark: "1." is not a sentence, and a model
+    still wrote "1。" although the marker was protected. Each line that
+    starts a numbered item in the source gets the source's mark back."""
+    marks = {match.group(2): match.group(3) for match in _LIST_MARKER_RE.finditer(source_text)}
+    if not marks:
+        return translation
+
+    def fix(match: re.Match[str]) -> str:
+        mark = marks.get(match.group(2))
+        return f"{match.group(1)}{match.group(2)}{mark}" if mark else match.group(0)
+
+    return re.sub(r"(?m)^(\s*)(\d{1,3})[。．、]", fix, translation)
+
+
 def auto_correct_translation(
     source_text: str,
     translation: str,
@@ -385,6 +405,7 @@ def auto_correct_translation(
     target_language: str = "zh",
 ) -> str:
     """Apply only deterministic fixes for drawing labels and ordinal dates."""
+    translation = restore_list_markers(source_text, translation)
     source = source_language.strip().casefold()
     target = target_language.strip().casefold()
     if not ((source in {"auto", "english", "en"} or source.startswith("en-")) and (

@@ -377,3 +377,12 @@ def test_list_label_protected_with_spaces_survives_chinese_spacing() -> None:
     source = "Note: 1. Unspecified material is Q345B; 2. Welds are E43."
     assert validate_placeholders(source, "注：1.未注明材料为Q345B；2.焊条为E43。", [" 1. ", " 2. "]) == []
     assert validate_placeholders(source, "注：未注明材料为Q345B；2.焊条为E43。", [" 1. "])
+
+
+def test_list_number_keeps_its_own_mark():
+    from document_translator.translation_rules import restore_list_markers
+
+    assert restore_list_markers("1. Increased design flow", "1。因路线走向更新") == "1.因路线走向更新"
+    assert restore_list_markers("1.Increased design flow", "1。因路线") == "1.因路线"
+    assert restore_list_markers("3) a\n4) b", "3、甲\n4。乙") == "3)甲\n4)乙"
+    assert restore_list_markers("Total 1.5 km", "1。5公里") == "1。5公里"  # not a list marker
