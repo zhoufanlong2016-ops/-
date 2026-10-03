@@ -1418,16 +1418,25 @@ def _table_alignment(source_page: Any, tables: list[Any]) -> dict[str, tuple[int
     detected = {c.id: _source_cell_alignment(source_page, c) for t in tables for c in t.cells if c.rect is not None}
     alignment: dict[str, tuple[int, bool]] = {}
     for table in tables:
-        header_row = min((c.row for c in table.cells if c.rect is not None), default=1)
+        # The header runs to the first row with cells of its own: above a
+        # risk register's column headers sits a full-width title row, and
+        # taking that as the header forced the column headers into the
+        # body's alignment.
+        real_by_row: dict[int, int] = {}
+        for c in table.cells:
+            if c.rect is not None:
+                real_by_row[c.row] = real_by_row.get(c.row, 0) + 1
+        header_row = next((row for row in sorted(real_by_row) if real_by_row[row] > 1), min(real_by_row, default=1))
+        header_rows = {row for row in real_by_row if row <= header_row}
         for column in {c.column for c in table.cells}:
-            body = [detected[c.id] for c in table.cells if c.column == column and c.row != header_row and c.id in detected]
+            body = [detected[c.id] for c in table.cells if c.column == column and c.row not in header_rows and c.id in detected]
             majority = (
                 1 if sum(h for h, _ in body) * 2 > len(body) else 0,
                 sum(1 for _, m in body if m) * 2 > len(body),
             ) if body else None
             for cell in table.cells:
                 if cell.column == column and cell.id in detected:
-                    alignment[cell.id] = detected[cell.id] if cell.row == header_row or majority is None else majority
+                    alignment[cell.id] = detected[cell.id] if cell.row in header_rows or majority is None else majority
     return alignment
 
 

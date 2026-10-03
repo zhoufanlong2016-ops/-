@@ -612,6 +612,81 @@ def _full_width_dividers(page: Any, rect: tuple[float, float, float, float]) -> 
     return tuple(found)
 
 
+def _finer_grid(table: Any, candidates: Sequence[Any], page: Any) -> Any:
+    """The "lines" grid of the same table, when its extra boundaries are real.
+
+    "lines" also reads highlight boxes and underlines inside a cell as grid
+    lines (a clarification table split into 10 rows and 5 columns around a
+    highlighted sentence), so an extra boundary counts only when a rule runs
+    along at least half the table's height (a column) or width (a row).
+    """
+    rect = _rect_tuple(getattr(table, "bbox", None))
+    if rect is None:
+        return table
+    for other in candidates:
+        box = _rect_tuple(getattr(other, "bbox", None))
+        if (
+            box is not None
+            # the same outline, or one enclosing it: "lines_strict" also
+            # finds only the lower rows of a table whose upper borders are
+            # filled rectangles, and those rows were reflowed as prose.
+            and box[0] <= rect[0] + 2.0 and box[1] <= rect[1] + 2.0 and box[2] >= rect[2] - 2.0 and box[3] >= rect[3] - 2.0
+            and abs(box[0] - rect[0]) <= 2.0 and abs(box[2] - rect[2]) <= 2.0
+            # more real cells: a header row read as one merged cell has the
+            # same row and column count as its 7 separate cells
+            and _real_cells(other) > _real_cells(table)
+            and _extra_boundaries_ruled(table, other, box, page)
+        ):
+            return other
+    return table
+
+
+def _real_cells(table: Any) -> int:
+    return sum(1 for cell in getattr(table, "cells", ()) or () if cell is not None)
+
+
+def _boundaries(table: Any, axis: int) -> list[float]:
+    values: list[float] = []
+    for cell in getattr(table, "cells", ()) or ():
+        box = _rect_tuple(cell)
+        if box is None:
+            continue
+        for value in (box[axis], box[axis + 2]):
+            if not any(abs(value - known) <= 2.0 for known in values):
+                values.append(value)
+    return values
+
+
+def _extra_boundaries_ruled(coarse: Any, fine: Any, rect: tuple[float, float, float, float], page: Any) -> bool:
+    vertical: list[tuple[float, float, float]] = []  # (x, y0, y1)
+    horizontal: list[tuple[float, float, float]] = []  # (y, x0, x1)
+    for drawing in page.get_drawings():
+        for item in drawing.get("items", ()):
+            if item[0] == "l":
+                a, b = item[1], item[2]
+                if abs(a.x - b.x) <= 1.0:
+                    vertical.append(((a.x + b.x) / 2, min(a.y, b.y), max(a.y, b.y)))
+                elif abs(a.y - b.y) <= 1.0:
+                    horizontal.append(((a.y + b.y) / 2, min(a.x, b.x), max(a.x, b.x)))
+            elif item[0] == "re":
+                r = item[1]
+                if r.width <= 2.0:
+                    vertical.append(((r.x0 + r.x1) / 2, r.y0, r.y1))
+                elif r.height <= 2.0:
+                    horizontal.append(((r.y0 + r.y1) / 2, r.x0, r.x1))
+
+    def ruled(position: float, rules: list[tuple[float, float, float]], low: float, high: float) -> bool:
+        covered = sum(max(0.0, min(end, high) - max(start, low)) for at, start, end in rules if abs(at - position) <= 1.5)
+        return covered >= 0.5 * (high - low)
+
+    for axis, rules, low, high in ((0, vertical, rect[1], rect[3]), (1, horizontal, rect[0], rect[2])):
+        known = _boundaries(coarse, axis)
+        for value in _boundaries(fine, axis):
+            if not any(abs(value - k) <= 2.0 for k in known) and not ruled(value, rules, low, high):
+                return False
+    return True
+
+
 def extract_tables_from_document(
     document: Any, *, page_numbers: Iterable[int] | None = None, merge_phantom_rows: bool = True
 ) -> tuple[PdfTable, ...]:
@@ -643,9 +718,16 @@ def extract_tables_from_document(
         try:
             finder = page.find_tables(strategy="lines_strict")
             page_tables = tuple(getattr(finder, "tables", ()) or ())
+            loose = tuple(getattr(page.find_tables(strategy="lines"), "tables", ()) or ())
             if not page_tables:
-                finder = page.find_tables(strategy="lines")
-                page_tables = tuple(getattr(finder, "tables", ()) or ())
+                page_tables = loose
+            else:
+                # "lines_strict" ignores rules drawn as thin filled
+                # rectangles (Word's cell borders): a 7-column risk table
+                # came out as 2 columns and every cell's text was poured
+                # into one. The same table (same outline) found with more
+                # cells by "lines" is the finer, real grid.
+                page_tables = tuple(_finer_grid(table, loose, page) for table in page_tables)
         except Exception as exc:  # pragma: no cover - implementation-specific PyMuPDF errors
             raise PdfTableExtractionError(f"failed to find vector tables on page {page_number}") from exc
         for table_number, table in enumerate(page_tables, 1):
