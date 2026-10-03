@@ -333,12 +333,20 @@ def _translate_in_place(
                     for other in page_paragraphs
                 )
                 paragraphs.append(paragraph)
+        page_heights = {number: float(page.rect.height) for number, page in enumerate(doc, start=1)}
     finally:
         doc.close()
 
     translatable = [p for p in paragraphs if _needs_translation(p.text, source_language)]
+    # A paragraph broken by a page is translated as one: two half sentences
+    # came back as two separate (and wrong) translations.
+    across = _across_pages(translatable, page_heights)
+    tails = set(across.values())
     paragraph_units = [
-        _unit(p.text, f"page:{p.page_number}", f"para:{index}", "paragraph", source_hash, source_language, target_language)
+        _unit(
+            p.text + (" " + translatable[across[index]].text if index in across else ""),
+            f"page:{p.page_number}", f"para:{index}", "paragraph", source_hash, source_language, target_language,
+        )
         for index, p in enumerate(translatable)
     ]
     cell_units: list[TranslationUnit] = []
@@ -358,7 +366,14 @@ def _translate_in_place(
             cell_units.append(unit)
             cell_by_unit[unit.id] = cell
 
-    translations, warnings, translation_stats = _translate_all(provider, paragraph_units + cell_units, cache=cache, progress=progress)
+    requested = [unit for index, unit in enumerate(paragraph_units) if index not in tails]
+    translations, warnings, translation_stats = _translate_all(provider, requested + cell_units, cache=cache, progress=progress)
+    for head, tail in across.items():
+        joined = translations.get(paragraph_units[head].id, "").strip()
+        if not joined:
+            continue
+        share = len(translatable[head].text) / max(1, len(translatable[head].text) + len(translatable[tail].text))
+        translations[paragraph_units[head].id], translations[paragraph_units[tail].id] = _split_continued(joined, share)
 
     with fitz.open(source) as work:
         for paragraph, unit in zip(translatable, paragraph_units):
@@ -548,6 +563,54 @@ def _restore_item_breaks(source: str, translation: str) -> str:
 
 
 _SPLIT_MARKS = "。；，、;,. "
+
+
+_SENTENCE_END_RE = re.compile(r"[.!?:;。！？：；…][\"'”’)）]*$")
+
+
+def _across_pages(paragraphs: list[_Paragraph], page_heights: dict[int, float]) -> dict[int, int]:
+    """Index of a page's last body paragraph -> the next page's first one,
+    where that paragraph runs on over the page break.
+
+    The page's last paragraph stops mid-sentence on a full line (no closing
+    punctuation, its last line reaching the margin), and the next page's
+    first paragraph continues in the same size, from the same margin, with
+    no label or bullet, not centred, and not starting a sentence.
+    """
+    def body(index: int) -> bool:
+        paragraph = paragraphs[index]
+        height = page_heights.get(paragraph.page_number, 842.0)
+        # Running headers and page numbers are not body text.
+        return 0.07 * height < paragraph.bbox[1] and paragraph.bbox[3] < 0.93 * height and not paragraph.centred
+
+    by_page: dict[int, list[int]] = {}
+    for index, paragraph in enumerate(paragraphs):
+        if body(index):
+            by_page.setdefault(paragraph.page_number, []).append(index)
+    result: dict[int, int] = {}
+    for page_number, indices in by_page.items():
+        following = by_page.get(page_number + 1)
+        if not following:
+            continue
+        head = max(indices, key=lambda index: paragraphs[index].bbox[3])
+        tail = min(following, key=lambda index: paragraphs[index].bbox[1])
+        a, b = paragraphs[head], paragraphs[tail]
+        last, first = a.lines[-1], b.lines[0]
+        text = a.text.rstrip()
+        if (
+            not _SENTENCE_END_RE.search(text)
+            and a.bounds[1] - last.bbox[2] <= 1.5 * last.size
+            and abs(a.size - b.size) <= 0.6
+            and abs(first.bbox[0] - a.bbox[0]) <= max(2.0, 0.8 * a.size)
+            and not first.bulleted
+            and _label_text_start(first) is None
+            and not bool(_LABEL_RE.match(first.text))
+            # A capital starts a sentence unless the page ended inside one
+            # ("... the realigned route of Line B &" / "Line C ...").
+            and (not first.text[:1].isupper() or re.search(r"(?:[a-z]+|[,&(/-])$", text))
+        ):
+            result[head] = tail
+    return result
 
 
 def _split_continued(translation: str, share: float) -> tuple[str, str]:

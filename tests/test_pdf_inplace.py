@@ -649,3 +649,24 @@ def test_a_column_of_one_line_rows_is_not_one_cell_paragraph():
     assert pdf_inplace._row_list_cells(page, SimpleNamespace(cells=[cell])) == [cell]
     prose = SimpleNamespace(id="p", rect=(36, 90, 314, 200), is_empty=False, text="one line")
     assert pdf_inplace._row_list_cells(page, SimpleNamespace(cells=[prose])) == []
+
+
+def test_a_paragraph_broken_by_a_page_is_one_sentence():
+    doc = fitz.open()
+    doc.new_page(width=595, height=842)
+    doc.new_page(width=595, height=842)
+    first, second = doc[0], doc[1]
+    words = "Construction of sewer through trenchless technology will aid in minimum disruption of traffic"
+    for y in (700, 717, 734):
+        _justified(first, 72, 523, y, words)
+    second.insert_text((72, 90), "resettlement of people or reconstruction of civic infrastructure.", fontsize=12)
+    second.insert_text((72, 120), "A new paragraph starts here.", fontsize=12)
+    paragraphs = []
+    for number, page in ((1, first), (2, second)):
+        lines, _ = pdf_inplace._visual_lines(page, [])
+        right = max(line.bbox[2] for line in lines) + 1
+        for paragraph in pdf_inplace._segment(number, lines, (72.0, right)):
+            paragraph.bounds = (72.0, right)
+            paragraphs.append(paragraph)
+    across = pdf_inplace._across_pages(paragraphs, {1: 842.0, 2: 842.0})
+    assert [(paragraphs[h].page_number, paragraphs[t].text[:12]) for h, t in across.items()] == [(1, "resettlement")]
