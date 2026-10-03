@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import os
+import sys
+import threading
 from pathlib import Path
 import re
 import time
@@ -27,6 +29,10 @@ from document_translator.translation_rules import rule_protected_tokens
 _LETTER_RE = re.compile(r"[A-Za-z㐀-鿿豈-﫿]")
 
 
+# A lowercase English word ("Clogged", "Door"); MText codes are excluded.
+_ORDINARY_WORD_RE = re.compile(r"(?<![A-Za-z⟦_])[A-Za-z][a-z]{3,}(?![A-Za-z])")
+
+
 def _needs_translation(text: str) -> bool:
     return bool(_LETTER_RE.search(text))
 
@@ -36,6 +42,16 @@ def _workers() -> int:
         return max(1, min(8, int(os.environ.get("DOCUMENT_TRANSLATOR_PDF_WORKERS", "6"))))
     except ValueError:
         return 6
+
+
+# Average advance per character in units of text height: CJK glyphs are
+# square, Latin letters and digits about 0.6 wide (Arial, SimHei's Latin).
+_OVERFLOW_TOLERANCE = 1.1
+_MIN_WIDTH_RATIO = 0.5
+
+
+def _text_width(text: str) -> float:
+    return sum(1.0 if "⺀" <= char <= "￯" else 0.6 for char in text if char.isprintable())
 
 
 class DwgTranslationServiceError(RuntimeError):
@@ -61,6 +77,8 @@ class DwgTranslationService:
             raise ValueError("max_attempts must be at least 1")
         self._provider = provider
         self._max_attempts = max_attempts
+        self.warnings: list[dict[str, object]] = []
+        self._warnings_lock = threading.Lock()
 
     def prepare_import(
         self,
@@ -93,7 +111,7 @@ class DwgTranslationService:
             dwg.make_translation(
                 item,
                 result.translation,
-                font_decision=self._font_decision(item, font_policy),
+                font_decision=self._fit_width(item, result.translation, self._font_decision(item, font_policy)),
             )
             for item, result in zip(exported.items, results, strict=True)
         )
@@ -151,6 +169,34 @@ class DwgTranslationService:
                 f"font policy contains an empty target for style {item.metadata.style_name}",
             )
         return dwg.FontDecision(target_font_file=target)
+
+    def _fit_width(
+        self, item: dwg.TextItem, translation: str, decision: dwg.FontDecision | None,
+    ) -> dwg.FontDecision | None:
+        """Keep a single-line label inside the width its source text took.
+
+        DBText does not wrap, so a translation wider than its source runs
+        into the neighbouring linework. Such a label is narrowed through its
+        width factor (MText wraps in its own box and is left alone); below
+        half the original width the text would be unreadable, so it is
+        narrowed to that and reported for review instead.
+        """
+        if item.entity_type == "MText" or translation == item.source_text:
+            return decision
+        source, target = _text_width(item.source_text), _text_width(translation)
+        if source <= 0 or target <= source * _OVERFLOW_TOLERANCE:
+            return decision
+        ratio = source / target
+        original = (decision.width_factor if decision is not None else None) or item.metadata.width_factor or 1.0
+        update: dict[str, object] = {"width_factor": round(original * max(ratio, _MIN_WIDTH_RATIO), 3)}
+        if ratio < _MIN_WIDTH_RATIO:
+            reason = f"TEXT_OVERFLOW: translation {target / source:.1f}x the source width"
+            update.update(review_required=True, review_reason=reason)
+            with self._warnings_lock:
+                self.warnings.append({"object_id": item.handle, "text": item.source_text, "errors": [reason]})
+        if decision is None:
+            return dwg.FontDecision(**update)
+        return decision.model_copy(update=update)
 
     def _unit_from_item(
         self,
@@ -210,12 +256,16 @@ class DwgTranslationService:
         if batches:
             from concurrent.futures import ThreadPoolExecutor
 
+            done = 0
             with ThreadPoolExecutor(max_workers=min(_workers(), len(batches))) as pool:
                 for batch, batch_results in zip(
-                    batches, pool.map(lambda batch: self._translate_and_validate_batch(batch, translate_batch), batches)
+                    batches, pool.map(lambda batch: self._translate_batch_or_items(batch, translate_batch), batches)
                 ):
+                    done += len(batch)
+                    print(f"translation: {done}/{len(distinct)}", file=sys.stderr, flush=True)
                     for unit, result in zip(batch, batch_results, strict=True):
-                        translated[(unit.source_text, tuple(unit.protected_tokens))] = result.translation
+                        if result is not None:
+                            translated[(unit.source_text, tuple(unit.protected_tokens))] = result.translation
         results: list[TranslationResult] = []
         for unit in units:
             text = translated.get((unit.source_text, tuple(unit.protected_tokens)), unit.source_text)
@@ -234,6 +284,38 @@ class DwgTranslationService:
             self._validate_provider_result(unit, result)
             results.append(result)
         return tuple(results)
+
+    def _translate_batch_or_items(self, units, translate_batch) -> list[TranslationResult | None]:
+        """One failing batch must not discard the whole drawing.
+
+        A batch that still fails after its retries (a slow or unreachable
+        API: requests timing out) is retried item by item; an item that
+        still fails keeps its source text and is reported in ``warnings``.
+        """
+        try:
+            results = list(self._translate_and_validate_batch(units, translate_batch))
+        except DwgTranslationServiceError as batch_error:
+            results: list[TranslationResult | None] = []
+            for unit in units:
+                try:
+                    results.append(self._translate_and_validate_batch((unit,), translate_batch)[0])
+                except DwgTranslationServiceError as error:
+                    results.append(None)
+                    with self._warnings_lock:
+                        self.warnings.append({"object_id": unit.location.object_id, "text": unit.source_text, "errors": [str(error) or str(batch_error)]})
+            return results
+        # In a batch of codes and names ("MAM", "LW - TDW - 003") a model
+        # copied ordinary labels too ("50% Clogged", "Lower Door"); asked on
+        # its own it translates them. A label returned unchanged that has a
+        # lowercase English word gets that one more request.
+        for index, (unit, result) in enumerate(zip(units, results)):
+            if result.translation.strip() == unit.source_text.strip() and _ORDINARY_WORD_RE.search(unit.source_text):
+                try:
+                    retry = self._translate_and_validate_batch((unit,), translate_batch)[0]
+                except DwgTranslationServiceError:
+                    continue
+                results[index] = retry
+        return results
 
     def _translate_and_validate_batch(self, units, translate_batch) -> tuple[TranslationResult, ...]:
         last_error: Exception | None = None

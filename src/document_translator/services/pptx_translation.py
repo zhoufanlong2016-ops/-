@@ -101,9 +101,9 @@ class PptxTranslationService:
     def _apply_batch(self, pending):
         units = [item[2] for item in pending]
         if hasattr(self.provider, "translate_batch"):
-            from .batch_runner import settle, translate_units
+            from .batch_runner import translate_and_settle
 
-            results, self.warnings = settle(self.provider, units, translate_units(self.provider, units, cache=self.cache))
+            results, self.warnings = translate_and_settle(self.provider, units, cache=self.cache)
         else:
             results = [self.provider.translate_unit(u) for u in units]
         if len(results) != len(pending):

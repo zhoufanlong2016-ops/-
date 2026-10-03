@@ -256,7 +256,9 @@ def _translate_docx(args: argparse.Namespace) -> int:
         print(f"comparison report={args.comparison_report}")
     for issue in outcome.quality_issues:
         print(f"quality issue: {issue}; draft retained for review", file=sys.stderr)
-    return 2 if outcome.quality_issues else 0
+    # Issues are reported for review, as for PDF; the translation is still
+    # delivered (exit 2 made the GUI discard it as "not passed").
+    return 0
 
 
 def _validate_output(args: argparse.Namespace) -> int:
@@ -319,7 +321,9 @@ def _translate_pptx(args: argparse.Namespace) -> int:
     report = args.layout_report or args.destination.with_suffix(".layout.json")
     outcome = PptxLayoutService(minimum_font_size=args.minimum_font_size).fit_file(args.source, args.destination, report)
     print(f"translated {count} PPTX text paragraphs; output={args.destination}; layout_report={outcome.report_path}; unresolved={outcome.unresolved}")
-    return 2 if outcome.unresolved else 0
+    if outcome.unresolved:
+        print(f"warning: {outcome.unresolved} text box(es) still overflow; see {outcome.report_path} (kept for review)", file=sys.stderr)
+    return 0
 
 
 def _translate_xlsx(args: argparse.Namespace) -> int:

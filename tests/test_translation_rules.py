@@ -356,3 +356,16 @@ def test_no_space_between_number_and_unit_in_chinese_and_both_forms_validate():
     assert normalize_chinese_spacing("直径在2,400 mm和3,500 mm之间，功率60 HP", "zh") == "直径在2,400mm和3,500mm之间，功率60HP"
     assert validate_placeholders("2,400 mm and 3,500 mm", "2,400mm和3,500mm", ["2,400 mm", "3,500 mm"]) == []
     assert validate_placeholders("3,500 mm", "3,600mm", ["3,500 mm"])
+
+
+def test_office_units_reach_the_model_with_dates_already_localised():
+    from document_translator.core import DocumentFormat, DocumentLocation, TranslationUnit, generate_unit_id
+    from document_translator.services.batch_runner import _with_local_dates
+
+    data = dict(document_hash="0" * 64, format=DocumentFormat.DOCX, location=DocumentLocation(part="p", object_id="1"),
+                source_language="en", target_language="zh", source_text="Deadline: 29th January 2026, Gulberg 2",
+                protected_tokens=["29", "2026", "2"], style_signature="", context_before="", context_after="")
+    unit = TranslationUnit(id=generate_unit_id(**data), **data)
+    prepared = _with_local_dates(unit)
+    assert prepared.source_text == "Deadline: 2026年1月29日, Gulberg 2"
+    assert "2026年1月29日" in prepared.protected_tokens

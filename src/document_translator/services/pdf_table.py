@@ -1163,6 +1163,22 @@ def _fill_line_height(
         probe.close()
 
 
+# A bold source cell (a table header: "Sr #", "Employer's Response") keeps
+# its weight: the CJK faces used here have no bold file, so the glyphs are
+# filled and outlined in black.
+_BOLD_TEXT = {"render_mode": 2, "fill": (0, 0, 0), "color": (0, 0, 0), "border_width": 0.04}
+
+
+def _cell_is_bold(page: Any, rect: Any) -> bool:
+    spans = [
+        span for block in page.get_text("dict", clip=rect).get("blocks", ())
+        for line in block.get("lines", ()) for span in line.get("spans", ())
+        if str(span.get("text", "")).strip()
+    ]
+    bold = [bool(int(span.get("flags") or 0) & 16) or "bold" in str(span.get("font", "")).casefold() for span in spans]
+    return bool(bold) and sum(bold) * 2 > len(bold)
+
+
 def _cell_alignment(
     align: int | Mapping[str, int] | Callable[[PdfTableCell], int],
     cell: PdfTableCell,
@@ -1428,6 +1444,7 @@ def render_table_translations(
         fitted_sizes: dict[str, float] = {}
         fitted_line_heights: dict[str, float | None] = {}
         compact_cells: set[str] = set()
+        bold_cells: set[str] = set()
         fitted_texts: dict[str, str] = {}
         source_drawing_counts: dict[int, int] = {}
         font_by_cell: dict[str, Path] = {}
@@ -1471,6 +1488,8 @@ def render_table_translations(
                 # stale fragment (for example a clipped table header) survives
                 # the overlay.  ``graphics=0`` keeps the original grid lines.
                 redactions_by_page.setdefault(page_number, []).append(cell_rect)
+                if _cell_is_bold(page, cell_rect):
+                    bold_cells.add(cell.id)
                 matched_links = _links_for_cell(page_links_by_page[page_number], cell_rect)
                 if matched_links:
                     links_by_cell[cell.id] = matched_links
@@ -1609,6 +1628,7 @@ def render_table_translations(
                     lineheight=fitted_line_heights.get(cell.id),
                     align=_cell_alignment(align, cell),
                     overlay=True,
+                    **(_BOLD_TEXT if cell.id in bold_cells else {}),
                 )
                 if result < -1e-6 and fitted_line_heights.get(cell.id) is not None:
                     # The cosmetic line-spacing bump was verified to fit on a
@@ -1625,6 +1645,7 @@ def render_table_translations(
                         fontsize=fitted_sizes[cell.id],
                         align=_cell_alignment(align, cell),
                         overlay=True,
+                        **(_BOLD_TEXT if cell.id in bold_cells else {}),
                     )
                 if result < -1e-6:
                     raise PdfTableFitError(

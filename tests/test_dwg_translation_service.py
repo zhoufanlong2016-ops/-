@@ -135,15 +135,18 @@ def test_service_carries_width_compensation_font_policy(tmp_path) -> None:
     assert decision.review_required is True
 
 
-def test_service_rejects_a_provider_that_drops_mtext_tokens(tmp_path) -> None:
-    export_json, _ = _write_export(tmp_path, mtext=True)
+def test_service_keeps_source_text_when_a_provider_drops_mtext_tokens(tmp_path) -> None:
+    export_json, exported = _write_export(tmp_path, mtext=True)
 
-    with pytest.raises(DwgTranslationServiceError, match="PLACEHOLDER_MISMATCH"):
-        DwgTranslationService(BrokenMTextProvider(), max_attempts=1).prepare_import(
-            export_json, destination_dwg=tmp_path / "translated.dwg", task_json=tmp_path / "import.json",
-            result_json=tmp_path / "result.json", command_script=tmp_path / "import.scr",
-            source_language="en", target_language="zh-CN",
-        )
+    service = DwgTranslationService(BrokenMTextProvider(), max_attempts=1)
+    outcome = service.prepare_import(
+        export_json, destination_dwg=tmp_path / "translated.dwg", task_json=tmp_path / "import.json",
+        result_json=tmp_path / "result.json", command_script=tmp_path / "import.scr",
+        source_language="en", target_language="zh-CN",
+    )
+    # The broken translation is never written: the item keeps its source and is reported.
+    assert outcome.results[0].translation == exported.items[0].source_text
+    assert "PLACEHOLDER_MISMATCH" in service.warnings[0]["errors"][0]
 
 
 def test_cli_prepares_a_dwg_import_task_without_opening_autocad(tmp_path, monkeypatch, capsys) -> None:
@@ -239,3 +242,45 @@ def test_service_retries_a_rate_limited_batch_with_backoff(tmp_path, monkeypatch
         source_language="en", target_language="zh-CN",
     )
     assert sleeps == [1]
+
+
+class LongProvider(FakeProvider):
+    def __init__(self, translation):
+        self.translation = translation
+
+    def translate_unit(self, unit):
+        result = super().translate_unit(unit)
+        return result.model_copy(update={"translation": self.translation, "result_hash": sha256_text(self.translation)})
+
+
+@pytest.mark.parametrize(("translation", "factor", "review"), [("你好", None, False), ("你好世界", 0.75, False), ("你好世界你好世界", 0.5, True)])
+def test_single_line_text_wider_than_its_source_is_narrowed(tmp_path, translation, factor, review) -> None:
+    export_json, _ = _write_export(tmp_path)
+    service = DwgTranslationService(LongProvider(translation))
+    outcome = service.prepare_import(
+        export_json, destination_dwg=tmp_path / "translated.dwg", task_json=tmp_path / "import.json",
+        result_json=tmp_path / "result.json", command_script=tmp_path / "import.scr",
+        source_language="en", target_language="zh-CN",
+    )
+    decision = outcome.import_task.translations[0].font_decision
+    assert (decision.width_factor if decision else None) == factor
+    assert bool(decision and decision.review_required) is review
+    assert bool(service.warnings) is review
+
+
+class CopiesInBatchProvider(FakeProvider):
+    def translate_batch(self, units):
+        if len(units) == 1:
+            return super().translate_batch(units)
+        return [LongProvider(unit.source_text).translate_unit(unit) for unit in units]
+
+
+def test_label_copied_unchanged_in_a_batch_is_asked_again_on_its_own(tmp_path) -> None:
+    service = DwgTranslationService(CopiesInBatchProvider())
+    _, exported = _write_export(tmp_path)
+    units = tuple(
+        service._unit_from_item(exported, exported.items[0].model_copy(update={"source_text": text, "source_hash": sha256_text(text)}), "en", "zh-CN")
+        for text in ("Hello Door", "MAM")
+    )
+    results = service._translate_batch_or_items(units, service._provider.translate_batch)
+    assert [result.translation for result in results] == ["你好 Door", "MAM"]

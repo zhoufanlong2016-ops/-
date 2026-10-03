@@ -304,9 +304,14 @@ def extract_paragraph_translation_units(
     return units
 
 
+_INTEGRITY_ERRORS = {"UNIT_ID_MISMATCH", "SOURCE_HASH_MISMATCH", "RESULT_HASH_MISMATCH", "EMPTY_TRANSLATION"}
+
+
 def _translation_text(unit: TranslationUnit, candidate: str | TranslationResult) -> str:
     if isinstance(candidate, TranslationResult):
-        errors = validate_result_for_unit(unit, candidate)
+        # Only a result that does not belong to this unit stops the write;
+        # content findings were already retried and reported by the service.
+        errors = [error for error in validate_result_for_unit(unit, candidate) if error.split(":")[0] in _INTEGRITY_ERRORS]
         if errors:
             raise DocxAdapterError(f"invalid result for {unit.id}: {', '.join(errors)}")
         value = candidate.translation

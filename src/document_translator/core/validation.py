@@ -44,7 +44,9 @@ def _count_token(text: str, token: str) -> int:
         # non-alphanumeric after it rejected "1. Kindly" in the source while
         # accepting "1. 请" in the translation.
         # A unit may follow directly in Chinese output ("150HP", "132KV").
-        tail = "" if token[-1].isspace() else rf"(?:(?![A-Za-z0-9])|(?=(?:{UNIT_WORDS}|KV)(?![A-Za-z])))"
+        # A token ending in a non-alphanumeric ("2026年1月15日") needs no
+        # boundary after it ("2026年1月15日12:00时").
+        tail = "" if not (token[-1].isascii() and token[-1].isalnum()) else rf"(?:(?![A-Za-z0-9])|(?=(?:{UNIT_WORDS}|KV)(?![A-Za-z])))"
         pattern = rf"(?<![A-Za-z0-9]){re.escape(token)}{tail}"
         return len(re.findall(pattern, text))
     return text.count(token)

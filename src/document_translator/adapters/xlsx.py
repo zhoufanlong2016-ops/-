@@ -216,9 +216,14 @@ def extract_xlsx_units(path: str | Path, **kwargs) -> list[TranslationUnit]:
     return list(read_xlsx(path, **kwargs).units)
 
 
+_INTEGRITY_ERRORS = {"UNIT_ID_MISMATCH", "SOURCE_HASH_MISMATCH", "RESULT_HASH_MISMATCH", "EMPTY_TRANSLATION"}
+
+
 def _translation_text(unit: TranslationUnit, value: str | TranslationResult) -> str:
     if isinstance(value, TranslationResult):
-        errors = validate_result_for_unit(unit, value)
+        # Only a result that does not belong to this unit stops the write;
+        # content findings were already retried and reported by the service.
+        errors = [error for error in validate_result_for_unit(unit, value) if error.split(":")[0] in _INTEGRITY_ERRORS]
         if errors:
             raise XlsxAdapterError(f"invalid result for {unit.id}: {', '.join(errors)}")
         text = value.translation

@@ -161,7 +161,8 @@ def translate_dwg_file(
         progress(f"dwg: 语言 {source_language} -> {target_language}")
 
         font_policy = _font_policy_for_chinese(exported) if target_language.startswith("zh") else None
-        DwgTranslationService(provider_factory(source_language, target_language)).prepare_import(
+        service = DwgTranslationService(provider_factory(source_language, target_language))
+        service.prepare_import(
             export_json,
             destination_dwg=workdir / "translated.dwg",
             task_json=workdir / "import_task.json",
@@ -171,6 +172,10 @@ def translate_dwg_file(
             target_language=target_language,
             font_policy=font_policy,
         )
+        for warning in service.warnings:
+            # Untranslated (the API kept failing) or too long to fit: the
+            # drawing is still written, these labels are listed for review.
+            progress(f"dwg: 需复核 {warning['object_id']} {warning['text']!r}: {'; '.join(map(str, warning['errors']))}")
         dwg.write_command_script(
             workdir / "import.scr", operation="import", task_json=workdir / "import_task.json", netload_path=bridge,
         )

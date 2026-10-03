@@ -10,6 +10,7 @@ depends only on its text and protected tokens (which is also the cache key).
 from __future__ import annotations
 
 import os
+import sys
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Callable, Sequence
 
@@ -94,6 +95,7 @@ def translate_units(
                 f"translation: {len(representatives)} distinct texts ({len(units)} total), "
                 f"{len(representatives) - len(pending)} from cache, {len(batches)} requests"
             )
+        done = 0
         with ThreadPoolExecutor(max_workers=max(1, min(worker_count(), len(batches)))) as pool:
             for batch, batch_results in zip(batches, pool.map(lambda batch: list(provider.translate_batch(batch)), batches)):
                 if len(batch_results) != len(batch):
@@ -102,6 +104,9 @@ def translate_units(
                 by_id = {result.unit_id: result for result in batch_results if isinstance(result, TranslationResult)}
                 if set(by_id) != {unit.id for unit in batch}:
                     raise ValueError("batch translation ID mismatch")
+                done += len(batch)
+                # Read by the GUI to show "已翻译 x/y".
+                print(f"translation: {done}/{len(pending)}", file=sys.stderr, flush=True)
                 for unit in batch:
                     result = by_id[unit.id]
                     results[unit.id] = result
@@ -165,3 +170,43 @@ def settle(
             warnings.append({"object_id": unit.location.object_id, "errors": errors})
         settled.append(result)
     return settled, warnings
+
+
+def _with_local_dates(unit: TranslationUnit) -> TranslationUnit:
+    """The unit as the model should see it: full dates already in the target
+    form ("29th January 2026" -> "2026年1月29日"), as the PDF path does.
+
+    With the day and year as opaque placeholders a model mixed them up
+    ("2026年29月"); a date has one correct rendering, so it is not left to it.
+    """
+    from document_translator.core import generate_unit_id
+    from document_translator.translation_rules import localize_chinese_dates, rule_protected_tokens
+
+    text, dates = localize_chinese_dates(unit.source_text, unit.source_language, unit.target_language)
+    if not dates:
+        return unit
+    kept = [token for token in unit.protected_tokens if token in text]
+    data = unit.model_dump(exclude={"id"})
+    data.update(source_text=text, protected_tokens=rule_protected_tokens(text, [*kept, *dates]))
+    return TranslationUnit(id=generate_unit_id(**{k: data[k] for k in (
+        "document_hash", "format", "location", "source_language", "target_language", "source_text",
+        "protected_tokens", "style_signature", "context_before", "context_after",
+    ) if k in data}), **data)
+
+
+def translate_and_settle(
+    provider: Any,
+    units: Sequence[TranslationUnit],
+    *,
+    cache: Any | None = None,
+    normalize: Callable[[str], str] | None = None,
+) -> tuple[list[TranslationResult], list[dict[str, object]]]:
+    """translate_units() + settle(), with dates localised before the model."""
+    prepared = [_with_local_dates(unit) for unit in units]
+    raw = translate_units(provider, prepared, cache=cache)
+    settled, warnings = settle(provider, prepared, raw, normalize=normalize)
+    rebound = [
+        result if model is unit else result.model_copy(update={"unit_id": unit.id, "source_hash": sha256_text(unit.source_text)})
+        for unit, model, result in zip(units, prepared, settled, strict=True)
+    ]
+    return rebound, warnings

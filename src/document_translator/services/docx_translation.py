@@ -88,10 +88,9 @@ class DocxTranslationService:
     def _translate_units(self, units: tuple[TranslationUnit, ...]) -> tuple[TranslationResult, ...]:
         batch_translate = getattr(self._provider, "translate_batch", None)
         if callable(batch_translate) and getattr(self._provider, "supports_stable_batch", True):
-            from .batch_runner import settle, translate_units
+            from .batch_runner import translate_and_settle
 
-            raw = translate_units(self._provider, units, cache=self._cache)
-            settled, self.warnings = settle(self._provider, units, raw, normalize=self._normalize_translation)
+            settled, self.warnings = translate_and_settle(self._provider, units, cache=self._cache, normalize=self._normalize_translation)
             return tuple(settled)
         return tuple(self._translate_and_validate(unit) for unit in units)
 

@@ -74,13 +74,12 @@ class XlsxTranslationService:
     def _translate_units(self, units: tuple[TranslationUnit, ...]) -> tuple[TranslationResult, ...]:
         batch_translate = getattr(self._provider, "translate_batch", None)
         if callable(batch_translate) and getattr(self._provider, "supports_stable_batch", True):
-            from .batch_runner import settle, translate_units
+            from .batch_runner import translate_and_settle
 
             try:
-                raw = translate_units(self._provider, units, cache=self._cache)
+                settled, self.warnings = translate_and_settle(self._provider, units, cache=self._cache)
             except Exception as error:
                 raise XlsxTranslationServiceError(f"batch translation failed: {error}") from error
-            settled, self.warnings = settle(self._provider, units, raw)
             return tuple(settled)
         return tuple(self._translate_and_validate(unit) for unit in units)
 

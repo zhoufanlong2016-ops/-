@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+import re
 import subprocess
 import sys
 import tempfile
@@ -103,6 +104,9 @@ def build_cli_command(
     if pdf_cache is not None and suffix != ".dwg":
         args.extend(("--cache", str(pdf_cache)))
     return args
+
+
+_TRANSLATION_PROGRESS_RE = re.compile(r"^translation: (\d+)/(\d+)\s*$")
 
 
 class _WindowsDropTarget:
@@ -420,7 +424,14 @@ class TranslationApp:
             self._active_process = process
         assert process.stdout is not None
         for line in process.stdout:
-            self.root.after(0, self._write_log, line.decode("utf-8", errors="replace"))
+            text = line.decode("utf-8", errors="replace")
+            counted = _TRANSLATION_PROGRESS_RE.search(text)
+            if counted:
+                # "translation: 12/48" from every route: a real progress bar
+                # instead of hundreds of log lines.
+                self.root.after(0, self._show_translation_progress, int(counted.group(1)), int(counted.group(2)))
+                continue
+            self.root.after(0, self._write_log, text)
         code = process.wait()
         with self._active_process_lock:
             self._active_process = None
@@ -490,13 +501,19 @@ class TranslationApp:
         self.execute_button.configure(state="normal")
         self.stop_button.configure(state="disabled")
 
+    def _show_translation_progress(self, done: int, total: int) -> None:
+        self.progress.stop()
+        self.progress.configure(mode="determinate", maximum=max(total, 1), value=done)
+        self.status.set(f"已翻译 {done}/{total}")
+
     def _start_file_progress(self) -> None:
         self.progress.configure(mode="indeterminate")
         self.progress.start(12)
 
     def _stop_file_progress(self) -> None:
         self.progress.stop()
-        self.progress.configure(mode="determinate")
+        self.progress.configure(mode="determinate", maximum=max(len(self.files), 1))
+        self.status.set("")
 
     def _request_save(self, temporary_path: Path, source: Path) -> None:
         self._preview_temporary_file(temporary_path)
