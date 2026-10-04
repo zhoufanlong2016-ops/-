@@ -860,3 +860,20 @@ def test_a_highlighted_phrase_is_marked_for_translation():
     assert marked == "Contractor\n\u27e6H\u27e7free of cost\u27e6/H\u27e7, and no"
     assert pdf_inplace._strip_highlight_markers(marked) == "Contractor\nfree of cost, and no"
     assert pdf_inplace._mark_highlights("other text", highlights, (400, 400, 500, 500)) == "other text"
+
+
+def test_a_row_broken_by_a_page_fills_the_first_cell_first(tmp_path):
+    from types import SimpleNamespace
+
+    head = SimpleNamespace(id="h", rect=(0, 0, 200, 60), source_font_size=10.0, is_empty=False, text="x")
+    text = "根据我们的经验，我们认为对于小直径的管道而言，这样的强度过高且不经济。" * 3
+    first, rest = pdf_inplace._fill_continued(head, text)
+    assert first and rest and first + rest == text.replace(" ", "") or (first + rest).replace(" ", "") == text
+    assert len(first) > len(text) // 3  # filled, not cut by the English proportion
+    short = "强度过高。"
+    assert pdf_inplace._fill_continued(head, short) == (short, "")
+
+
+def test_key_value_lines_in_a_cell_stay_one_per_line():
+    text = "Generated: yes\nMethod: Inverse Distance\nWeighting\nMerge Tiles: yes"
+    assert pdf_inplace._structure_cell_text(text) == "Generated: yes\nMethod: Inverse Distance Weighting\nMerge Tiles: yes"

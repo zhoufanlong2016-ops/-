@@ -401,7 +401,9 @@ def _translate_in_place(
     cell_units: list[TranslationUnit] = []
     cell_by_unit: dict[str, Any] = {}
     continued = _continued_cells(tables)
-    continuations = set(continued.values())
+    # Ids: a set of the cells themselves never matched "cell.id in", so each
+    # continuation was also translated on its own and overwrote its share.
+    continuations = {cell.id for cell in continued.values()}
     for table in tables:
         for cell in table.cells:
             if cell.is_empty or cell.id in continuations or cell.id in row_cells:
@@ -459,14 +461,23 @@ def _translate_in_place(
         work.save(str(staged), garbage=1, deflate=True)
 
     cell_translations: dict[str, str] = {}
+    cleared_tails: list[Any] = []
     for unit in cell_units:
         cell = cell_by_unit[unit.id]
         translation = restore_list_markers(unit.source_text, translations.get(unit.id, "").strip())
         if cell.id in continued and translation:
             tail = continued[cell.id]
-            cell_translations[cell.id], cell_translations[tail.id] = _split_continued(
-                translation, len(cell.text) / max(1, len(cell.text) + len(tail.text))
-            )
+            filled = _fill_continued(cell, translation)
+            if filled is None:
+                filled = _split_continued(translation, len(cell.text) / max(1, len(cell.text) + len(tail.text)))
+            cell_translations[cell.id], rest = filled
+            if rest:
+                cell_translations[tail.id] = rest
+            else:
+                # All of it is on the first page: the next page's part of
+                # the row is cleared once the tables are written.
+                cell_translations[tail.id] = tail.text
+                cleared_tails.append(tail)
         else:
             cell_translations[cell.id] = _restore_item_breaks(cell.text, translation) if translation else cell.text
     table_report = _render_tables(source, staged, candidate, tables, cell_translations, source_language, target_language, warnings)
@@ -474,6 +485,7 @@ def _translate_in_place(
         (cell_by_unit[unit.id].page_number, cell_by_unit[unit.id].rect) for unit in cell_units
     ]
     highlight_report = _move_highlights(candidate, highlights, rewritten, highlight_targets)
+    _clear_cells(candidate, cleared_tails)
     try:
         staged.unlink(missing_ok=True)
         if source.name.endswith(".upright" + source.suffix):
@@ -634,6 +646,21 @@ def _move_highlights(
     return {"removed": removed, "added": added, "not_found": missing}
 
 
+def _clear_cells(candidate: Path, cells: list[Any]) -> None:
+    """Remove the text of ``cells``, leaving their rules."""
+    import fitz
+
+    if not cells:
+        return
+    with fitz.open(candidate) as doc:
+        for cell in cells:
+            page = doc[cell.page_number - 1]
+            page.add_redact_annot(fitz.Rect(cell.rect) + (1, 1, -1, -1), fill=False)
+        for number in {cell.page_number for cell in cells}:
+            doc[number - 1].apply_redactions(images=0, graphics=0, text=0)
+        doc.save(str(candidate), incremental=True, encryption=fitz.PDF_ENCRYPT_KEEP)
+
+
 def _find_phrase(page: Any, phrase: str, clip: Any) -> list[Any]:
     """Quads of ``phrase`` on the page within ``clip``; a phrase the layout
     wrapped is found in two halves."""
@@ -715,9 +742,13 @@ def _structure_cell_text(text: str) -> str:
     lines = [line for line in lines if line]
     if len(lines) < 2:
         return text
+    # "Merge Tiles: yes" / "Method: Inverse Distance": a run of key: value
+    # lines is a list of entries, one per line (run together, "是方法：反距离").
+    keyed = [_KEY_VALUE_RE.match(line) is not None for line in lines]
     out = [lines[0]]
-    for line in lines[1:]:
-        if _CELL_ITEM_START.match(line):
+    for index, line in enumerate(lines[1:], start=1):
+        key_value = keyed[index] and (any(keyed[:index]) or (index + 1 < len(lines) and keyed[index + 1]))
+        if _CELL_ITEM_START.match(line) or key_value:
             out.append(line)
         elif _CJK_RE.search(out[-1][-1:]) or _CJK_RE.search(line[:1]):
             out[-1] += line
@@ -2413,6 +2444,53 @@ def _fills_cell(page: Any, cell: Any) -> bool:
     return not text.is_empty and text.width >= 0.8 * rect.width
 
 
+def _cell_fits(cell: Any, text: str, size: float) -> bool:
+    """``text`` fits ``cell``'s own rectangle at ``size``, no word split."""
+    import fitz
+
+    from . import pdf_table
+
+    if cell.rect is None or not text.strip():
+        return True
+    rect = fitz.Rect(cell.rect)
+    normalised = pdf_table._normalise_render_text(text, keep_line_breaks=True)
+    fontfile = str(_table_cell_font(cell, normalised))
+    font = pdf_table.cached_font(fontfile)
+    pad = pdf_table._cell_fit_padding(rect, normalised, 2.0)
+    width, height = rect.width - 2 * pad, rect.height - 2 * pad
+    for paragraph in normalised.split("\n"):
+        for atom, _ in pdf_table._tokenize_atoms_with_seps(paragraph):
+            if any(font.text_length(word, fontsize=size) > width for word in atom.split(" ")):
+                return False
+    wrapped = pdf_table._wrap_atomic_phrases(normalised, fontfile=fontfile, fontname="probe", fontsize=size, max_width=width)
+    if pdf_table.probe_textbox(width, height, wrapped, fontfile=fontfile, fontname="probe", fontsize=size)[0] >= 0:
+        return True
+    return pdf_table.compact_line_height(width, height, wrapped, fontfile=fontfile, fontname="probe", fontsize=size) is not None
+
+
+def _fill_continued(head: Any, translation: str) -> tuple[str, str] | None:
+    """A row broken by a page is set like any text: as much as fits in the
+    first page's cell, the rest in the next page's (an empty rest: it all
+    fits there). Split by the source's proportion, the first cell ended
+    half empty mid-sentence ("根据我们的经验，"). None: not even a start fits."""
+    # Filled to the brim at its own size the cell did not fit once written
+    # (bold, line spacing); filled as if one step larger, it always does.
+    size = round((head.source_font_size or 10.0) * 2) / 2 + _FONT_STEP
+    if _cell_fits(head, translation, size):
+        return translation, ""
+    breaks = [i for i in range(1, len(translation)) if _can_break(translation, i)]
+    low, high, best = 0, len(breaks) - 1, 0
+    while low <= high:
+        middle = (low + high) // 2
+        if _cell_fits(head, translation[:breaks[middle]].rstrip(), size):
+            best, low = breaks[middle], middle + 1
+        else:
+            high = middle - 1
+    if best == 0:
+        return None
+    return translation[:best].rstrip(), translation[best:].strip()
+
+
 def _table_font_size(tables: list[Any], cell_translations: dict[str, str]) -> tuple[float, dict[str, float]]:
     """Largest size (from the source's own) at which every cell fits its original cell."""
     import fitz
@@ -2423,22 +2501,7 @@ def _table_font_size(tables: list[Any], cell_translations: dict[str, str]) -> tu
 
     def fits(cell: Any, size: float) -> bool:
         text = "" if cell.is_empty else (cell_translations.get(cell.id) or cell.text)
-        if cell.rect is None or not text.strip():
-            return True
-        rect = fitz.Rect(cell.rect)
-        normalised = pdf_table._normalise_render_text(text, keep_line_breaks=True)
-        fontfile = str(_table_cell_font(cell, normalised))
-        font = pdf_table.cached_font(fontfile)
-        pad = pdf_table._cell_fit_padding(rect, normalised, 2.0)
-        width, height = rect.width - 2 * pad, rect.height - 2 * pad
-        for paragraph in normalised.split("\n"):
-            for atom, _ in pdf_table._tokenize_atoms_with_seps(paragraph):
-                if any(font.text_length(word, fontsize=size) > width for word in atom.split(" ")):
-                    return False
-        wrapped = pdf_table._wrap_atomic_phrases(normalised, fontfile=fontfile, fontname="probe", fontsize=size, max_width=width)
-        if pdf_table.probe_textbox(width, height, wrapped, fontfile=fontfile, fontname="probe", fontsize=size)[0] >= 0:
-            return True
-        return pdf_table.compact_line_height(width, height, wrapped, fontfile=fontfile, fontname="probe", fontsize=size) is not None
+        return _cell_fits(cell, text, size)
 
     cells = [c for t in tables for c in t.cells if c.rect is not None]
     size = round(max((c.source_font_size or 10.0) for c in cells) * 2) / 2
