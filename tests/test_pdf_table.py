@@ -164,3 +164,16 @@ def test_render_allows_short_header_in_compact_cell(tmp_path):
 
     assert report.rendered_cell_count == 3
     assert destination.exists()
+
+
+def test_chinese_is_set_one_and_a_half_lines_apart_when_it_fits():
+    from document_translator.services import pdf_table
+
+    font = r"C:\Windows\Fonts\simhei.ttf"
+    text = "根据我们的经验，这样的强度过高且不经济。\n是否允许承包商通过降低强度来优化设计？"
+    ascender = pdf_table.cached_font(font).ascender
+    roomy = pdf_table.chinese_line_height(300, 100, text, fontfile=font, fontname="F", fontsize=10)
+    assert roomy is not None and abs(roomy * ascender - 1.5) < 1e-6
+    tight = pdf_table.chinese_line_height(300, 26, text, fontfile=font, fontname="F", fontsize=10)
+    assert tight is None or tight * ascender < 1.5
+    assert pdf_table.chinese_line_height(300, 100, "English only", fontfile=font, fontname="F", fontsize=10) is None

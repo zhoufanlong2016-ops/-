@@ -1963,8 +1963,10 @@ def _flow_over_pages(doc: Any, plans: list[tuple[Any, str, Any]], flow: dict[int
             # At the line pitch the text will be written with, so the part on
             # this page keeps the paragraph's spacing.
             content, fontfile, alias, align = _layout(page, head, text[:cut].rstrip(), size, head.bounds, region.width)
-            pitch = _source_pitch(head, size, fontfile) if _CJK_RE.search(content) else None
-            return _fits(region, content, fontfile, alias, size, align, pitch)
+            # at the spacing the text will be written with
+            return _chinese_pitch(region, content, fontfile, alias, size, align) is not None or (
+                not _CJK_RE.search(content) and _fits(region, content, fontfile, alias, size, align)
+            )
 
         low, high, best = 0, len(breaks) - 1, 0
         while low <= high:
@@ -2165,11 +2167,10 @@ def _insert(page: Any, paragraph: _Paragraph, text: str, region: Any, size: floa
         content, fontfile, alias, align = _layout(page, paragraph, text, size, bounds, region.width)
         anchored = _on_source_baseline(region, paragraph, fontfile, size)
         box = anchored if _fits(anchored, content, fontfile, alias, size, align) else region
-        # Chinese keeps the source's line pitch where it still fits: at the
-        # font's own 1.0 spacing a body set at 1.4x read cramped and small.
-        pitch = _source_pitch(paragraph, size, fontfile) if _CJK_RE.search(content) else None
-        if pitch is not None and not _fits(box, content, fontfile, alias, size, align, pitch):
-            pitch = None
+        # Chinese is set 1.5 lines apart where it fits, closer only where
+        # the space does not allow it (at the font's own spacing a body read
+        # cramped).
+        pitch = _chinese_pitch(box, content, fontfile, alias, size, align) if len(paragraph.lines) > 1 or "\n" in content else None
         color = _rgb(paragraph.lines[0].color)
         # A bold source heading stays bold: CJK faces here have no bold
         # file, so the glyphs are filled and outlined in the same colour.
@@ -2276,21 +2277,10 @@ def _fits(region: Any, text: str, fontfile: str, alias: str, size: float, align:
     return probe_textbox(region.width, region.height, text, fontfile=fontfile, fontname=alias, fontsize=size, align=align, lineheight=lineheight)[0] >= 0
 
 
-def _source_pitch(paragraph: _Paragraph, size: float, fontfile: str) -> float | None:
-    """insert_textbox()'s ``lineheight`` that reproduces the source's line
-    pitch (1.0-1.6 times ``size``), if the paragraph has several lines.
+def _chinese_pitch(region: Any, content: str, fontfile: str, alias: str, size: float, align: int) -> float | None:
+    from .pdf_table import chinese_line_height
 
-    ``lineheight`` multiplies the font's ascender, not its size: 1.5 in
-    SimHei (ascender 0.86) gave 1.29x, not the source's 1.5x.
-    """
-    from .pdf_table import cached_font
-
-    tops = [line.bbox[1] for line in paragraph.lines]
-    steps = sorted(b - a for a, b in zip(tops, tops[1:]) if b > a)
-    ascender = cached_font(fontfile).ascender
-    if not steps or ascender <= 0:
-        return None
-    return min(1.6, max(1.0, steps[len(steps) // 2] / size)) / ascender
+    return chinese_line_height(region.width, region.height, content, fontfile=fontfile, fontname=alias, fontsize=size, align=align)
 
 
 def _render_tables(

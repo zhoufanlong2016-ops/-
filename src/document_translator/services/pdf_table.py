@@ -96,6 +96,32 @@ def probe_textbox(
 # the whole table dropped to 6 pt. One line needs no inter-line room.
 
 
+# Chinese set from English reads best at about 1.5 times its size between
+# lines; less only where the space does not allow it.
+CHINESE_LINE_SPACING = (1.5, 1.4, 1.3, 1.2)
+
+
+def chinese_line_height(
+    width: float, height: float, text: str, *, fontfile: str, fontname: str, fontsize: float, align: int = 0,
+) -> float | None:
+    """insert_textbox()'s ``lineheight`` for the widest of
+    CHINESE_LINE_SPACING at which ``text`` (Chinese) still fits; None for
+    other text or when none fits. ``lineheight`` multiplies the font's
+    ascender, not its size."""
+    import re
+
+    if not re.search(r"[\u3400-\u9fff]", text):
+        return None
+    ascender = cached_font(fontfile).ascender
+    if ascender <= 0:
+        return None
+    for spacing in CHINESE_LINE_SPACING:
+        lineheight = spacing / ascender
+        if probe_textbox(width, height, text, fontfile=fontfile, fontname=fontname, fontsize=fontsize, align=align, lineheight=lineheight)[0] >= 0:
+            return lineheight
+    return None
+
+
 def compact_line_height(
     width: float, height: float, wrapped: str, *, fontfile: str, fontname: str, fontsize: float, align: int = 0
 ) -> float | None:
@@ -1716,15 +1742,22 @@ def render_table_translations(
                 )
                 if compact:
                     compact_cells.add(cell.id)
-                fitted_line_heights[cell.id] = compact if compact or not spread_lines else _fill_line_height(
-                    fit_rect,
-                    wrapped_text,
-                    fontfile=str(cell_font),
-                    fontname=cell_alias,
-                    font_size=fitted_size,
-                    line_count=fitted_line_count,
-                    align=_cell_alignment(align, cell),
+                preferred = None if compact else chinese_line_height(
+                    fit_rect.width, fit_rect.height, wrapped_text, fontfile=str(cell_font), fontname=cell_alias,
+                    fontsize=fitted_size, align=_cell_alignment(align, cell),
                 )
+                if compact or preferred:
+                    fitted_line_heights[cell.id] = compact or preferred
+                else:
+                    fitted_line_heights[cell.id] = None if not spread_lines else _fill_line_height(
+                        fit_rect,
+                        wrapped_text,
+                        fontfile=str(cell_font),
+                        fontname=cell_alias,
+                        font_size=fitted_size,
+                        line_count=fitted_line_count,
+                        align=_cell_alignment(align, cell),
+                    )
             fit_page = None
 
         removed_decoration_counts: dict[int, int] = {}
@@ -1766,7 +1799,6 @@ def render_table_translations(
                 )
                 render_text = fitted_texts.get(cell.id, translated)
                 if middle_aligned is not None and middle_aligned(cell) and cell.id not in compact_cells:
-                    fitted_line_heights[cell.id] = None
                     probe = fitz.open()
                     try:
                         leftover = probe.new_page(width=page.rect.width, height=page.rect.height).insert_textbox(
@@ -1775,6 +1807,7 @@ def render_table_translations(
                             fontname=cell_alias,
                             fontfile=str(cell_font),
                             fontsize=fitted_sizes[cell.id],
+                            lineheight=fitted_line_heights.get(cell.id),
                             align=_cell_alignment(align, cell),
                         )
                     finally:
