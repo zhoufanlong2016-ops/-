@@ -1305,6 +1305,28 @@ def _fill_line_height(
 _BOLD_TEXT = {"render_mode": 2, "fill": (0, 0, 0), "color": (0, 0, 0), "border_width": 0.04}
 
 
+def _cell_paint(bold: bool, color: tuple[float, float, float]) -> dict[str, Any]:
+    if bold:
+        return {**_BOLD_TEXT, "fill": color, "color": color}
+    return {"color": color}
+
+
+def _cell_color(page: Any, rect: Any) -> tuple[float, float, float]:
+    """The colour most of the cell's characters have."""
+    from collections import Counter
+
+    counts: Counter[int] = Counter()
+    for block in page.get_text("dict", clip=rect).get("blocks", ()):
+        for line in block.get("lines", ()):
+            for span in line.get("spans", ()):
+                text = str(span.get("text", ""))
+                counts[int(span.get("color") or 0) & 0xFFFFFF] += sum(1 for char in text if char.isalnum())
+    if not counts or not any(counts.values()):
+        return (0.0, 0.0, 0.0)
+    value = counts.most_common(1)[0][0]
+    return ((value >> 16) / 255.0, ((value >> 8) & 0xFF) / 255.0, (value & 0xFF) / 255.0)
+
+
 def _cell_is_bold(page: Any, rect: Any) -> bool:
     spans = [
         span for block in page.get_text("dict", clip=rect).get("blocks", ())
@@ -1581,6 +1603,9 @@ def render_table_translations(
         fitted_line_heights: dict[str, float | None] = {}
         compact_cells: set[str] = set()
         bold_cells: set[str] = set()
+        # The cell's own text colour (white on a coloured header band was
+        # written black, all but invisible).
+        cell_colors: dict[str, tuple[float, float, float]] = {}
         fitted_texts: dict[str, str] = {}
         source_drawing_counts: dict[int, int] = {}
         font_by_cell: dict[str, Path] = {}
@@ -1628,6 +1653,7 @@ def render_table_translations(
                 redactions_by_page[page_number].extend(_overflow_glyph_rects(page_lines, cell_rect))
                 if _cell_is_bold(page, cell_rect):
                     bold_cells.add(cell.id)
+                cell_colors[cell.id] = _cell_color(page, cell_rect)
                 matched_links = _links_for_cell(page_links_by_page[page_number], cell_rect)
                 if matched_links:
                     links_by_cell[cell.id] = matched_links
@@ -1766,7 +1792,7 @@ def render_table_translations(
                     lineheight=fitted_line_heights.get(cell.id),
                     align=_cell_alignment(align, cell),
                     overlay=True,
-                    **(_BOLD_TEXT if cell.id in bold_cells else {}),
+                    **_cell_paint(cell.id in bold_cells, cell_colors.get(cell.id, (0.0, 0.0, 0.0))),
                 )
                 if result < -1e-6 and fitted_line_heights.get(cell.id) is not None:
                     # The cosmetic line-spacing bump was verified to fit on a
@@ -1783,7 +1809,7 @@ def render_table_translations(
                         fontsize=fitted_sizes[cell.id],
                         align=_cell_alignment(align, cell),
                         overlay=True,
-                        **(_BOLD_TEXT if cell.id in bold_cells else {}),
+                        **_cell_paint(cell.id in bold_cells, cell_colors.get(cell.id, (0.0, 0.0, 0.0))),
                     )
                 if result < -1e-6:
                     raise PdfTableFitError(

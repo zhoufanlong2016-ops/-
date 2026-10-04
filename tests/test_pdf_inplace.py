@@ -821,3 +821,34 @@ def test_a_table_border_under_a_line_of_text_is_not_its_underline(tmp_path):
     before = len(page.get_drawings())
     pdf_inplace._refit_underline(page, paragraph, "将使用以下直径：", 11, fitz.Rect(340, 298, 560, 312), rules)
     assert len(page.get_drawings()) == before
+
+
+def test_a_coloured_bullet_does_not_colour_the_line():
+    doc = fitz.open()
+    page = doc.new_page()
+    page.insert_text((72, 100), "•", fontsize=11, color=(0.1, 0.68, 0.89))
+    page.insert_text((90, 100), "Jacking Shafts: 82", fontsize=11, color=(0, 0, 0))
+    lines, _ = pdf_inplace._visual_lines(page, [])
+    assert lines[0].color & 0xFFFFFF == 0
+
+
+def test_text_of_separate_boxes_stays_apart_and_a_box_is_one_text():
+    doc = fitz.open()
+    page = doc.new_page(width=960, height=540)
+    for x0, words in ((35, ("1. Collection", "System")), (252, ("2. Conveyance", "System"))):
+        page.draw_rect(fitz.Rect(x0, 276, x0 + 180, 366), color=(1, 1, 1), fill=(0.11, 0.38, 0.58))
+        for k, word in enumerate(words):
+            width = fitz.get_text_length(word, fontsize=16)
+            page.insert_text((x0 + 90 - width / 2, 310 + 22 * k), word, fontsize=16, color=(1, 1, 1))
+    lines, _ = pdf_inplace._visual_lines(page, [])
+    paragraphs = pdf_inplace._segment(1, lines, (35.0, 900.0))
+    assert sorted(p.text for p in paragraphs) == ["1. Collection System", "2. Conveyance System"]
+
+
+def test_a_table_cell_keeps_its_text_colour():
+    from document_translator.services import pdf_table
+
+    doc = fitz.open()
+    page = doc.new_page()
+    page.insert_text((100, 100), "B. Contents of Tender Documents", fontsize=11, color=(1, 1, 1))
+    assert pdf_table._cell_color(page, fitz.Rect(90, 85, 400, 105)) == (1.0, 1.0, 1.0)

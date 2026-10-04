@@ -92,6 +92,8 @@ class _VisualLine:
     segments: list[_Segment]
     # A symbol-font bullet sits just left of the line: a list item starts.
     bulleted: bool = False
+    # The filled box (a diagram node, a slide panel) the line sits in.
+    box: tuple[float, float, float, float] | None = None
 
     @property
     def bbox(self) -> tuple[float, float, float, float]:
@@ -127,7 +129,16 @@ class _VisualLine:
 
     @property
     def color(self) -> int:
-        return int(self.spans[0].get("color") or 0)
+        """The colour of most of the line's letters (a coloured bullet "•"
+        opening a black line made the whole translation that colour)."""
+        from collections import Counter
+
+        counts: Counter[int] = Counter()
+        for span in self.spans:
+            counts[int(span.get("color") or 0)] += sum(1 for char in str(span.get("text", "")) if char.isalnum())
+        if not any(counts.values()):
+            return int(self.spans[0].get("color") or 0)
+        return counts.most_common(1)[0][0]
 
     @property
     def font(self) -> str:
@@ -340,8 +351,16 @@ def _translate_in_place(
             for paragraph in page_paragraphs:
                 paragraph.page_width = float(page.rect.width)
                 paragraph.bounds = page_bounds
+                # A box's text is written within the box, centred there as it
+                # was ("1. Collection System" in a diagram node).
+                box = paragraph.lines[0].box
+                if box is not None and all(line.box == box for line in paragraph.lines):
+                    pad = 0.15 * paragraph.size
+                    paragraph.bounds = (box[0] + pad, box[2] - pad)
+                    middle = (box[0] + box[2]) / 2
+                    paragraph.centred = all(abs((line.bbox[0] + line.bbox[2]) / 2 - middle) <= max(4.0, 0.5 * line.size) for line in paragraph.lines)
                 # A column's paragraph is written within its column.
-                if gutter is not None and paragraph.bbox[2] <= gutter:
+                elif gutter is not None and paragraph.bbox[2] <= gutter:
                     paragraph.bounds = (page_bounds[0], gutter - 0.5 * paragraph.size)
                 elif gutter is not None and paragraph.bbox[0] >= gutter:
                     column_left = min(line.bbox[0] for line in lines if line.bbox[0] >= gutter)
@@ -807,6 +826,21 @@ def _visual_lines(page: Any, table_rects: list[Any]) -> tuple[list[_VisualLine],
     from .pdf_table import _visible_rules
 
     vertical_rules = _visible_rules(page)[0]
+    # Boxes text sits in (a diagram's boxes, a slide's coloured panels):
+    # pieces in different boxes are different texts.
+    boxes = [
+        fitz.Rect(drawing["rect"]) for drawing in page.get_drawings()
+        if drawing.get("rect") is not None and drawing.get("fill") is not None
+        # a visible fill: white boxes behind each line (Word shading) are not boxes
+        and any(value < 0.9 for value in drawing["fill"])
+        and drawing["rect"].width > 20 and drawing["rect"].height > 10
+        and drawing["rect"].width < 0.9 * page.rect.width
+    ]
+
+    def box_of(bbox: tuple[float, float, float, float]) -> int | None:
+        centre = fitz.Point((bbox[0] + bbox[2]) / 2, (bbox[1] + bbox[3]) / 2)
+        inside = [index for index, box in enumerate(boxes) if box.contains(centre)]
+        return min(inside, key=lambda index: boxes[index].get_area()) if inside else None
     # Column edges: where several pieces of text on the page start. A piece
     # starting there is a column of its own ("1388 g" beside "Weight
     # (Battery & Propellers"), even when the gap before it is small.
@@ -839,13 +873,34 @@ def _visual_lines(page: Any, table_rects: list[Any]) -> tuple[list[_VisualLine],
                 and not re.fullmatch(r"\d+(?:\.\d+)*\.?", left_text)  # section number "4.1"
                 and sum(count for x, count in starts.items() if abs(x - segment.bbox[0]) <= 1.5) >= 4
             )
-            rule_between = rule_between or column_start
+            own_box = box_of(segment.bbox)
+            other_box = box_of(line.segments[-1].bbox)
+            rule_between = rule_between or column_start or (own_box is not None and other_box is not None and own_box != other_box)
             if height > 0 and overlap >= 0.6 * height and gap <= 3.0 * size and not marker_between and not rule_between:
                 line.segments.append(segment)
                 break
         else:
             lines.append(_VisualLine([segment]))
     for line in lines:
+        index = box_of(line.bbox)
+        if index is not None and all(box_of(segment.bbox) == index for segment in line.segments):
+            line.box = tuple(boxes[index])
+    # Only a small box is one text (a diagram node of a line or three); a
+    # legend panel or a page-wide background holds many separate ones.
+    from collections import Counter
+
+    members = Counter(line.box for line in lines if line.box is not None)
+
+    def centred_in_box(line: _VisualLine) -> bool:
+        middle = (line.box[0] + line.box[2]) / 2
+        return abs((line.bbox[0] + line.bbox[2]) / 2 - middle) <= max(4.0, 0.5 * line.size)
+
+    # ... and its text is centred in it, as a node's is (a legend's entries
+    # in a small panel are separate labels, set from the left).
+    centred_boxes = {box for box in members if all(centred_in_box(line) for line in lines if line.box == box)}
+    for line in lines:
+        if line.box is not None and (members[line.box] > 3 or line.box not in centred_boxes):
+            line.box = None
         x0, y0, _, y1 = line.bbox
         line.bulleted = any(
             m[2] <= x0 + 1.0 and x0 - m[2] <= 3.0 * line.size
@@ -896,6 +951,21 @@ def _stretched(line: _VisualLine) -> bool:
     # Justification widens every space; one wide tab after a heading's
     # number ("1.10    TOTAL CATCHMENT AREA") is not that.
     return len(gaps) >= 3 and sorted(gaps)[len(gaps) // 2] > 0.4 * line.size
+
+
+def _box_order(lines: list[_VisualLine]) -> list[_VisualLine]:
+    """Lines of one box follow each other, where the box's first line is."""
+    ordered: list[_VisualLine] = []
+    placed: set[int] = set()
+    for line in lines:
+        if id(line) in placed:
+            continue
+        group = [line] if line.box is None else [other for other in lines if other.box == line.box]
+        for member in group:
+            if id(member) not in placed:
+                placed.add(id(member))
+                ordered.append(member)
+    return ordered
 
 
 def _reading_order(lines: list[_VisualLine], bounds: tuple[float, float]) -> list[_VisualLine]:
@@ -1001,7 +1071,7 @@ def _segment(
     crossing the new text.
     """
     left, right = bounds
-    lines = _reading_order(lines, bounds)
+    lines = _box_order(_reading_order(lines, bounds))
     paragraphs: list[_Paragraph] = []
 
     gutter = _gutter(lines, bounds)
@@ -1036,6 +1106,17 @@ def _segment(
         hanging = bool(current) and _continues_hanging_item(current[0], line)
         if hanging:
             centred = own_centred = current_centred
+        if current and current[-1].box is not None and line.box == current[-1].box and abs(line.size - current[-1].size) <= 0.6:
+            # Lines of one box are one text (a diagram node "1. Collection" /
+            # "System"), whatever their alignment.
+            current.append(line)
+            continue
+        if current and current[-1].box is not None and line.box is not None and current[-1].box != line.box:
+            paragraphs.append(_Paragraph(page_number, current, current_centred))
+            current = []
+            current_centred = centred
+            current.append(line)
+            continue
         if current:
             previous = current[-1]
             size = previous.size
@@ -1687,10 +1768,16 @@ def _insert_label(page: Any, paragraph: _Paragraph, label: str, size: float, wri
         bold = Path(fontfile).with_name(Path(fontfile).stem.rstrip("bd") + "bd" + Path(fontfile).suffix)
         fontfile = str(bold) if bold.is_file() else fontfile
     label = _with_font_glyphs(label, cached_font(fontfile))
+    # The label's own colour ("viii." in blue before black text).
+    label_span = next(
+        (span for span in first.spans if str(span.get("text", "")).strip()),
+        None,
+    )
+    label_color = int(label_span.get("color") or 0) if label_span is not None else first.color
     page.insert_text(
         (first.bbox[0], baseline), label, fontsize=size, fontfile=fontfile,
-        fontname=_font_alias(fontfile), color=_rgb(first.color), overlay=True,
-        **({"render_mode": 2, "fill": _rgb(first.color), "border_width": 0.04} if _is_bold(paragraph) and fontfile == paragraph.cjk_font else {}),
+        fontname=_font_alias(fontfile), color=_rgb(label_color), overlay=True,
+        **({"render_mode": 2, "fill": _rgb(label_color), "border_width": 0.04} if _is_bold(paragraph) and fontfile == paragraph.cjk_font else {}),
     )
 
 
