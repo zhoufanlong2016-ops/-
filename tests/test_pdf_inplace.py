@@ -877,3 +877,23 @@ def test_a_row_broken_by_a_page_fills_the_first_cell_first(tmp_path):
 def test_key_value_lines_in_a_cell_stay_one_per_line():
     text = "Generated: yes\nMethod: Inverse Distance\nWeighting\nMerge Tiles: yes"
     assert pdf_inplace._structure_cell_text(text) == "Generated: yes\nMethod: Inverse Distance Weighting\nMerge Tiles: yes"
+
+
+def test_a_cell_holding_a_picture_is_split_around_it():
+    from types import SimpleNamespace
+
+    doc = fitz.open()
+    page = doc.new_page()
+    page.insert_text((60, 70), "Text above the picture.", fontsize=10)
+    pix = fitz.Pixmap(fitz.csRGB, fitz.IRect(0, 0, 40, 20), False)
+    pix.clear_with(200)
+    page.insert_image(fitz.Rect(60, 90, 260, 150), pixmap=pix)
+    page.insert_text((60, 175), "Text below the picture.", fontsize=10)
+    from document_translator.services.pdf_table import PdfTable, PdfTableCell
+
+    cell = PdfTableCell(id="c", page_number=1, table_number=1, row=1, column=1, rect=(50, 50, 300, 200),
+                        text="Text above the picture.\nText below the picture.")
+    table = PdfTable(page_number=1, table_number=1, rect=(50, 50, 300, 200), row_count=1, column_count=1, cells=(cell,))
+    split = pdf_inplace._split_around_images(page, table)
+    assert [(c.id, c.text) for c in split.cells] == [("c:a", "Text above the picture."), ("c:b", "Text below the picture.")]
+    assert split.cells[0].rect[3] <= 90 and split.cells[1].rect[1] >= 150

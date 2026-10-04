@@ -373,7 +373,9 @@ def normalize_chinese_spacing(text: str, target_language: str) -> str:
 # 数字 + 英文单位:"3,500 mm" -> "3,500mm"
 UNIT_WORDS = (
     "kVA|KVA|MPa|kPa|kN|kg|kW|MW|kV|KV|Hz|mL|mm|cm|km|m²|m³|㎡|m|N|W|V|L|HP|hp|hrs|hr|"
-    "cusecs|cusec|Cusecs|Cusec|USD|PKR|RMB|CNY|%|‰|°"
+    "cusecs|cusec|Cusecs|Cusec|USD|PKR|RMB|CNY|%|‰|°|"
+    # psi, apparent power, energy, flow and speed units ("6000 psi", "450 MGD")
+    "psi|PSI|MVA|kWh|MWh|MGD|cfs|rpm|sqm"
 )
 _NUMBER_UNIT_SPACE_RE = re.compile(rf"(?<=\d)[ \t ]+(?=(?:{UNIT_WORDS})(?![A-Za-z]))")
 
@@ -569,7 +571,20 @@ def _localize_english_dates(text: str) -> tuple[str, list[str]]:
 
     text = _EN_MONTH_DAY_YEAR_RE.sub(emit, text)
     text = _EN_DAY_MONTH_YEAR_RE.sub(emit, text)
+
+    # "Volume-2" reads as an identifier, was protected as one and came back
+    # in English ("Volume-2，第二部分"); a volume number has one Chinese form.
+    def volume(match: re.Match[str]) -> str:
+        value = f"第{match.group(1)}卷"
+        if value not in dates:
+            dates.append(value)
+        return value
+
+    text = _EN_VOLUME_RE.sub(volume, text)
     return text, dates
+
+
+_EN_VOLUME_RE = re.compile(r"\bVol(?:ume|\.)?[ \t]*[-–]?[ \t]*(\d{1,2})\b")
 
 
 def rule_protected_tokens(text: str, existing: Iterable[str] = ()) -> list[str]:

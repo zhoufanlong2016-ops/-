@@ -1742,12 +1742,16 @@ def render_table_translations(
                 )
                 if compact:
                     compact_cells.add(cell.id)
-                preferred = None if compact else chinese_line_height(
+                # Chinese at 1.5 lines where it fits comes first; the compact
+                # pitch (tighter than the font's own) only when nothing else does.
+                preferred = chinese_line_height(
                     fit_rect.width, fit_rect.height, wrapped_text, fontfile=str(cell_font), fontname=cell_alias,
                     fontsize=fitted_size, align=_cell_alignment(align, cell),
                 )
+                if preferred:
+                    compact_cells.discard(cell.id)
                 if compact or preferred:
-                    fitted_line_heights[cell.id] = compact or preferred
+                    fitted_line_heights[cell.id] = preferred or compact
                 else:
                     fitted_line_heights[cell.id] = None if not spread_lines else _fill_line_height(
                         fit_rect,
@@ -1799,6 +1803,11 @@ def render_table_translations(
                 )
                 render_text = fitted_texts.get(cell.id, translated)
                 if middle_aligned is not None and middle_aligned(cell) and cell.id not in compact_cells:
+                    # Line spacing means nothing to a single line, and its
+                    # reserved room left nothing over to centre it with: a
+                    # header row's text sat against the top border.
+                    if chr(10) not in render_text.strip():
+                        fitted_line_heights[cell.id] = None
                     probe = fitz.open()
                     try:
                         leftover = probe.new_page(width=page.rect.width, height=page.rect.height).insert_textbox(

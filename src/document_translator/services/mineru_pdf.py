@@ -1607,8 +1607,13 @@ def _source_cell_alignment(source_page: Any, cell: Any) -> tuple[int, bool]:
         and all(abs((r.x0 + r.x1) / 2 - centre_x) <= tolerance for r in line_rects)
         and min(r.width for r in line_rects) <= cell_rect.width * 0.85
     )
+    # A single line with room above and below sits in the middle of its
+    # cell (a header row): written from the top, CJK glyphs, which fill the
+    # em, looked pushed up against the border.
+    single = len(line_rects) == 1
     middle = (
-        abs((text_rect.y0 + text_rect.y1) / 2 - (cell_rect.y0 + cell_rect.y1) / 2) <= max(3.0, cell_rect.height * 0.15)
+        abs((text_rect.y0 + text_rect.y1) / 2 - (cell_rect.y0 + cell_rect.y1) / 2)
+        <= max(3.0, cell_rect.height * (0.25 if single else 0.15))
         and text_rect.height <= cell_rect.height * 0.75
     )
     # Set against the right border ("PKR Million" over the amounts):

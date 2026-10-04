@@ -395,3 +395,16 @@ def test_a_value_used_twice_may_come_back_as_literals():
     protected = protect_for_translation(text, ["Volume-2", "6", "78"])
     translated = protected.text.replace(protected.replacements[1][0], "6").replace(protected.replacements[2][0], "6")
     assert "6" in restore_after_translation(translated, protected)
+
+
+def test_volume_numbers_have_their_chinese_form():
+    from document_translator.translation_rules import localize_chinese_dates
+
+    text, fixed = localize_chinese_dates("Volume-2, Part II, Section 6 and Vol. 3", "en", "zh")
+    assert text == "第2卷, Part II, Section 6 and 第3卷" and fixed == ["第2卷", "第3卷"]
+
+
+def test_no_space_between_a_number_and_psi_or_kva():
+    from document_translator.translation_rules import normalize_chinese_spacing
+
+    assert normalize_chinese_spacing("强度为6000 psi，容量500 kVA", "zh") == "强度为6000psi，容量500kVA"

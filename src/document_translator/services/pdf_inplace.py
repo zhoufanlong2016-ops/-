@@ -35,7 +35,7 @@ from document_translator.core import (
     sha256_text,
     validate_result_for_unit,
 )
-from document_translator.translation_rules import localize_chinese_dates, restore_list_markers, rule_protected_tokens
+from document_translator.translation_rules import localize_chinese_dates, normalize_chinese_spacing, restore_list_markers, rule_protected_tokens
 
 from .mineru_pdf import (
     TranslationBatchProvider,
@@ -328,7 +328,7 @@ def _translate_in_place(
         # the paragraph path leaves untouched; its tables stay too: written
         # unrotated, their cells came out as scattered vertical words.
         tables = [
-            t for t in tables
+            _split_around_images(doc[t.page_number - 1], t) for t in tables
             if not _is_drawing_frame(t, doc[t.page_number - 1]) and not doc[t.page_number - 1].rotation
         ]
         # A cell holding a column of one-line rows (a Gantt chart's task
@@ -426,17 +426,21 @@ def _translate_in_place(
     regions = {unit.id: (p.page_number, p.bbox) for unit, p in zip(paragraph_units, translatable)}
     regions.update({unit.id: (cell_by_unit[unit.id].page_number, cell_by_unit[unit.id].rect) for unit in cell_units})
     for unit_id, text in list(translations.items()):
-        if text and _HIGHLIGHT_OPEN in text and unit_id in regions:
+        if text and "\u27e6" in text and unit_id in regions:
             page_number, region = regions[unit_id]
-            color = next(
-                (h["color"] for h in highlights.get(page_number, ()) if fitz.Rect(h["rect"]).intersects(fitz.Rect(region))),
-                None,
-            )
-            for phrase in re.findall(re.escape(_HIGHLIGHT_OPEN) + r"(.*?)" + re.escape(_HIGHLIGHT_CLOSE), text, re.S):
-                if phrase.strip():
-                    highlight_targets.append((page_number, region, phrase.strip(), color))
+            for kind, (opening, closing) in _MARKS.items():
+                color = next(
+                    (h["color"] for h in highlights.get(page_number, ())
+                     if h.get("kind") == kind and fitz.Rect(h["rect"]).intersects(fitz.Rect(region))),
+                    None,
+                )
+                for phrase in re.findall(re.escape(opening) + r"(.*?)" + re.escape(closing), text, re.S):
+                    if _strip_highlight_markers(phrase).strip():
+                        highlight_targets.append((page_number, region, _strip_highlight_markers(phrase).strip(), (kind, color)))
         if text:
-            translations[unit_id] = _strip_highlight_markers(text)
+            # Chinese spacing applies to cached results too (written before
+            # a rule such as "6000psi" existed).
+            translations[unit_id] = normalize_chinese_spacing(_strip_highlight_markers(text), target_language)
     # The whole translation is set as one paragraph: from the first page's
     # place onward, continuing on the next page only if it does not fit.
     flow: dict[int, _Paragraph] = {}
@@ -462,28 +466,26 @@ def _translate_in_place(
 
     cell_translations: dict[str, str] = {}
     cleared_tails: list[Any] = []
+    joined_rows: dict[str, tuple[Any, Any, str]] = {}
     for unit in cell_units:
         cell = cell_by_unit[unit.id]
         translation = restore_list_markers(unit.source_text, translations.get(unit.id, "").strip())
         if cell.id in continued and translation:
-            tail = continued[cell.id]
-            filled = _fill_continued(cell, translation)
-            if filled is None:
-                filled = _split_continued(translation, len(cell.text) / max(1, len(cell.text) + len(tail.text)))
-            cell_translations[cell.id], rest = filled
-            if rest:
-                cell_translations[tail.id] = rest
-            else:
-                # All of it is on the first page: the next page's part of
-                # the row is cleared once the tables are written.
-                cell_translations[tail.id] = tail.text
-                cleared_tails.append(tail)
+            # Split over the two pages once the first page's table size is
+            # known (_render_tables): filled at the source size, the cell was
+            # left half empty when the table was then set smaller.
+            joined_rows[cell.id] = (cell, continued[cell.id], translation)
+            cell_translations[cell.id] = translation
         else:
             cell_translations[cell.id] = _restore_item_breaks(cell.text, translation) if translation else cell.text
-    table_report = _render_tables(source, staged, candidate, tables, cell_translations, source_language, target_language, warnings)
+    table_report = _render_tables(
+        source, staged, candidate, tables, cell_translations, source_language, target_language, warnings,
+        joined_rows=joined_rows, cleared_tails=cleared_tails,
+    )
     rewritten = [(p.page_number, p.bbox) for p in translatable] + [
-        (cell_by_unit[unit.id].page_number, cell_by_unit[unit.id].rect) for unit in cell_units
-    ]
+        (cell.page_number, cell.rect) for table in tables for cell in table.cells
+        if cell.rect is not None and not cell.is_empty and cell_translations.get(cell.id, cell.text) != cell.text
+    ] + [(cell.page_number, cell.rect) for cell in cleared_tails]
     highlight_report = _move_highlights(candidate, highlights, rewritten, highlight_targets)
     _clear_cells(candidate, cleared_tails)
     try:
@@ -553,6 +555,8 @@ def _row_list_cells(page: Any, table: Any) -> list[Any]:
 
 
 _HIGHLIGHT_OPEN, _HIGHLIGHT_CLOSE = "\u27e6H\u27e7", "\u27e6/H\u27e7"
+_UNDERLINE_OPEN, _UNDERLINE_CLOSE = "\u27e6U\u27e7", "\u27e6/U\u27e7"
+_MARKS = {"highlight": (_HIGHLIGHT_OPEN, _HIGHLIGHT_CLOSE), "underline": (_UNDERLINE_OPEN, _UNDERLINE_CLOSE)}
 
 
 def _collect_highlights(doc: Any) -> dict[int, list[dict[str, Any]]]:
@@ -581,7 +585,37 @@ def _collect_highlights(doc: Any) -> dict[int, list[dict[str, Any]]]:
             if covered:
                 result.setdefault(number, []).append({
                     "rect": tuple(annot.rect), "text": " ".join(covered), "color": annot.colors.get("stroke"),
+                    "kind": "highlight",
                 })
+    # Underlined words: a thin rule just under them, as long as they are.
+    # Rewritten, the rule stayed under other words ("设计、制造" struck
+    # through); the phrase is carried through translation like a highlight.
+    for number, page in enumerate(doc, start=1):
+        rules = [
+            (fitz.Rect(d["rect"]), d.get("color") or d.get("fill"))
+            for d in page.get_drawings()
+            if d.get("rect") is not None and d["rect"].height <= 1.5 and d["rect"].width > 4
+        ]
+        if not rules:
+            continue
+        words = page.get_text("words")
+        for rule, color in rules:
+            above = [
+                w for w in words
+                if rule.y0 - 0.35 * (w[3] - w[1]) <= w[3] <= rule.y0 + 0.25 * (w[3] - w[1])
+                and min(w[2], rule.x1) - max(w[0], rule.x0) > 0.5 * (w[2] - w[0])
+            ]
+            if not above:
+                continue
+            span = fitz.Rect(min(w[0] for w in above), 0, max(w[2] for w in above), 1)
+            # a rule as long as the words over it (a table border runs on)
+            if rule.width > span.width + 6 or rule.width < 0.6 * span.width:
+                continue
+            result.setdefault(number, []).append({
+                "rect": (span.x0, min(w[1] for w in above), span.x1, rule.y1),
+                "text": " ".join(w[4] for w in sorted(above, key=lambda w: w[0])),
+                "color": tuple(color) if color else (0, 0, 0), "kind": "underline", "rule": tuple(rule),
+            })
     return result
 
 
@@ -598,13 +632,16 @@ def _mark_highlights(text: str, highlights: Any, region: Any) -> str:
         words = highlight["text"].split()
         pattern = r"\s+".join(re.escape(word) for word in words)
         match = re.search(pattern, text) if words else None
-        if match and _HIGHLIGHT_OPEN not in text[max(0, match.start() - 4):match.end() + 5]:
-            text = text[:match.start()] + _HIGHLIGHT_OPEN + match.group(0) + _HIGHLIGHT_CLOSE + text[match.end():]
+        opening, closing = _MARKS[highlight.get("kind", "highlight")]
+        if match and "\u27e6" not in text[max(0, match.start() - 4):match.end() + 5] and "\u27e6" not in match.group(0):
+            text = text[:match.start()] + opening + match.group(0) + closing + text[match.end():]
     return text
 
 
 def _strip_highlight_markers(text: str) -> str:
-    return text.replace(_HIGHLIGHT_OPEN, "").replace(_HIGHLIGHT_CLOSE, "")
+    for opening, closing in _MARKS.values():
+        text = text.replace(opening, "").replace(closing, "")
+    return text
 
 
 def _move_highlights(
@@ -629,7 +666,16 @@ def _move_highlights(
                 if annot.type[1] == "Highlight" and any(annot.rect.intersects(area) for area in areas):
                     page.delete_annot(annot)
                     removed += 1
-            for page_number, region, phrase, color in targets:
+            old_rules = [
+                fitz.Rect(h["rule"]) for h in highlights[number]
+                if h.get("kind") == "underline" and any(fitz.Rect(h["rect"]).intersects(area) for area in areas)
+            ]
+            for rule in old_rules:
+                page.add_redact_annot(rule + (-0.3, -0.3, 0.3, 0.3), fill=False)
+            if old_rules:
+                page.apply_redactions(images=0, graphics=1, text=1)
+                removed += len(old_rules)
+            for page_number, region, phrase, (kind, color) in targets:
                 if page_number != number:
                     continue
                 clip = fitz.Rect(region) + (-3, -3, 3, 40)
@@ -637,10 +683,16 @@ def _move_highlights(
                 if not quads:
                     missing += 1
                     continue
-                annot = page.add_highlight_annot(quads)
-                if color:
-                    annot.set_colors(stroke=color)
-                annot.update()
+                if kind == "underline":
+                    for quad in quads:
+                        box = fitz.Quad(quad).rect
+                        y = box.y1 - 0.08 * box.height
+                        page.draw_line((box.x0, y), (box.x1, y), color=color or (0, 0, 0), width=max(0.5, 0.06 * box.height))
+                else:
+                    annot = page.add_highlight_annot(quads)
+                    if color:
+                        annot.set_colors(stroke=color)
+                    annot.update()
                 added += 1
         doc.save(str(candidate), incremental=True, encryption=fitz.PDF_ENCRYPT_KEEP)
     return {"removed": removed, "added": added, "not_found": missing}
@@ -670,6 +722,54 @@ def _find_phrase(page: Any, phrase: str, clip: Any) -> list[Any]:
     middle = len(phrase) // 2
     first, second = _find_phrase(page, phrase[:middle], clip), _find_phrase(page, phrase[middle:], clip)
     return first + second if first and second else []
+
+
+def _split_around_images(page: Any, table: Any) -> Any:
+    """A cell holding a picture (a small table pasted as an image) becomes
+    the part above it and the part below it: written as one block, the
+    translation ran over the picture."""
+    import fitz
+
+    images = [fitz.Rect(info["bbox"]) for info in page.get_image_info()]
+    if not images:
+        return table
+    cells: list[Any] = []
+    changed = False
+    for cell in table.cells:
+        rect = fitz.Rect(cell.rect) if cell.rect is not None else None
+        inside = [
+            image for image in images
+            if rect is not None and image.width > 20 and image.height > 20
+            and rect.contains(fitz.Rect(image.x0 + 1, image.y0 + 1, image.x1 - 1, image.y1 - 1))
+        ]
+        if not inside or cell.is_empty:
+            cells.append(cell)
+            continue
+        image = min(inside, key=lambda box: box.y0)
+        above: list[str] = []
+        below: list[str] = []
+        for block in page.get_text("dict", clip=rect).get("blocks", ()):
+            for line in block.get("lines", ()):
+                text = "".join(str(span.get("text", "")) for span in line.get("spans", ())).strip()
+                if not text:
+                    continue
+                middle = (line["bbox"][1] + line["bbox"][3]) / 2
+                if middle < image.y0:
+                    above.append(text)
+                elif middle > image.y1:
+                    below.append(text)
+        if not above and not below:
+            cells.append(cell)
+            continue
+        changed = True
+        parts = (
+            ("a", (rect.x0, rect.y0, rect.x1, image.y0), above),
+            ("b", (rect.x0, image.y1, rect.x1, rect.y1), below),
+        )
+        for suffix, box, lines in parts:
+            if lines:
+                cells.append(dataclasses.replace(cell, id=f"{cell.id}:{suffix}", rect=box, text="\n".join(lines)))
+    return dataclasses.replace(table, cells=tuple(cells)) if changed else table
 
 
 def _continued_cells(tables: list[Any]) -> dict[str, Any]:
@@ -1488,7 +1588,7 @@ def _unit(
         "source_language": source_language,
         "target_language": target_language,
         "source_text": text,
-        "protected_tokens": rule_protected_tokens(text, [*dates, *(m for m in (_HIGHLIGHT_OPEN, _HIGHLIGHT_CLOSE) if m in text)]),
+        "protected_tokens": rule_protected_tokens(text, [*dates, *(m for pair in _MARKS.values() for m in pair if m in text)]),
         "style_signature": style,
         "context_before": "",
         "context_after": "",
@@ -2292,6 +2392,9 @@ def _render_tables(
     source_language: str,
     target_language: str,
     warnings: list[dict[str, object]],
+    *,
+    joined_rows: dict[str, tuple[Any, Any, str]] | None = None,
+    cleared_tails: list[Any] | None = None,
 ) -> dict[str, object]:
     """Replace each table's cell text in place; the ruled grid is never touched.
 
@@ -2326,6 +2429,23 @@ def _render_tables(
         for page_number in sorted({t.page_number for t in good}):
             page_tables = [t for t in good if t.page_number == page_number]
             alignment.update(_table_alignment(source_doc[page_number - 1], page_tables))
+            for head, tail, joined in (joined_rows or {}).values():
+                if head.page_number != page_number:
+                    continue
+                # The size the rest of this page's tables need, then as much
+                # of the row as fits the first cell at that size.
+                others, _ = _table_font_size(page_tables, {**cell_translations, head.id: ""})
+                filled = _fill_continued(head, joined, others)
+                if filled is None:
+                    filled = _split_continued(joined, len(head.text) / max(1, len(head.text) + len(tail.text)))
+                cell_translations[head.id], rest = filled
+                if rest:
+                    cell_translations[tail.id] = rest
+                elif cleared_tails is not None:
+                    # All of it is on the first page: the next page's part
+                    # of the row is cleared once the tables are written.
+                    cell_translations[tail.id] = tail.text
+                    cleared_tails.append(tail)
             size, outliers = _table_font_size(page_tables, cell_translations)
             sized.extend(
                 dataclasses.replace(t, cells=tuple(dataclasses.replace(c, source_font_size=outliers.get(c.id, size)) for c in t.cells))
@@ -2434,7 +2554,7 @@ def _fills_cell(page: Any, cell: Any) -> bool:
     return not text.is_empty and text.width >= 0.8 * rect.width
 
 
-def _cell_fits(cell: Any, text: str, size: float) -> bool:
+def _cell_fits(cell: Any, text: str, size: float, spacing: float | None = None) -> bool:
     """``text`` fits ``cell``'s own rectangle at ``size``, no word split."""
     import fitz
 
@@ -2453,26 +2573,33 @@ def _cell_fits(cell: Any, text: str, size: float) -> bool:
             if any(font.text_length(word, fontsize=size) > width for word in atom.split(" ")):
                 return False
     wrapped = pdf_table._wrap_atomic_phrases(normalised, fontfile=fontfile, fontname="probe", fontsize=size, max_width=width)
+    if spacing is not None:
+        return pdf_table.probe_textbox(
+            width, height, wrapped, fontfile=fontfile, fontname="probe", fontsize=size, lineheight=spacing / font.ascender,
+        )[0] >= 0
     if pdf_table.probe_textbox(width, height, wrapped, fontfile=fontfile, fontname="probe", fontsize=size)[0] >= 0:
         return True
     return pdf_table.compact_line_height(width, height, wrapped, fontfile=fontfile, fontname="probe", fontsize=size) is not None
 
 
-def _fill_continued(head: Any, translation: str) -> tuple[str, str] | None:
+def _fill_continued(head: Any, translation: str, page_size: float | None = None) -> tuple[str, str] | None:
     """A row broken by a page is set like any text: as much as fits in the
     first page's cell, the rest in the next page's (an empty rest: it all
     fits there). Split by the source's proportion, the first cell ended
     half empty mid-sentence ("根据我们的经验，"). None: not even a start fits."""
     # Filled to the brim at its own size the cell did not fit once written
     # (bold, line spacing); filled as if one step larger, it always does.
-    size = round((head.source_font_size or 10.0) * 2) / 2 + _FONT_STEP
-    if _cell_fits(head, translation, size):
+    size = min(round((head.source_font_size or 10.0) * 2) / 2, page_size or 99.0)
+    # At the 1.5 line spacing Chinese is set with: filled at the font's own
+    # spacing, the cell then had to be written cramped.
+    spacing = 1.5 if _CJK_RE.search(translation) else None
+    if _cell_fits(head, translation, size, spacing):
         return translation, ""
     breaks = [i for i in range(1, len(translation)) if _can_break(translation, i)]
     low, high, best = 0, len(breaks) - 1, 0
     while low <= high:
         middle = (low + high) // 2
-        if _cell_fits(head, translation[:breaks[middle]].rstrip(), size):
+        if _cell_fits(head, translation[:breaks[middle]].rstrip(), size, spacing):
             best, low = breaks[middle], middle + 1
         else:
             high = middle - 1
