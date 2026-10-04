@@ -799,3 +799,25 @@ def test_two_columns_are_read_one_after_the_other():
     lines, _ = pdf_inplace._visual_lines(page, [])
     ordered = [line.text[:8] for line in pdf_inplace._reading_order(lines, (46.0, 560.0))]
     assert ordered.index("Gulshan-") < ordered.index("14,165 M")
+
+
+def test_a_table_border_under_a_line_of_text_is_not_its_underline(tmp_path):
+    doc = fitz.open()
+    page = doc.new_page(width=595, height=842)
+    page.insert_text((340, 309), "the mentioned lengths will be used:", fontsize=11)
+    shape = page.new_shape()
+    for rect in (
+        (356.4, 312.3, 471.3, 312.8),  # the table's top border
+        (355.9, 312.8, 356.3, 326.1),  # its column rules
+        (471.3, 312.8, 471.8, 326.1),
+    ):
+        shape.draw_rect(fitz.Rect(rect))  # each piece its own path, as Word draws them
+        shape.finish(fill=(0, 0, 0), color=None)
+    shape.commit()
+    lines, _ = pdf_inplace._visual_lines(page, [])
+    (paragraph,) = pdf_inplace._segment(1, lines, (340.0, 560.0))
+    paragraph.bounds = (340.0, 560.0)
+    rules = pdf_inplace._rule_drawings(page)
+    before = len(page.get_drawings())
+    pdf_inplace._refit_underline(page, paragraph, "将使用以下直径：", 11, fitz.Rect(340, 298, 560, 312), rules)
+    assert len(page.get_drawings()) == before

@@ -1966,12 +1966,28 @@ def _refit_underline(page: Any, paragraph: _Paragraph, text: str, size: float, b
 
     from .pdf_table import cached_font
 
+    # A table's border right under a line of text ("... will be used:" just
+    # above a table) is no underline: its ends meet the grid's vertical
+    # rules. Taken for one, it was erased with the line's old underlines.
+    verticals = [
+        fitz.Rect(drawing["rect"]) for drawing in page.get_drawings()
+        if drawing.get("rect") is not None and drawing["rect"].width <= 2.0 and drawing["rect"].height > 3.0
+    ]
+
+    def grid_line(rect: Any) -> bool:
+        return any(
+            min(abs(v.x0 - rect.x0), abs(v.x1 - rect.x0), abs(v.x0 - rect.x1), abs(v.x1 - rect.x1)) <= 1.5
+            and v.y0 - 1.0 <= rect.y1 and rect.y0 <= v.y1 + 1.0
+            for v in verticals
+        )
+
     def under_line(line: _VisualLine) -> list:
         x0, _, x1, y1 = line.bbox
         return [
             rule for rule in rules
             if y1 - 0.4 * line.size <= rule[0].y0 <= y1 + 0.6 * line.size
             and rule[0].x0 >= x0 - 2.0 and rule[0].x1 <= x1 + 2.0
+            and not grid_line(rule[0])
         ]
 
     def remove(rule_rects: list) -> None:
@@ -2149,8 +2165,33 @@ def _table_alignment(source_page: Any, tables: list[Any]) -> dict[str, tuple[int
             ) if body else None
             for cell in table.cells:
                 if cell.column == column and cell.id in detected:
-                    alignment[cell.id] = detected[cell.id] if cell.row in header_rows or majority is None else majority
+                    if majority is None:
+                        alignment[cell.id] = detected[cell.id]
+                    elif cell.row in header_rows:
+                        # A heading filling its cell reads as left-aligned
+                        # whatever it was ("Pipe Diameter (mm)" fills 89%):
+                        # then it is set like its column.
+                        own = detected[cell.id]
+                        ambiguous = own[0] == 0 and majority[0] != 0 and _fills_cell(source_page, cell)
+                        alignment[cell.id] = (majority[0], own[1]) if ambiguous else own
+                    else:
+                        alignment[cell.id] = majority
     return alignment
+
+
+def _fills_cell(page: Any, cell: Any) -> bool:
+    """The cell's text spans most of its width, so it reads as neither
+    left-aligned nor centred."""
+    import fitz
+
+    rect = fitz.Rect(cell.rect)
+    text = fitz.Rect()
+    for block in page.get_text("dict", clip=rect).get("blocks", ()):
+        for line in block.get("lines", ()):
+            for span in line.get("spans", ()):
+                if str(span.get("text", "")).strip():
+                    text |= fitz.Rect(span["bbox"])
+    return not text.is_empty and text.width >= 0.8 * rect.width
 
 
 def _table_font_size(tables: list[Any], cell_translations: dict[str, str]) -> tuple[float, dict[str, float]]:
