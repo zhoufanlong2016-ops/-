@@ -852,3 +852,11 @@ def test_a_table_cell_keeps_its_text_colour():
     page = doc.new_page()
     page.insert_text((100, 100), "B. Contents of Tender Documents", fontsize=11, color=(1, 1, 1))
     assert pdf_table._cell_color(page, fitz.Rect(90, 85, 400, 105)) == (1.0, 1.0, 1.0)
+
+
+def test_a_highlighted_phrase_is_marked_for_translation():
+    highlights = [{"rect": (100, 100, 200, 112), "text": "free of cost", "color": (1, 1, 0)}]
+    marked = pdf_inplace._mark_highlights("Contractor\nfree of cost, and no", highlights, (90, 90, 300, 130))
+    assert marked == "Contractor\n\u27e6H\u27e7free of cost\u27e6/H\u27e7, and no"
+    assert pdf_inplace._strip_highlight_markers(marked) == "Contractor\nfree of cost, and no"
+    assert pdf_inplace._mark_highlights("other text", highlights, (400, 400, 500, 500)) == "other text"

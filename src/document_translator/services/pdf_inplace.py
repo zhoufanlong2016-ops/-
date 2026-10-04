@@ -322,6 +322,7 @@ def _translate_in_place(
     except pdf_table.PdfTableError:
         tables = []
     doc = fitz.open(source)
+    highlights = _collect_highlights(doc)
     try:
         # A page stored rotated (/Rotate 90) has all its text rotated, which
         # the paragraph path leaves untouched; its tables stay too: written
@@ -388,8 +389,11 @@ def _translate_in_place(
             paragraph.toc_page = entry.group("page")
     paragraph_units = [
         _unit(
-            (_TOC_ENTRY_RE.match(p.text).group("title") if p.toc_page else p.text)
-            + (" " + translatable[across[index]].text if index in across else ""),
+            _mark_highlights(
+                (_TOC_ENTRY_RE.match(p.text).group("title") if p.toc_page else p.text)
+                + (" " + translatable[across[index]].text if index in across else ""),
+                highlights.get(p.page_number, ()), p.bbox,
+            ),
             f"page:{p.page_number}", f"para:{index}", "paragraph", source_hash, source_language, target_language,
         )
         for index, p in enumerate(translatable)
@@ -407,12 +411,30 @@ def _translate_in_place(
                 continue
             # "Drawing No. LW-" / "TD-401" broken across cell lines is one code.
             cell_text = _structure_cell_text(re.sub(r"(?<=[A-Za-z0-9])-\n(?=[A-Za-z0-9])", "-", text))
+            cell_text = _mark_highlights(cell_text, highlights.get(cell.page_number, ()), cell.rect)
             unit = _unit(cell_text, f"page:{cell.page_number}", cell.id, "table_cell", source_hash, source_language, target_language)
             cell_units.append(unit)
             cell_by_unit[unit.id] = cell
 
     requested = [unit for index, unit in enumerate(paragraph_units) if index not in tails]
     translations, warnings, translation_stats = _translate_all(provider, requested + cell_units, cache=cache, progress=progress)
+    # Highlighted phrases come back marked: record where the translation of
+    # each goes, and take the markers out of the text that is written.
+    highlight_targets: list[tuple[int, Any, str, Any]] = []
+    regions = {unit.id: (p.page_number, p.bbox) for unit, p in zip(paragraph_units, translatable)}
+    regions.update({unit.id: (cell_by_unit[unit.id].page_number, cell_by_unit[unit.id].rect) for unit in cell_units})
+    for unit_id, text in list(translations.items()):
+        if text and _HIGHLIGHT_OPEN in text and unit_id in regions:
+            page_number, region = regions[unit_id]
+            color = next(
+                (h["color"] for h in highlights.get(page_number, ()) if fitz.Rect(h["rect"]).intersects(fitz.Rect(region))),
+                None,
+            )
+            for phrase in re.findall(re.escape(_HIGHLIGHT_OPEN) + r"(.*?)" + re.escape(_HIGHLIGHT_CLOSE), text, re.S):
+                if phrase.strip():
+                    highlight_targets.append((page_number, region, phrase.strip(), color))
+        if text:
+            translations[unit_id] = _strip_highlight_markers(text)
     # The whole translation is set as one paragraph: from the first page's
     # place onward, continuing on the next page only if it does not fit.
     flow: dict[int, _Paragraph] = {}
@@ -426,7 +448,7 @@ def _translate_in_place(
         for paragraph, unit in zip(translatable, paragraph_units):
             if id(paragraph) in flowed:
                 continue  # filled with whatever the head paragraph leaves over
-            paragraph_translation = translations.get(unit.id, "").strip() or unit.source_text
+            paragraph_translation = translations.get(unit.id, "").strip() or _strip_highlight_markers(unit.source_text)
             # Also for a cached result from before the provider restored them.
             paragraph_translation = restore_list_markers(unit.source_text, paragraph_translation)
             translations[unit.id] = _normalise_structure(
@@ -448,6 +470,10 @@ def _translate_in_place(
         else:
             cell_translations[cell.id] = _restore_item_breaks(cell.text, translation) if translation else cell.text
     table_report = _render_tables(source, staged, candidate, tables, cell_translations, source_language, target_language, warnings)
+    rewritten = [(p.page_number, p.bbox) for p in translatable] + [
+        (cell_by_unit[unit.id].page_number, cell_by_unit[unit.id].rect) for unit in cell_units
+    ]
+    highlight_report = _move_highlights(candidate, highlights, rewritten, highlight_targets)
     try:
         staged.unlink(missing_ok=True)
         if source.name.endswith(".upright" + source.suffix):
@@ -462,6 +488,7 @@ def _translate_in_place(
         "rendered_paragraphs": rendered,
         "table_translation": table_report,
         "rotated_lines_left_untouched": skipped_rotated,
+        "highlights": highlight_report,
         "translation_warning_count": len(warnings),
         "translation": translation_stats,
         **({"translation_warnings": warnings} if warnings else {}),
@@ -511,6 +538,111 @@ def _row_list_cells(page: Any, table: Any) -> list[Any]:
         if size > 0 and steps[len(steps) // 2] >= 1.5 * size and filled * 2 < len(widths):
             result.append(cell)
     return result
+
+
+_HIGHLIGHT_OPEN, _HIGHLIGHT_CLOSE = "\u27e6H\u27e7", "\u27e6/H\u27e7"
+
+
+def _collect_highlights(doc: Any) -> dict[int, list[dict[str, Any]]]:
+    """Highlight annotations and the words they cover, per page.
+
+    A highlight is an annotation over the source's own words ("location for
+    disposal" in a reply). Rewritten, the words moved and the yellow stayed
+    behind over other text or blank space; the phrase is now carried
+    through translation and highlighted again where its translation is.
+    """
+    import fitz
+
+    result: dict[int, list[dict[str, Any]]] = {}
+    for number, page in enumerate(doc, start=1):
+        annots = [annot for annot in page.annots() or () if annot.type[1] == "Highlight"]
+        if not annots:
+            continue
+        words = page.get_text("words")
+        for annot in annots:
+            vertices = annot.vertices or []
+            quads = [fitz.Quad(vertices[i:i + 4]).rect for i in range(0, len(vertices) - 3, 4)] or [annot.rect]
+            covered = [
+                w[4] for w in words
+                if any(q.contains(fitz.Point((w[0] + w[2]) / 2, (w[1] + w[3]) / 2)) for q in quads)
+            ]
+            if covered:
+                result.setdefault(number, []).append({
+                    "rect": tuple(annot.rect), "text": " ".join(covered), "color": annot.colors.get("stroke"),
+                })
+    return result
+
+
+def _mark_highlights(text: str, highlights: Any, region: Any) -> str:
+    """``text`` with each highlighted phrase inside it between markers."""
+    import fitz
+
+    if not highlights or region is None:
+        return text
+    area = fitz.Rect(region)
+    for highlight in highlights:
+        if not area.intersects(fitz.Rect(highlight["rect"])):
+            continue
+        words = highlight["text"].split()
+        pattern = r"\s+".join(re.escape(word) for word in words)
+        match = re.search(pattern, text) if words else None
+        if match and _HIGHLIGHT_OPEN not in text[max(0, match.start() - 4):match.end() + 5]:
+            text = text[:match.start()] + _HIGHLIGHT_OPEN + match.group(0) + _HIGHLIGHT_CLOSE + text[match.end():]
+    return text
+
+
+def _strip_highlight_markers(text: str) -> str:
+    return text.replace(_HIGHLIGHT_OPEN, "").replace(_HIGHLIGHT_CLOSE, "")
+
+
+def _move_highlights(
+    candidate: Path,
+    highlights: dict[int, list[dict[str, Any]]],
+    rewritten: list[tuple[int, Any]],
+    targets: list[tuple[int, Any, str, Any]],
+) -> dict[str, int]:
+    """Drop highlights left over rewritten text; highlight each translated
+    phrase where it now is."""
+    import fitz
+
+    if not highlights:
+        return {"removed": 0, "added": 0, "not_found": 0}
+    removed = added = missing = 0
+    with fitz.open(candidate) as doc:
+        for number, page in enumerate(doc, start=1):
+            if number not in highlights:
+                continue
+            areas = [fitz.Rect(region) for page_number, region in rewritten if page_number == number and region is not None]
+            for annot in list(page.annots() or ()):
+                if annot.type[1] == "Highlight" and any(annot.rect.intersects(area) for area in areas):
+                    page.delete_annot(annot)
+                    removed += 1
+            for page_number, region, phrase, color in targets:
+                if page_number != number:
+                    continue
+                clip = fitz.Rect(region) + (-3, -3, 3, 40)
+                quads = _find_phrase(page, phrase, clip)
+                if not quads:
+                    missing += 1
+                    continue
+                annot = page.add_highlight_annot(quads)
+                if color:
+                    annot.set_colors(stroke=color)
+                annot.update()
+                added += 1
+        doc.save(str(candidate), incremental=True, encryption=fitz.PDF_ENCRYPT_KEEP)
+    return {"removed": removed, "added": added, "not_found": missing}
+
+
+def _find_phrase(page: Any, phrase: str, clip: Any) -> list[Any]:
+    """Quads of ``phrase`` on the page within ``clip``; a phrase the layout
+    wrapped is found in two halves."""
+    quads = page.search_for(phrase, clip=clip, quads=True)
+    if quads or len(phrase) < 4:
+        return quads
+    middle = len(phrase) // 2
+    first, second = _find_phrase(page, phrase[:middle], clip), _find_phrase(page, phrase[middle:], clip)
+    return first + second if first and second else []
 
 
 def _continued_cells(tables: list[Any]) -> dict[str, Any]:
@@ -1325,7 +1457,7 @@ def _unit(
         "source_language": source_language,
         "target_language": target_language,
         "source_text": text,
-        "protected_tokens": rule_protected_tokens(text, dates),
+        "protected_tokens": rule_protected_tokens(text, [*dates, *(m for m in (_HIGHLIGHT_OPEN, _HIGHLIGHT_CLOSE) if m in text)]),
         "style_signature": style,
         "context_before": "",
         "context_after": "",

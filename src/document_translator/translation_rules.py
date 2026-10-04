@@ -629,15 +629,22 @@ def protect_for_translation(text: str, tokens: Iterable[str]) -> ProtectedText:
 def restore_after_translation(text: str, protected: ProtectedText) -> str:
     """Restore protected source values only when every placeholder survives."""
     restored = _unwrap_bracketed_values(text, protected)
+    from collections import Counter
+
+    # How many markers stand for each value ("6" in "Section 6 ... Page 6-78").
+    occurrences = Counter(value for _, value in protected.replacements)
     for marker, value in protected.replacements:
         marker_count = restored.count(marker)
         if marker_count == 1:
             restored = restored.replace(marker, value)
             continue
         # Some translation engines emit an immutable literal unchanged
-        # instead of echoing its marker. Accept that only when the literal is
-        # present exactly once; otherwise fail closed as before.
-        if marker_count == 0 and restored.count(value) == 1:
+        # instead of echoing its marker. Accept that when the literal is
+        # present as often as the source has it (once per marker for that
+        # value; requiring exactly one failed every value used twice);
+        # otherwise fail closed as before. The value counts themselves are
+        # checked again by validation.
+        if marker_count == 0 and 1 <= restored.count(value) <= occurrences[value]:
             continue
         raise ValueError(f"protected placeholder was not preserved: {marker}")
     return restored

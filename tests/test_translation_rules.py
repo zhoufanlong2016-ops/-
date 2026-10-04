@@ -386,3 +386,12 @@ def test_list_number_keeps_its_own_mark():
     assert restore_list_markers("1.Increased design flow", "1。因路线") == "1.因路线"
     assert restore_list_markers("3) a\n4) b", "3、甲\n4。乙") == "3)甲\n4)乙"
     assert restore_list_markers("Total 1.5 km", "1。5公里") == "1。5公里"  # not a list marker
+
+
+def test_a_value_used_twice_may_come_back_as_literals():
+    from document_translator.translation_rules import protect_for_translation, restore_after_translation
+
+    text = "Volume-2, Part II, Section 6 - Employer Requirements. Page 6-78."
+    protected = protect_for_translation(text, ["Volume-2", "6", "78"])
+    translated = protected.text.replace(protected.replacements[1][0], "6").replace(protected.replacements[2][0], "6")
+    assert "6" in restore_after_translation(translated, protected)
