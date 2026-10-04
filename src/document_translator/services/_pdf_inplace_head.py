@@ -336,16 +336,9 @@ def _translate_in_place(
             skipped_rotated += rotated
             page_bounds = _body_edges(lines, bounds_by_size[_page_key(page)])
             page_paragraphs = _segment(page_number, lines, page_bounds, _horizontal_rules(page))
-            gutter = _gutter(lines, page_bounds)
             for paragraph in page_paragraphs:
                 paragraph.page_width = float(page.rect.width)
                 paragraph.bounds = page_bounds
-                # A column's paragraph is written within its column.
-                if gutter is not None and paragraph.bbox[2] <= gutter:
-                    paragraph.bounds = (page_bounds[0], gutter - 0.5 * paragraph.size)
-                elif gutter is not None and paragraph.bbox[0] >= gutter:
-                    column_left = min(line.bbox[0] for line in lines if line.bbox[0] >= gutter)
-                    paragraph.bounds = (column_left, page_bounds[1])
                 # Shares its left edge with other text (a legend column, a
                 # list): left-anchored even if it happens to reach the right.
                 x0 = paragraph.bbox[0]
@@ -879,75 +872,6 @@ def _body_edges(lines: list[_VisualLine], bounds: tuple[float, float]) -> tuple[
     return left, right
 
 
-def _stretched(line: _VisualLine) -> bool:
-    """Word spaces widened by justification (wider than 0.4 of the size)."""
-    chars = sorted((c for span in line.spans for c in span.get("chars", ())), key=lambda c: c["bbox"][0])
-    gaps: list[float] = []
-    end = None
-    after_space = False
-    for char in chars:
-        if not str(char.get("c", "")).strip():
-            after_space = end is not None
-            continue
-        if after_space and end is not None:
-            gaps.append(char["bbox"][0] - end)
-        after_space = False
-        end = char["bbox"][2]
-    # Justification widens every space; one wide tab after a heading's
-    # number ("1.10    TOTAL CATCHMENT AREA") is not that.
-    return len(gaps) >= 3 and sorted(gaps)[len(gaps) // 2] > 0.4 * line.size
-
-
-def _reading_order(lines: list[_VisualLine], bounds: tuple[float, float]) -> list[_VisualLine]:
-    """Two columns read one after the other, not line by line across both.
-
-    Read strictly top to bottom, a brochure's left and right columns
-    alternated ("Sewerage system from LARECHS Colony" / "14,165 Million PKR"
-    / "to Gulshan-e-Ravi ...") and every line became a paragraph. A gutter
-    is a vertical band in the middle of the page that no line of either
-    column crosses; between lines that do cross it (titles, section bars
-    across both columns) the left column is read before the right.
-    """
-    gutter = _gutter(lines, bounds)
-    if gutter is None:
-        return lines
-    ordered: list[_VisualLine] = []
-    band: list[_VisualLine] = []
-
-    def flush() -> None:
-        ordered.extend(sorted((l for l in band if l.bbox[2] <= gutter), key=lambda l: (l.bbox[1], l.bbox[0])))
-        ordered.extend(sorted((l for l in band if l.bbox[2] > gutter), key=lambda l: (l.bbox[1], l.bbox[0])))
-        band.clear()
-
-    for line in sorted(lines, key=lambda l: (l.bbox[1], l.bbox[0])):
-        if line.bbox[0] < gutter < line.bbox[2]:
-            flush()
-            ordered.append(line)
-        else:
-            band.append(line)
-    flush()
-    return ordered
-
-
-def _gutter(lines: list[_VisualLine], bounds: tuple[float, float]) -> float | None:
-    """x of a vertical band between two columns that few lines cross."""
-    left, right = bounds
-    width = right - left
-    if len(lines) < 8 or width <= 0:
-        return None
-    best: tuple[int, float] | None = None
-    for step in range(25, 76):
-        gutter = left + width * step / 100
-        crossing = sum(1 for line in lines if line.bbox[0] < gutter < line.bbox[2])
-        left_side = sum(1 for line in lines if line.bbox[2] <= gutter)
-        right_side = sum(1 for line in lines if line.bbox[0] >= gutter)
-        if left_side >= 4 and right_side >= 4 and crossing <= 0.25 * len(lines):
-            score = min(left_side, right_side) - crossing
-            if best is None or score > best[0]:
-                best = (score, gutter)
-    return None if best is None else best[1]
-
-
 def _is_centred(line: _VisualLine, bounds: tuple[float, float]) -> bool:
     left, right = bounds
     x0, _, x1, _ = line.bbox
@@ -1001,15 +925,7 @@ def _segment(
     crossing the new text.
     """
     left, right = bounds
-    lines = _reading_order(lines, bounds)
     paragraphs: list[_Paragraph] = []
-
-    gutter = _gutter(lines, bounds)
-
-    def column_right(line: _VisualLine) -> float:
-        """A left-column line's column ends at the gutter; otherwise the margin."""
-        return gutter if gutter is not None and line.bbox[2] <= gutter else right
-
     current: list[_VisualLine] = []
     current_centred = False
     for line in lines:
@@ -1107,23 +1023,7 @@ def _segment(
                     and all(abs(c.bbox[2] - current[0].bbox[2]) <= 2.0 and abs(c.bbox[0] - previous.bbox[0]) <= 1.5 for c in current[-2:])
                 ):
                     indented = False
-                # Ended early against the right edge of its own column: on a
-                # two-column page every line of the left column ended 300pt
-                # short of the page margin and became its own paragraph.
-                edge = min(right, column_right(previous))
-                ended_early = edge - previous.bbox[2] > 1.5 * size
-                # Justified to a narrower measure (text in a box): the next
-                # line ends exactly where this long one does.
-                long_line = previous.bbox[2] - previous.bbox[0] >= 0.6 * (edge - previous.bbox[0])
-                if ended_early and (
-                    _stretched(previous)  # spaced out to fill its measure
-                    or (abs(line.bbox[2] - previous.bbox[2]) <= 1.5 and _stretched(line) and long_line)
-                ):
-                    ended_early = False
-                # The paragraph's own measure: the lines before ended here too.
-                if ended_early and len(current) >= 2 and abs(current[-2].bbox[2] - previous.bbox[2]) <= 1.5:
-                    ended_early = False
-                new = indented or ended_early
+                new = indented or right - previous.bbox[2] > 1.5 * size  # previous line ended early
             # A line closing a bracket the paragraph left open continues it
             # ("... with 3 Standby" / "Pumps).", set indented).
             if new and _closes_open_bracket(current, line) and abs(line.size - size) <= 0.6 and line.color == previous.color:

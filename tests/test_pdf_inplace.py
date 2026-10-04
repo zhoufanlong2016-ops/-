@@ -784,3 +784,18 @@ def test_a_page_footer_does_not_hide_a_paragraph_broken_by_the_page():
             paragraphs.append(paragraph)
     across = pdf_inplace._across_pages(paragraphs, {1: 842.0, 2: 842.0, 3: 842.0})
     assert [(paragraphs[h].page_number, paragraphs[t].text[:12]) for h, t in across.items()] == [(1, "resettlement")]
+
+
+def test_two_columns_are_read_one_after_the_other():
+    doc = fitz.open()
+    page = doc.new_page(width=595, height=842)
+    left = ["Sewerage system from LARECHS Colony to", "Gulshan-e-Ravi, Lahore through trenchless", "technology for the city."]
+    right = ["14,165 Million PKR approved as the", "project cost by the forum in 2020 for", "the whole of the works."]
+    for i, (a, b) in enumerate(zip(left, right)):
+        page.insert_text((46, 120 + 16 * i), a, fontsize=11)
+        page.insert_text((330, 120 + 16 * i), b, fontsize=11)
+    page.insert_text((46, 300), "Funding agency text in the left column only", fontsize=11)
+    page.insert_text((330, 300), "And more in the right column at this height", fontsize=11)
+    lines, _ = pdf_inplace._visual_lines(page, [])
+    ordered = [line.text[:8] for line in pdf_inplace._reading_order(lines, (46.0, 560.0))]
+    assert ordered.index("Gulshan-") < ordered.index("14,165 M")
