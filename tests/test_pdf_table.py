@@ -111,6 +111,11 @@ def test_render_redacts_only_text_preserves_vector_lines_and_embeds_font(tmp_pat
     assert report.table_count == 1
     assert report.rendered_cell_count == 3
     assert min(report.font_size_map.values()) >= 6
+    # Every engine repairs the text layer after rendering: Arial shares one
+    # glyph between " " and U+00A0 and between "-" and U+00AD.
+    from document_translator.services.pdf_pipeline import repair_pdf_text_cmaps
+
+    repair_pdf_text_cmaps(destination)
     source_doc = fitz.open(source)
     output_doc = fitz.open(destination)
     try:
