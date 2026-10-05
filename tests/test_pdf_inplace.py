@@ -912,3 +912,39 @@ def test_an_inline_bullet_is_measured_as_written():
         assert pdf_inplace._cell_fits(head, text, 10.0, 1.5)
     finally:
         pdf_inplace._CELL_SOURCE_FONTS.pop(head.id, None)
+
+
+def test_a_key_value_lead_in_may_be_followed_by_several_spaces():
+    assert pdf_inplace._KEY_VALUE_RE.match("Name of Project:  Lahore Wastewater")
+    assert pdf_inplace._KEY_VALUE_RE.match("Reference No.:   0074-PAK-01")
+
+
+def test_page_number_footer_has_one_chinese_form():
+    from types import SimpleNamespace
+
+    unit = SimpleNamespace(source_text="3 | P a g e", target_language="zh")
+    assert pdf_inplace._page_footer_translation(unit) == "第3页"
+    assert pdf_inplace._page_footer_translation(SimpleNamespace(source_text="Page 12", target_language="zh")) == "第12页"
+    assert pdf_inplace._page_footer_translation(SimpleNamespace(source_text="Page Size", target_language="zh")) is None
+
+
+def test_a_page_split_never_puts_closing_punctuation_first():
+    text = "十六（16）。"
+    assert not pdf_inplace._can_break(text, text.index("）"))
+    assert not pdf_inplace._can_break("[14.15]", 3)
+
+
+def test_a_floor_plan_found_as_a_table_is_a_drawing():
+    from types import SimpleNamespace
+
+    import fitz
+
+    page = fitz.open().new_page(width=600, height=800)
+
+    def cell(rect, text=""):
+        return SimpleNamespace(rect=rect, text=text, is_empty=not text)
+
+    rooms = [cell((0, 0, 200, 200), "Office\nOffice"), cell((50, 0, 150, 100), "Office")] + [cell((0, 0, 10, 10)) for _ in range(20)]
+    assert pdf_inplace._is_drawing_frame(SimpleNamespace(cells=rooms), page)
+    grid = [cell((x, y, x + 50, y + 20), "a") for x in range(0, 200, 50) for y in range(0, 100, 20)]
+    assert not pdf_inplace._is_drawing_frame(SimpleNamespace(cells=grid), page)

@@ -175,13 +175,20 @@ def compact_line_height(
     if probe_textbox(width, height, wrapped, fontfile=fontfile, fontname=fontname, fontsize=fontsize, align=align)[0] >= 0:
         return None
     font = cached_font(fontfile)
+    lines = _wrapped_line_count(width, wrapped, fontfile=fontfile, fontname=fontname, fontsize=fontsize, align=align)
+    glyph = (font.ascender - font.descender) * fontsize
+    if lines > 1 and font.ascender > 0:
+        # Lines are drawn lineheight x ascender apart. The old "glyph pitch"
+        # (1.05, taken as a multiple of the size) set them 0.9 of a line
+        # apart: four lines of a Chinese cell ran into one another. Several
+        # lines are kept at least 1.05 glyph boxes apart; tighter than that
+        # the cell needs a smaller size, not overlapping lines.
+        compact = round(1.05 * (font.ascender - font.descender) / font.ascender, 3)
+        fits = (lines - 1) * compact * font.ascender * fontsize + glyph <= height - 0.5
+        return compact if fits else None
     # insert_textbox() needs lineheight*size plus the descent: with the
-    # ascent as line height one line takes exactly the glyph box height;
-    # several lines keep the glyph pitch (SimHei's default adds 20 %).
-    if "\n" in wrapped:
-        compact = round(max(font.ascender - font.descender, 1.0) + 0.05, 3)
-    else:
-        compact = round(max(font.ascender, 0.8), 3)
+    # ascent as line height one line takes exactly the glyph box height.
+    compact = round(max(font.ascender, 0.8), 3)
     fits = probe_textbox(
         width, height, wrapped, fontfile=fontfile, fontname=fontname, fontsize=fontsize, align=align,
         lineheight=compact,
@@ -1290,7 +1297,10 @@ def _wrap_atomic_phrases(
             # Chinese line-breaking rules: no closing punctuation at the start
             # of a line ("，因此") and no opening bracket at its end ("三（").
             following = [entry]
-            if atom[:1] in _NO_LINE_START and len(current) > 1:
+            # Pulled back until the moved run starts with a character a line
+            # may start with: one step moved "）" ahead of "。" and left it
+            # opening the next line ("二十九\n）。").
+            while following[0][0][:1] in _NO_LINE_START and len(current) > 1:
                 following.insert(0, current.pop())
             while len(current) > 1 and current[-1][0][-1:] in _NO_LINE_END:
                 following.insert(0, current.pop())

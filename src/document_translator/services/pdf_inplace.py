@@ -335,7 +335,10 @@ def _translate_in_place(
         # the paragraph path leaves untouched; its tables stay too: written
         # unrotated, their cells came out as scattered vertical words.
         tables = [
-            _split_around_images(doc[t.page_number - 1], t) for t in tables
+            _split_around_images(
+                doc[t.page_number - 1], t,
+                nested=[o.rect for o in tables if o is not t and o.page_number == t.page_number],
+            ) for t in tables
             if not _is_drawing_frame(t, doc[t.page_number - 1]) and not doc[t.page_number - 1].rotation
         ]
         # A cell holding a column of one-line rows (a Gantt chart's task
@@ -731,13 +734,17 @@ def _find_phrase(page: Any, phrase: str, clip: Any) -> list[Any]:
     return first + second if first and second else []
 
 
-def _split_around_images(page: Any, table: Any) -> Any:
+def _split_around_images(page: Any, table: Any, nested: Any = ()) -> Any:
     """A cell holding a picture (a small table pasted as an image) becomes
     the part above it and the part below it: written as one block, the
-    translation ran over the picture."""
+    translation ran over the picture. A table drawn inside the cell
+    (``nested``: the page's other tables) is kept clear the same way: taken
+    into the cell's text, its numbers were run into the sentence above it
+    ("数量5.5 5.5 1") and its own row was left blank."""
     import fitz
 
     images = [fitz.Rect(info["bbox"]) for info in page.get_image_info()]
+    images += [fitz.Rect(rect) for rect in nested]
     # A figure drawn in vectors (a single-line diagram) is a picture too:
     # the many small strokes inside a cell, away from its own rules.
     drawn = [
@@ -1358,7 +1365,22 @@ def _is_drawing_frame(table: Any, page: Any) -> bool:
     import fitz
 
     area = page.rect.width * page.rect.height
-    return any(c.rect is not None and fitz.Rect(c.rect).get_area() > 0.5 * area for c in table.cells)
+    if any(c.rect is not None and fitz.Rect(c.rect).get_area() > 0.5 * area for c in table.cells):
+        return True
+    # A floor plan's rooms found as a "table": its cells overlap one
+    # another (a room inside another's rectangle), which no real grid does,
+    # and two rooms' labels were read as one cell ("办公室办公室").
+    filled = [fitz.Rect(c.rect) for c in table.cells if c.rect is not None and not c.is_empty]
+    # ... and most of its "cells" are empty rooms: a schedule whose bars
+    # overlap its own grid still has text in a good share of its cells.
+    if len(filled) > 0.2 * len(table.cells):
+        return False
+    for index, one in enumerate(filled):
+        for other in filled[index + 1:]:
+            smaller = min(one.get_area(), other.get_area())
+            if smaller > 0 and (one & other).get_area() > 0.5 * smaller:
+                return True
+    return False
 
 
 def _horizontal_rules(page: Any) -> list[tuple[float, float, float, float]]:
@@ -1527,6 +1549,18 @@ def _segment(
                 # The paragraph's own measure: the lines before ended here too.
                 if ended_early and len(current) >= 2 and abs(current[-2].bbox[2] - previous.bbox[2]) <= 1.5:
                     ended_early = False
+                # Ragged right: the line ended short only because the next
+                # word did not fit in what was left ("... Road to" /
+                # "Gulshan-e-Ravi ..." was split into two paragraphs).
+                # Only mid-sentence (ending in a word or a comma): a list of
+                # specifications ("...24/25/30p)" / "3840x2160 ...") ends each
+                # line where its item does.
+                if (
+                    ended_early and re.search(r"[A-Za-z,&\-]$", previous.text.rstrip())
+                    and re.match(r"[A-Za-z(][^\s:]*(?:\s|$)", line.text.lstrip()) is not None
+                    and _first_word_width(line) > edge - previous.bbox[2] - 0.3 * size
+                ):
+                    ended_early = False
                 new = indented or ended_early
             # A line closing a bracket the paragraph left open continues it
             # ("... with 3 Standby" / "Pumps).", set indented).
@@ -1578,7 +1612,30 @@ def _label_text_start(first: _VisualLine) -> float | None:
     return None
 
 
-_KEY_VALUE_RE = re.compile(r"^[A-Za-z][\w./()-]{0,20}(?: [\w./(),-]{1,20}){0,3}: \S")
+# The value may stand at a tab stop after several spaces ("Name of Project:  Lahore").
+_KEY_VALUE_RE = re.compile(r"^[A-Za-z][\w./()-]{0,20}(?: [\w./(),-]{1,20}){0,3}:[ \t]+\S")
+
+
+def _first_word_width(line: _VisualLine) -> float:
+    """Width of the first word of ``line``, as drawn (0 if none)."""
+    chars = sorted(
+        (char for span in line.spans for char in span.get("chars", ())),
+        key=lambda char: char["bbox"][0],
+    )
+    start = end = None
+    for char in chars:
+        value = str(char.get("c", ""))
+        if not value.strip():
+            if start is not None:
+                break
+            continue
+        if start is None:
+            start = char["bbox"][0]
+        end = char["bbox"][2]
+        # A Chinese line breaks between any two characters.
+        if _CJK_RE.match(value):
+            break
+    return 0.0 if start is None else end - start
 
 
 def _closes_open_bracket(current: list[_VisualLine], line: _VisualLine) -> bool:
@@ -1660,6 +1717,8 @@ _MAX_BATCH_ITEMS = 40
 
 _PAGE_OF_EN = re.compile(r"Page\s+(\d+)\s+of\s+(\d+)", re.I)
 _PAGE_OF_ZH = re.compile(r"第\s*(\d+)\s*页\s*[，,]?\s*共\s*(\d+)\s*页")
+# "3 | Page", "Page | 3", "Page 3", the word often letter-spaced ("P a g e").
+_PAGE_NUMBER_EN = re.compile(r"(?:(\d+)\s*[|\-–—]?\s*P\s?a\s?g\s?e|P\s?a\s?g\s?e\s*[|\-–—]?\s*(\d+))", re.I)
 
 
 def _page_footer_translation(unit: TranslationUnit) -> str | None:
@@ -1668,6 +1727,9 @@ def _page_footer_translation(unit: TranslationUnit) -> str | None:
     text = unit.source_text.strip()
     if unit.target_language.lower().startswith("zh") and (match := _PAGE_OF_EN.fullmatch(text)):
         return f"第{match.group(1)}页，共{match.group(2)}页"
+    # Translated as words, the number was kept and "Page" became "第页".
+    if unit.target_language.lower().startswith("zh") and (match := _PAGE_NUMBER_EN.fullmatch(text)):
+        return f"第{match.group(1) or match.group(2)}页"
     if unit.target_language.lower().startswith("en") and (match := _PAGE_OF_ZH.fullmatch(text)):
         return f"Page {match.group(1)} of {match.group(2)}"
     return None
@@ -2144,9 +2206,15 @@ def _flow_over_pages(doc: Any, plans: list[tuple[Any, str, Any]], flow: dict[int
 
 def _can_break(text: str, index: int) -> bool:
     """A line may end before ``text[index]``: never inside a Latin word or number."""
+    from .pdf_table import _NO_LINE_END, _NO_LINE_START
+
     before, after = text[index - 1], text[index]
     if before.isspace() or after.isspace():
         return True
+    # Not before closing punctuation nor after an opening bracket: a row
+    # split by a page left "）。" to open the next page's cell.
+    if after in _NO_LINE_START or before in _NO_LINE_END:
+        return False
     return not (before.isascii() and before.isalnum() and after.isascii() and after.isalnum())
 
 

@@ -227,3 +227,25 @@ def test_header_row_without_column_rules_gets_its_columns_back() -> None:
     page2.insert_text((52, 45), "Engineering Team", fontsize=8)
     merged = (cell(1, 1, (50, 20, 560, 34), "Attendees of the Pre-Bid Meeting"), *cells[1:])
     assert _split_unruled_spans(merged, page2) is merged
+
+
+def test_closing_punctuation_run_never_starts_a_line() -> None:
+    from document_translator.services.pdf_table import _wrap_atomic_phrases
+
+    font = r"C:\Windows\Fonts\simhei.ttf"
+    if not Path(font).exists():
+        pytest.skip("SimHei not installed")
+    text = "气味控制和通风系统的总数应读作：29（二十九）。招标文件中任何位置的气味控制和通风系统数量均应读作29（二十九）。"
+    wrapped = _wrap_atomic_phrases(text, fontfile=font, fontname="p", fontsize=11, max_width=252.52)
+    assert all(not line.startswith(("）", "。")) for line in wrapped.split("\n"))
+
+
+def test_compact_lines_never_overlap() -> None:
+    from document_translator.services.pdf_table import cached_font, compact_line_height
+
+    font = r"C:\Windows\Fonts\simhei.ttf"
+    if not Path(font).exists():
+        pytest.skip("SimHei not installed")
+    lineheight = compact_line_height(108, 50, "子条款（健康与安全\n义务）\n监控报告第4个\n要点", fontfile=font, fontname="p", fontsize=11)
+    f = cached_font(font)
+    assert lineheight is None or lineheight * f.ascender >= f.ascender - f.descender
