@@ -229,6 +229,46 @@ def _apply_cjk_font_policy(root: ET.Element, group: Sequence[ET.Element], text: 
         fonts.set(f"{{{_WORD_NAMESPACE}}}cs", LATIN_FONT)
 
 
+# Chinese faces a Chinese document sets its Latin text in too. SimSun's
+# Latin letters are monospaced: an English translation left in them read
+# "Valid  Observation" with gaps between the letters.
+_CJK_FONT_NAMES = ("宋", "仿宋", "楷", "黑", "雅黑", "等线", "simsun", "nsimsun", "fangsong", "kaiti", "simhei", "yahei", "dengxian", "mingliu", "pmingliu")
+_SANS_CJK_NAMES = ("黑", "雅黑", "等线", "simhei", "yahei", "dengxian")
+
+
+def _apply_latin_font_policy(root: ET.Element, group: Sequence[ET.Element], text: str) -> None:
+    """Text without Chinese in a run whose Latin font is a Chinese face is
+    given a Latin face of the same style (Song -> Times New Roman, Hei ->
+    Arial); theme references to the East Asian theme font become the Latin
+    theme font."""
+    if contains_cjk(text) or not text.strip():
+        return
+    parents = {child: parent for parent in root.iter() for child in parent}
+    runs: set[ET.Element] = set()
+    for node in group:
+        current = parents.get(node)
+        while current is not None and current.tag != _RUN_TAG:
+            current = parents.get(current)
+        if current is not None:
+            runs.add(current)
+    for run in runs:
+        rpr = run.find(_RUN_PROPERTIES_TAG)
+        fonts = rpr.find(_FONT_TAG) if rpr is not None else None
+        if fonts is None:
+            continue
+        # "eastAsia" hint: quotes and dashes drawn in the Chinese face.
+        if fonts.get(f"{{{_WORD_NAMESPACE}}}hint") == "eastAsia":
+            del fonts.attrib[f"{{{_WORD_NAMESPACE}}}hint"]
+        for slot in ("ascii", "hAnsi"):
+            theme = fonts.get(f"{{{_WORD_NAMESPACE}}}{slot}Theme")
+            if theme in ("minorEastAsia", "majorEastAsia"):
+                fonts.set(f"{{{_WORD_NAMESPACE}}}{slot}Theme", theme.replace("EastAsia", "HAnsi"))
+            name = fonts.get(f"{{{_WORD_NAMESPACE}}}{slot}")
+            if name and any(key in name.casefold() for key in _CJK_FONT_NAMES):
+                sans = any(key in name.casefold() for key in _SANS_CJK_NAMES)
+                fonts.set(f"{{{_WORD_NAMESPACE}}}{slot}", LATIN_FONT if sans else "Times New Roman")
+
+
 def extract_translation_units(
     path: str | Path, *, source_language: str = "auto", target_language: str = "en",
 ) -> list[TranslationUnit]:
@@ -417,6 +457,7 @@ def rewrite_docx(
             for node in group[1:]:
                 node.text = ""
             _apply_cjk_font_policy(root, group, value)
+            _apply_latin_font_policy(root, group, value)
         _remove_redundant_soft_breaks(root)
         rewritten_parts[part] = _serialize_part(root, source_parts[part])
 
@@ -496,6 +537,7 @@ def rewrite_docx_paragraphs(
             for node in group[1:]:
                 node.text = ""
             _apply_cjk_font_policy(root, group, value)
+            _apply_latin_font_policy(root, group, value)
         _remove_redundant_soft_breaks(root)
         rewritten_parts[part] = _serialize_part(root, source_parts[part])
 

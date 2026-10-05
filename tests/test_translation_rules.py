@@ -442,3 +442,16 @@ def test_title_cased_line_copied_whole_is_untranslated_english():
 def test_company_named_after_a_road_is_not_a_kept_road_name():
     assert proper_names("China Road and Bridge Corporation (CRBC)") == []
     assert proper_names("along Multan Road and Ferozepur Road") == ["Multan Road", "Ferozepur Road"]
+
+
+def test_chinese_returned_unchanged_as_english_is_rejected():
+    from document_translator.core import TranslationResult, sha256_text
+    from document_translator.core.validation import validate_result_for_unit
+    from document_translator.services.pdf_inplace import _unit
+
+    unit = _unit("平均边长", "p", "o", "s", "a" * 64, "zh", "en")
+    def result(text):
+        return TranslationResult(unit_id=unit.id, translation=text, provider="p", model="m", prompt_version="v", glossary_version="g",
+                                 source_hash=sha256_text(unit.source_text), result_hash=sha256_text(text), request_count=1, validation_status="valid")
+    assert any("UNTRANSLATED_SOURCE" in e for e in validate_result_for_unit(unit, result("平均边长")))
+    assert not any("UNTRANSLATED_SOURCE" in e for e in validate_result_for_unit(unit, result("Average side length")))

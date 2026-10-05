@@ -124,3 +124,21 @@ def test_default_segment_limit_keeps_legal_sentences_below_the_model_context_win
     )
 
     assert provider.calls == ["甲" * 100 + "。", "乙" * 61 + "。"]
+
+
+def test_english_text_leaves_a_chinese_latin_font():
+    import xml.etree.ElementTree as ET
+
+    from document_translator.adapters import docx as adapter
+
+    w = adapter._WORD_NAMESPACE
+    root = ET.fromstring(
+        f'<w:body xmlns:w="{w}"><w:p><w:r><w:rPr><w:rFonts w:hint="eastAsia" w:ascii="宋体" w:hAnsi="宋体" w:eastAsia="宋体"/></w:rPr><w:t>x</w:t></w:r>'
+        f'<w:r><w:rPr><w:rFonts w:asciiTheme="minorEastAsia" w:hAnsiTheme="minorEastAsia"/></w:rPr><w:t>y</w:t></w:r></w:p></w:body>'
+    )
+    texts = list(root.iter(f"{{{w}}}t"))
+    adapter._apply_latin_font_policy(root, texts, "Average side length")
+    fonts = list(root.iter(f"{{{w}}}rFonts"))
+    assert fonts[0].get(f"{{{w}}}ascii") == "Times New Roman" and fonts[0].get(f"{{{w}}}eastAsia") == "宋体"
+    assert fonts[0].get(f"{{{w}}}hint") is None
+    assert fonts[1].get(f"{{{w}}}asciiTheme") == "minorHAnsi"

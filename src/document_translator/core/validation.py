@@ -94,6 +94,15 @@ def validate_result_for_unit(unit: TranslationUnit, result: TranslationResult) -
     errors.extend(validate_placeholders(unit.source_text, result.translation, unit.protected_tokens))
     errors.extend(validate_name_retention(unit.source_text, result.translation, unit.source_language, unit.target_language))
     errors.extend(validate_translation_residue(unit.source_text, result.translation, unit.source_language, unit.target_language))
+    # Chinese returned as its own English translation: a whole batch came
+    # back as its input ("（2）埋石：三等控制点…") and was accepted, and
+    # cached, as valid.
+    if (
+        unit.target_language.lower().startswith("en")
+        and re.search(r"[㐀-鿿]", unit.source_text)
+        and " ".join(result.translation.split()) == " ".join(unit.source_text.split())
+    ):
+        errors.append("UNTRANSLATED_SOURCE: the Chinese source was returned unchanged")
     if unit.target_language.lower().startswith("en") and _LITERAL_DATE_RE.search(result.translation):
         errors.append("LITERAL_DATE: 年/月/日 rendered word for word instead of as an English date")
     return errors

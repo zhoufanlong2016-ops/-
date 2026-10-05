@@ -102,7 +102,8 @@ def test_markdown_units_protect_engineering_values_in_addition_to_inline_syntax(
 
 def test_preflight_warning_is_returned_for_hard_wrap() -> None:
     text = "这是一个足够长但没有句末标点的中文段落，用于确认翻译器能识别跨空行拆开的词语，并且保留源代码中的逐行位置以便安全回写外部承\n\n包商围绕在其身边。\n"
-    outcome = MarkdownTranslationService(FakeProvider()).translate_text(text)
+    # The fake returns its input: kept as Chinese, it is not an untranslated English one.
+    outcome = MarkdownTranslationService(FakeProvider()).translate_text(text, target_language="zh")
     assert outcome.preflight_warnings
 
 
@@ -203,7 +204,7 @@ def test_long_markdown_unit_is_split_at_source_sentence_boundaries() -> None:
     provider = RecordingProvider()
     text = "甲" * 100 + "。" + "乙" * 61 + "。\n"
 
-    outcome = MarkdownTranslationService(provider, max_segment_chars=160).translate_text(text)
+    outcome = MarkdownTranslationService(provider, max_segment_chars=160).translate_text(text, target_language="zh")
 
     assert provider.source_texts == ["甲" * 100 + "。", "乙" * 61 + "。"]
     assert outcome.results[0].request_count == 2
