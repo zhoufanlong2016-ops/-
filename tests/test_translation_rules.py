@@ -419,3 +419,10 @@ def test_a_written_out_value_is_counted_as_a_whole_number():
     for marker, value in protected.replacements:
         reply = reply.replace(marker, value)
     assert restore_after_translation(reply, protected) == text
+
+
+def test_short_volume_references_before_a_part():
+    from document_translator.translation_rules import localize_chinese_dates
+
+    text, _ = localize_chinese_dates("Based on V3A – Part II – Tender Drawings and V2-Part II; a 400 V2 motor", "en", "zh")
+    assert text == "Based on 第3A卷 – Part II – Tender Drawings and 第2卷-Part II; a 400 V2 motor"

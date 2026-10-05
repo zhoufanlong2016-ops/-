@@ -575,7 +575,7 @@ def _localize_english_dates(text: str) -> tuple[str, list[str]]:
     # "Volume-2" reads as an identifier, was protected as one and came back
     # in English ("Volume-2，第二部分"); a volume number has one Chinese form.
     def volume(match: re.Match[str]) -> str:
-        value = f"第{match.group(1)}卷"
+        value = f"第{match.group(1) or match.group(2)}卷"
         if value not in dates:
             dates.append(value)
         return value
@@ -584,7 +584,13 @@ def _localize_english_dates(text: str) -> tuple[str, list[str]]:
     return text, dates
 
 
-_EN_VOLUME_RE = re.compile(r"\bVol(?:ume|\.)?[ \t]*[-–]?[ \t]*(\d{1,2})\b")
+# "Volume-2", "Vol. 3", and the short form before a part ("V3A – Part II",
+# "V2-Part II"): one volume reference, one Chinese form. A bare "V2" (a
+# voltage, a version) is left alone.
+_EN_VOLUME_RE = re.compile(
+    r"\bVol(?:ume|\.)?[ \t]*[-–]?[ \t]*(\d{1,2}[A-Z]?)\b"
+    r"|\bV(\d{1,2}[A-Z]?)(?=[ \t]*[-–—,]?[ \t]*Part\b)"
+)
 
 
 def rule_protected_tokens(text: str, existing: Iterable[str] = ()) -> list[str]:
