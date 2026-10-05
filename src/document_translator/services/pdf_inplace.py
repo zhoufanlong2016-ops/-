@@ -18,6 +18,7 @@ ends early), and those signals are read directly from the source geometry.
 from __future__ import annotations
 
 import dataclasses
+from types import SimpleNamespace
 import hashlib
 import re
 import tempfile
@@ -323,6 +324,12 @@ def _translate_in_place(
         tables = []
     doc = fitz.open(source)
     highlights = _collect_highlights(doc)
+    _CELL_SOURCE_FONTS.clear()
+    for table in tables:
+        page = doc[table.page_number - 1]
+        for cell in table.cells:
+            if cell.rect is not None and not cell.is_empty:
+                _CELL_SOURCE_FONTS[cell.id] = _dominant_font(page, cell.rect)
     try:
         # A page stored rotated (/Rotate 90) has all its text rotated, which
         # the paragraph path leaves untouched; its tables stay too: written
@@ -731,6 +738,31 @@ def _split_around_images(page: Any, table: Any) -> Any:
     import fitz
 
     images = [fitz.Rect(info["bbox"]) for info in page.get_image_info()]
+    # A figure drawn in vectors (a single-line diagram) is a picture too:
+    # the many small strokes inside a cell, away from its own rules.
+    drawn = [
+        fitz.Rect(d["rect"]) for d in page.get_drawings()
+        if d.get("rect") is not None and d["rect"].width < 0.85 * page.rect.width
+    ]
+    for cell in table.cells:
+        if cell.rect is None:
+            continue
+        inner = fitz.Rect(cell.rect) + (3, 3, -3, -3)
+        strokes = [r for r in drawn if inner.contains(r) and r.width < 0.9 * inner.width]
+        if len(strokes) >= 8:
+            figure = fitz.Rect(strokes[0])
+            for r in strokes[1:]:
+                figure |= r
+            # A figure, not underlines or bars drawn through the text: most
+            # of the cell's text lies outside it.
+            lines = [
+                fitz.Rect(line["bbox"]) for block in page.get_text("dict", clip=fitz.Rect(cell.rect)).get("blocks", ())
+                for line in block.get("lines", ())
+                if "".join(str(span.get("text", "")) for span in line.get("spans", ())).strip()
+            ]
+            covered = sum(1 for line in lines if figure.contains(fitz.Point((line.x0 + line.x1) / 2, (line.y0 + line.y1) / 2)))
+            if figure.width > 40 and figure.height > 20 and lines and covered * 2 < len(lines):
+                images.append(figure)
     if not images:
         return table
     cells: list[Any] = []
@@ -742,34 +774,62 @@ def _split_around_images(page: Any, table: Any) -> Any:
             if rect is not None and image.width > 20 and image.height > 20
             and rect.contains(fitz.Rect(image.x0 + 1, image.y0 + 1, image.x1 - 1, image.y1 - 1))
         ]
-        if not inside or cell.is_empty:
+        # A column of one-line rows (a Gantt chart's task names, its bars
+        # drawn beside them) is read line by line already.
+        if not inside or cell.is_empty or _row_list_cells(page, SimpleNamespace(cells=[cell])):
             cells.append(cell)
             continue
-        image = min(inside, key=lambda box: box.y0)
-        above: list[str] = []
-        below: list[str] = []
+        # The text between the pictures, in bands top to bottom.
+        inside.sort(key=lambda box: box.y0)
+        edges = [rect.y0]
+        for image in inside:
+            edges += [image.y0, image.y1]
+        edges.append(rect.y1)
+        bands = [(edges[i], edges[i + 1]) for i in range(0, len(edges), 2)]
+        texts: list[list[str]] = [[] for _ in bands]
         for block in page.get_text("dict", clip=rect).get("blocks", ()):
             for line in block.get("lines", ()):
                 text = "".join(str(span.get("text", "")) for span in line.get("spans", ())).strip()
                 if not text:
                     continue
                 middle = (line["bbox"][1] + line["bbox"][3]) / 2
-                if middle < image.y0:
-                    above.append(text)
-                elif middle > image.y1:
-                    below.append(text)
-        if not above and not below:
+                for index, (top, bottom) in enumerate(bands):
+                    if top <= middle <= bottom:
+                        texts[index].append(text)
+        if not any(texts):
             cells.append(cell)
             continue
         changed = True
-        parts = (
-            ("a", (rect.x0, rect.y0, rect.x1, image.y0), above),
-            ("b", (rect.x0, image.y1, rect.x1, rect.y1), below),
-        )
-        for suffix, box, lines in parts:
-            if lines:
-                cells.append(dataclasses.replace(cell, id=f"{cell.id}:{suffix}", rect=box, text="\n".join(lines)))
+        for index, ((top, bottom), lines) in enumerate(zip(bands, texts)):
+            if lines and bottom - top > 4:
+                suffix = "ab"[index] if len(bands) == 2 else f"p{index}"
+                cells.append(dataclasses.replace(cell, id=f"{cell.id}:{suffix}", rect=(rect.x0, top, rect.x1, bottom), text="\n".join(lines)))
     return dataclasses.replace(table, cells=tuple(cells)) if changed else table
+
+
+# Source font of each table cell of the document being translated.
+_CELL_SOURCE_FONTS: dict[str, str] = {}
+
+
+def _dominant_font(page: Any, rect: Any) -> str:
+    from collections import Counter
+
+    import fitz
+
+    counts: Counter[str] = Counter()
+    for block in page.get_text("dict", clip=fitz.Rect(rect)).get("blocks", ()):
+        for line in block.get("lines", ()):
+            for span in line.get("spans", ()):
+                counts[str(span.get("font", ""))] += sum(1 for char in str(span.get("text", "")) if char.isalnum())
+    return counts.most_common(1)[0][0] if counts else ""
+
+
+def _cell_font_for(cell: Any, text: str) -> str:
+    """The cell's font: in the style (serif or sans) of its source text."""
+    from .pdf_layout import _font_file
+
+    source = _CELL_SOURCE_FONTS.get(cell.id) or _CELL_SOURCE_FONTS.get(cell.id.rsplit(":", 1)[0], "")
+    return _font_file(source, text, prefer_narrow=len(text) >= 80) or str(_table_cell_font(cell, text))
 
 
 def _continued_cells(tables: list[Any]) -> dict[str, Any]:
@@ -2275,8 +2335,10 @@ def _insert(page: Any, paragraph: _Paragraph, text: str, region: Any, size: floa
         # A bold source heading stays bold: CJK faces here have no bold
         # file, so the glyphs are filled and outlined in the same colour.
         bold = _CJK_RE.search(content) and _is_bold(paragraph)
+        from .pdf_table import _with_reserve
+
         written = page.insert_textbox(
-            box, content, fontname=alias, fontfile=fontfile, fontsize=size,
+            _with_reserve(box, content, fontfile, alias, size, pitch, align), content, fontname=alias, fontfile=fontfile, fontsize=size,
             color=color, align=align, overlay=True, lineheight=pitch,
             **({"render_mode": 2, "fill": color, "border_width": 0.04} if bold else {}),
         )
@@ -2434,8 +2496,20 @@ def _render_tables(
                     continue
                 # The size the rest of this page's tables need, then as much
                 # of the row as fits the first cell at that size.
-                others, _ = _table_font_size(page_tables, {**cell_translations, head.id: ""})
-                filled = _fill_continued(head, joined, others)
+                # The page's size depends on what the cell holds, and what
+                # it holds on the size: settle both. Filled for a size the
+                # table was not set at, the cell was written at another
+                # spacing and ended with lines to spare ("此类小").
+                size_now, _ = _table_font_size(page_tables, {**cell_translations, head.id: ""})
+                filled = None
+                for _ in range(4):
+                    filled = _fill_continued(head, joined, size_now)
+                    if filled is None:
+                        break
+                    settled, _ = _table_font_size(page_tables, {**cell_translations, head.id: filled[0]})
+                    if settled == size_now:
+                        break
+                    size_now = settled
                 if filled is None:
                     filled = _split_continued(joined, len(head.text) / max(1, len(head.text) + len(tail.text)))
                 cell_translations[head.id], rest = filled
@@ -2469,7 +2543,7 @@ def _render_tables(
             for c in t.cells:
                 text = mapping[c.id]
                 if text and text != c.text:
-                    mapping[c.id] = _with_font_glyphs(text, pdf_table.cached_font(str(_table_cell_font(c, text))))
+                    mapping[c.id] = _with_font_glyphs(text, pdf_table.cached_font(str(_cell_font_for(c, text))))
         sizes = [float(page["font_size"]) for page in pages.values()]
         sizes += [float(v) for page in pages.values() for v in dict(page.get("smaller_cells", {})).values()]
         # Every table page in one pass: each cell keeps its page's size
@@ -2480,7 +2554,7 @@ def _render_tables(
             output,
             mapping,
             tables=sized,
-            fontfile=_table_cell_font,
+            fontfile=lambda cell, text: _cell_font_for(cell, text),
             minimum_font_size=min(sizes),
             initial_font_size=max(sizes),
             align=lambda cell: alignment.get(cell.id, (0, False))[0],
@@ -2527,6 +2601,11 @@ def _table_alignment(source_page: Any, tables: list[Any]) -> dict[str, tuple[int
                 if cell.column == column and cell.id in detected:
                     if majority is None:
                         alignment[cell.id] = detected[cell.id]
+                    elif cell.row in header_rows and not detected[cell.id][1] and _balanced_in_cell(source_page, cell):
+                        # A header whose lines fill the cell with equal room
+                        # above and below ("Structures need to / Dismantle"):
+                        # its shorter translation goes in the middle.
+                        alignment[cell.id] = (detected[cell.id][0] if not _fills_cell(source_page, cell) else majority[0], True)
                     elif cell.row in header_rows:
                         # A heading filling its cell reads as left-aligned
                         # whatever it was ("Pipe Diameter (mm)" fills 89%):
@@ -2537,6 +2616,21 @@ def _table_alignment(source_page: Any, tables: list[Any]) -> dict[str, tuple[int
                     else:
                         alignment[cell.id] = majority
     return alignment
+
+
+def _balanced_in_cell(page: Any, cell: Any) -> bool:
+    import fitz
+
+    rect = fitz.Rect(cell.rect)
+    text = fitz.Rect()
+    for block in page.get_text("dict", clip=rect).get("blocks", ()):
+        for line in block.get("lines", ()):
+            for span in line.get("spans", ()):
+                if str(span.get("text", "")).strip():
+                    text |= fitz.Rect(span["bbox"])
+    if text.is_empty:
+        return False
+    return abs((text.y0 - rect.y0) - (rect.y1 - text.y1)) <= max(2.0, 0.1 * rect.height)
 
 
 def _fills_cell(page: Any, cell: Any) -> bool:
@@ -2564,7 +2658,7 @@ def _cell_fits(cell: Any, text: str, size: float, spacing: float | None = None) 
         return True
     rect = fitz.Rect(cell.rect)
     normalised = pdf_table._normalise_render_text(text, keep_line_breaks=True)
-    fontfile = str(_table_cell_font(cell, normalised))
+    fontfile = str(_cell_font_for(cell, normalised))
     font = pdf_table.cached_font(fontfile)
     pad = pdf_table._cell_fit_padding(rect, normalised, 2.0)
     width, height = rect.width - 2 * pad, rect.height - 2 * pad
@@ -2574,9 +2668,9 @@ def _cell_fits(cell: Any, text: str, size: float, spacing: float | None = None) 
                 return False
     wrapped = pdf_table._wrap_atomic_phrases(normalised, fontfile=fontfile, fontname="probe", fontsize=size, max_width=width)
     if spacing is not None:
-        return pdf_table.probe_textbox(
-            width, height, wrapped, fontfile=fontfile, fontname="probe", fontsize=size, lineheight=spacing / font.ascender,
-        )[0] >= 0
+        lines = pdf_table._wrapped_line_count(width, wrapped, fontfile=fontfile, fontname="probe", fontsize=size)
+        glyph = (font.ascender - font.descender) * size
+        return bool(lines) and (lines - 1) * spacing * size + glyph <= height - 0.5
     if pdf_table.probe_textbox(width, height, wrapped, fontfile=fontfile, fontname="probe", fontsize=size)[0] >= 0:
         return True
     return pdf_table.compact_line_height(width, height, wrapped, fontfile=fontfile, fontname="probe", fontsize=size) is not None

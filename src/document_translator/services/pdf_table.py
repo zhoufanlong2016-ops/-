@@ -112,14 +112,54 @@ def chinese_line_height(
 
     if not re.search(r"[\u3400-\u9fff]", text):
         return None
-    ascender = cached_font(fontfile).ascender
-    if ascender <= 0:
+    font = cached_font(fontfile)
+    if font.ascender <= 0:
         return None
+    # insert_textbox() reserves lineheight x size for every line but draws
+    # them lineheight x ascender x size apart, so its own fit test asked
+    # for a line more than the cell holds (a continued cell then stopped
+    # three lines short of its border). The lines are counted once, and
+    # fit by the pitch they are actually drawn at.
+    lines = _wrapped_line_count(width, text, fontfile=fontfile, fontname=fontname, fontsize=fontsize, align=align)
+    glyph = (font.ascender - font.descender) * fontsize
     for spacing in CHINESE_LINE_SPACING:
-        lineheight = spacing / ascender
-        if probe_textbox(width, height, text, fontfile=fontfile, fontname=fontname, fontsize=fontsize, align=align, lineheight=lineheight)[0] >= 0:
-            return lineheight
+        if lines and (lines - 1) * spacing * fontsize + glyph <= height - 0.5:
+            return spacing / font.ascender
     return None
+
+
+def _with_reserve(rect: Any, text: str, fontfile: str, fontname: str, fontsize: float, lineheight: float | None, align: int = 0) -> Any:
+    """``rect`` lengthened by what insert_textbox() reserves beyond the lines
+    it draws (lineheight x size per line, drawn x ascender apart), so text
+    that fits where it is drawn is not refused. The text starts at the top
+    either way; only the unused reserve may pass the bottom."""
+    import fitz
+
+    if not lineheight:
+        return rect
+    font = cached_font(fontfile)
+    lines = _wrapped_line_count(rect.width, text, fontfile=fontfile, fontname=fontname, fontsize=fontsize, align=align)
+    if not lines:
+        return rect
+    reserved = lines * lineheight * fontsize
+    drawn = (lines - 1) * lineheight * font.ascender * fontsize + (font.ascender - font.descender) * fontsize
+    return fitz.Rect(rect.x0, rect.y0, rect.x1, rect.y1 + max(0.0, reserved - drawn))
+
+
+def _wrapped_line_count(width: float, text: str, *, fontfile: str, fontname: str, fontsize: float, align: int = 0) -> int:
+    """How many lines ``text`` takes at ``width`` (0 if it cannot be set)."""
+    import fitz
+
+    probe = fitz.open()
+    try:
+        page = probe.new_page(width=width + 20, height=20000)
+        rect = fitz.Rect(0, 0, width, 19990)
+        if page.insert_textbox(rect, text, fontname=fontname, fontfile=fontfile, fontsize=fontsize, align=align) < 0:
+            return 0
+        tops = {round(line["bbox"][1], 1) for block in page.get_text("dict").get("blocks", ()) for line in block.get("lines", ())}
+        return len(tops)
+    finally:
+        probe.close()
 
 
 def compact_line_height(
@@ -1627,6 +1667,9 @@ def render_table_translations(
         redactions_by_page: dict[int, list[Any]] = {}
         fitted_sizes: dict[str, float] = {}
         fitted_line_heights: dict[str, float | None] = {}
+        # The tight pitch a cell fits at, to fall back on when its preferred
+        # Chinese spacing does not fit on the real page.
+        compact_heights: dict[str, float] = {}
         compact_cells: set[str] = set()
         bold_cells: set[str] = set()
         # The cell's own text colour (white on a coloured header band was
@@ -1748,6 +1791,8 @@ def render_table_translations(
                     fit_rect.width, fit_rect.height, wrapped_text, fontfile=str(cell_font), fontname=cell_alias,
                     fontsize=fitted_size, align=_cell_alignment(align, cell),
                 )
+                if compact:
+                    compact_heights[cell.id] = compact
                 if preferred:
                     compact_cells.discard(cell.id)
                 if compact or preferred:
@@ -1826,7 +1871,7 @@ def render_table_translations(
                     if leftover > 1.0:
                         fit_rect = fitz.Rect(fit_rect.x0, fit_rect.y0 + leftover / 2 - 0.5, fit_rect.x1, fit_rect.y1)
                 result = page.insert_textbox(
-                    fit_rect,
+                    _with_reserve(fit_rect, render_text, str(cell_font), cell_alias, fitted_sizes[cell.id], fitted_line_heights.get(cell.id), _cell_alignment(align, cell)),
                     render_text,
                     fontname=cell_alias,
                     fontfile=str(cell_font),
@@ -1836,7 +1881,19 @@ def render_table_translations(
                     overlay=True,
                     **_cell_paint(cell.id in bold_cells, cell_colors.get(cell.id, (0.0, 0.0, 0.0))),
                 )
-                if result < -1e-6 and fitted_line_heights.get(cell.id) is not None:
+                if result < -1e-6 and cell.id in compact_heights and fitted_line_heights.get(cell.id) != compact_heights[cell.id]:
+                    result = page.insert_textbox(
+                        _with_reserve(fit_rect, render_text, str(cell_font), cell_alias, fitted_sizes[cell.id], compact_heights[cell.id], _cell_alignment(align, cell)),
+                        render_text,
+                        fontname=cell_alias,
+                        fontfile=str(cell_font),
+                        fontsize=fitted_sizes[cell.id],
+                        lineheight=compact_heights[cell.id],
+                        align=_cell_alignment(align, cell),
+                        overlay=True,
+                        **_cell_paint(cell.id in bold_cells, cell_colors.get(cell.id, (0.0, 0.0, 0.0))),
+                    )
+                if result < -1e-6 and fitted_line_heights.get(cell.id) is not None and cell.id not in compact_heights:
                     # The cosmetic line-spacing bump was verified to fit on a
                     # disposable probe page, but the real page's own already-
                     # embedded font resources (accumulated from earlier cells)

@@ -641,6 +641,15 @@ def protect_for_translation(text: str, tokens: Iterable[str]) -> ProtectedText:
     return ProtectedText(pattern.sub(replace, text), tuple(replacements))
 
 
+def _whole_count(text: str, value: str) -> int:
+    """Occurrences of ``value`` as a whole value: the "6" of "Section 6",
+    not the 6 inside "76" (counted as substrings, a value written out in
+    "第6节 ... 第76页" was always "too many")."""
+    before = r"(?<![A-Za-z0-9.])" if value[:1].isalnum() else ""
+    after = r"(?![A-Za-z0-9]|\.\d)" if value[-1:].isalnum() else ""
+    return len(re.findall(before + re.escape(value) + after, text))
+
+
 def restore_after_translation(text: str, protected: ProtectedText) -> str:
     """Restore protected source values only when every placeholder survives."""
     restored = _unwrap_bracketed_values(text, protected)
@@ -659,7 +668,7 @@ def restore_after_translation(text: str, protected: ProtectedText) -> str:
         # value; requiring exactly one failed every value used twice);
         # otherwise fail closed as before. The value counts themselves are
         # checked again by validation.
-        if marker_count == 0 and 1 <= restored.count(value) <= occurrences[value]:
+        if marker_count == 0 and 1 <= _whole_count(restored, value) <= occurrences[value]:
             continue
         raise ValueError(f"protected placeholder was not preserved: {marker}")
     return restored

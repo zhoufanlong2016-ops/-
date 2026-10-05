@@ -408,3 +408,14 @@ def test_no_space_between_a_number_and_psi_or_kva():
     from document_translator.translation_rules import normalize_chinese_spacing
 
     assert normalize_chinese_spacing("强度为6000 psi，容量500 kVA", "zh") == "强度为6000psi，容量500kVA"
+
+
+def test_a_written_out_value_is_counted_as_a_whole_number():
+    from document_translator.translation_rules import protect_for_translation, restore_after_translation
+
+    text = "Section 6, Page 6-76. Section 6, Page 6-78."
+    protected = protect_for_translation(text, ["6", "76", "78"])
+    reply = protected.text
+    for marker, value in protected.replacements:
+        reply = reply.replace(marker, value)
+    assert restore_after_translation(reply, protected) == text

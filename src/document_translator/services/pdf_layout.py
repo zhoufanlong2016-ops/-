@@ -628,6 +628,14 @@ def _cached_font(fontfile: str) -> Any:
     return cached_font(str(fontfile))
 
 
+_SERIF_KEYS = ("times", "serif", "roman", "cambria", "georgia", "garamond", "antiqua", "palatino", "minion", "century", "song", "sun", "ming", "batang")
+
+
+def _is_serif_name(name: str) -> bool:
+    name = name.casefold()
+    return any(key in name for key in _SERIF_KEYS) and "sans" not in name
+
+
 def _font_file(
     font_name: str,
     text: str,
@@ -646,7 +654,14 @@ def _font_file(
 
     name = font_name.casefold()
     if contains_cjk(text):
-        candidates = (r"C:\Windows\Fonts\simhei.ttf", r"C:\Windows\Fonts\msyh.ttc")
+        # Chinese in the source's style: a serif face (Times, Cambria, ...)
+        # becomes Song, a sans face Hei. Everything set in Hei turned a
+        # Times New Roman table into a different-looking document.
+        candidates = (
+            (r"C:\Windows\Fonts\STSONG.TTF", r"C:\Windows\Fonts\simhei.ttf", r"C:\Windows\Fonts\msyh.ttc")
+            if _is_serif_name(name)
+            else (r"C:\Windows\Fonts\simhei.ttf", r"C:\Windows\Fonts\msyh.ttc")
+        )
     elif "times" in name or ("noto" in name and "serif" in name) or "serif" in name:
         # Times New Roman is a stable serif fallback whose family is normally
         # absent from the CJK/serif asset set.
