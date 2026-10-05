@@ -1,0 +1,1349 @@
+{
+  "summary": {
+    "endpoint": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+    "selection": [
+      "eng-zh-002",
+      "eng-zh-012",
+      "eng-zh-035",
+      "eng-zh-040",
+      "eng-zh-043",
+      "eng-en-012",
+      "eng-en-018",
+      "eng-en-035",
+      "eng-en-040",
+      "eng-en-043"
+    ],
+    "pricing_basis": {
+      "region": "China (Beijing) official list pricing",
+      "currency": "CNY",
+      "per_million_tokens": {
+        "qwen-mt-plus": {
+          "input": 1.8,
+          "output": 5.4
+        },
+        "qwen-mt-flash": {
+          "input": 0.7,
+          "output": 1.95
+        },
+        "qwen-mt-lite": {
+          "input": 0.6,
+          "output": 1.6
+        }
+      },
+      "note": "Calculated from API usage. Account billing can be lower when free quota or promotions apply."
+    },
+    "models": {
+      "qwen-mt-plus": {
+        "requests": 10,
+        "successful": 10,
+        "failed": 0,
+        "average_elapsed_seconds": 0.7628999999999999,
+        "average_input_tokens": 91.1,
+        "average_output_tokens": 32.1,
+        "calculated_list_cost_cny": 0.0033732000000000002,
+        "language_direction_errors": 0,
+        "required_term_exact_match_errors": 2,
+        "numbers_units_chainages_errors": 1,
+        "placeholder_errors": 0,
+        "prompt_leaks": 0
+      },
+      "qwen-mt-flash": {
+        "requests": 10,
+        "successful": 10,
+        "failed": 0,
+        "average_elapsed_seconds": 0.46930000000000005,
+        "average_input_tokens": 91.1,
+        "average_output_tokens": 32.2,
+        "calculated_list_cost_cny": 0.0012656,
+        "language_direction_errors": 0,
+        "required_term_exact_match_errors": 4,
+        "numbers_units_chainages_errors": 1,
+        "placeholder_errors": 0,
+        "prompt_leaks": 0
+      },
+      "qwen-mt-lite": {
+        "requests": 10,
+        "successful": 10,
+        "failed": 0,
+        "average_elapsed_seconds": 0.45149999999999996,
+        "average_input_tokens": 91.1,
+        "average_output_tokens": 32.3,
+        "calculated_list_cost_cny": 0.0010634,
+        "language_direction_errors": 0,
+        "required_term_exact_match_errors": 9,
+        "numbers_units_chainages_errors": 3,
+        "placeholder_errors": 0,
+        "prompt_leaks": 0
+      }
+    },
+    "total_calculated_list_cost_cny": 0.0057022
+  },
+  "results": [
+    {
+      "model": "qwen-mt-plus",
+      "id": "eng-zh-002",
+      "source_language": "zh-CN",
+      "target_language": "en",
+      "category": "road_bridge",
+      "source_text": "在K12+340处设置临时交通标志。",
+      "required_terms": [
+        {
+          "source": "临时交通标志",
+          "target": "temporary traffic signs"
+        }
+      ],
+      "protected_literals": [
+        "K12+340"
+      ],
+      "http_status": 200,
+      "success": true,
+      "elapsed_seconds": 1.199,
+      "translation": "Set up temporary traffic signs at K12+340.",
+      "usage": {
+        "input_tokens": 75,
+        "output_tokens": 14,
+        "total_tokens": 89
+      },
+      "calculated_list_cost_cny": 0.00021060000000000002,
+      "language_direction_correct": true,
+      "required_term_exact_match": {
+        "temporary traffic signs": true
+      },
+      "numbers_units_chainages_preserved": true,
+      "protected_literal_counts": {
+        "K12+340": true
+      },
+      "placeholders_complete_and_count_correct": true,
+      "prompt_leak_detected": false
+    },
+    {
+      "model": "qwen-mt-plus",
+      "id": "eng-zh-012",
+      "source_language": "zh-CN",
+      "target_language": "en",
+      "category": "mtbm",
+      "source_text": "顶进推力不得超过1200 kN。",
+      "required_terms": [
+        {
+          "source": "顶进推力",
+          "target": "jacking thrust"
+        }
+      ],
+      "protected_literals": [
+        "1200 kN"
+      ],
+      "http_status": 200,
+      "success": true,
+      "elapsed_seconds": 0.569,
+      "translation": "The jacking thrust shall not exceed 1200 kN.",
+      "usage": {
+        "input_tokens": 73,
+        "output_tokens": 15,
+        "total_tokens": 88
+      },
+      "calculated_list_cost_cny": 0.0002124,
+      "language_direction_correct": true,
+      "required_term_exact_match": {
+        "jacking thrust": true
+      },
+      "numbers_units_chainages_preserved": true,
+      "protected_literal_counts": {
+        "1200 kN": true
+      },
+      "placeholders_complete_and_count_correct": true,
+      "prompt_leak_detected": false
+    },
+    {
+      "model": "qwen-mt-plus",
+      "id": "eng-zh-035",
+      "source_language": "zh-CN",
+      "target_language": "en",
+      "category": "construction_quality_safety",
+      "source_text": "质量计划应规定材料进场检验、过程见证点、不合格品隔离、纠正措施关闭和记录保存期限，并明确承包商、分包商与工程师的责任边界。",
+      "required_terms": [
+        {
+          "source": "见证点",
+          "target": "witness point"
+        },
+        {
+          "source": "不合格品",
+          "target": "nonconforming product"
+        },
+        {
+          "source": "纠正措施",
+          "target": "corrective action"
+        }
+      ],
+      "protected_literals": [],
+      "http_status": 200,
+      "success": true,
+      "elapsed_seconds": 0.827,
+      "translation": "The quality plan shall specify material inspection upon arrival, process witness points, isolation of nonconforming products, closure of corrective actions, and record retention periods, and clearly define the responsibility boundaries among the contractor, subcontractors, and the engineer.",
+      "usage": {
+        "input_tokens": 97,
+        "output_tokens": 48,
+        "total_tokens": 145
+      },
+      "calculated_list_cost_cny": 0.0004338000000000001,
+      "language_direction_correct": true,
+      "required_term_exact_match": {
+        "witness point": true,
+        "nonconforming product": true,
+        "corrective action": true
+      },
+      "numbers_units_chainages_preserved": true,
+      "protected_literal_counts": {},
+      "placeholders_complete_and_count_correct": true,
+      "prompt_leak_detected": false
+    },
+    {
+      "model": "qwen-mt-plus",
+      "id": "eng-zh-040",
+      "source_language": "zh-CN",
+      "target_language": "en",
+      "category": "contract_submittal_rfi",
+      "source_text": "任何进度或费用影响均应在合同通知期内提出，并附上受影响活动、数量计算、依据条款和可核查的 contemporaneous records；未按期通知不得视为自动获得工期或费用补偿⟦PH_0001⟧⟦PH_0002⟧。",
+      "required_terms": [
+        {
+          "source": "通知期",
+          "target": "notice period"
+        },
+        {
+          "source": "工期",
+          "target": "extension of time"
+        },
+        {
+          "source": "费用补偿",
+          "target": "cost compensation"
+        }
+      ],
+      "protected_literals": [
+        "⟦PH_0001⟧",
+        "⟦PH_0002⟧"
+      ],
+      "http_status": 200,
+      "success": true,
+      "elapsed_seconds": 0.881,
+      "translation": "Any schedule or cost impact shall be raised within the contract notice period, accompanied by affected activities, quantity calculations, supporting clauses, and verifiable contemporaneous records; failure to notify on time shall not be deemed as automatic entitlement to extension of time or cost compensation⟦PH_0001⟧⟦PH_0002⟧.",
+      "usage": {
+        "input_tokens": 120,
+        "output_tokens": 68,
+        "total_tokens": 188
+      },
+      "calculated_list_cost_cny": 0.0005832000000000001,
+      "language_direction_correct": true,
+      "required_term_exact_match": {
+        "notice period": true,
+        "extension of time": true,
+        "cost compensation": true
+      },
+      "numbers_units_chainages_preserved": true,
+      "protected_literal_counts": {
+        "⟦PH_0001⟧": true,
+        "⟦PH_0002⟧": true
+      },
+      "placeholders_complete_and_count_correct": true,
+      "prompt_leak_detected": false
+    },
+    {
+      "model": "qwen-mt-plus",
+      "id": "eng-zh-043",
+      "source_language": "zh-CN",
+      "target_language": "en",
+      "category": "electrical_scada_ventilation",
+      "source_text": "风机额定功率为7.5 kW，防护等级为IP55。",
+      "required_terms": [
+        {
+          "source": "额定功率",
+          "target": "rated power"
+        },
+        {
+          "source": "防护等级",
+          "target": "ingress-protection rating"
+        }
+      ],
+      "protected_literals": [
+        "7.5 kW",
+        "IP55"
+      ],
+      "http_status": 200,
+      "success": true,
+      "elapsed_seconds": 0.568,
+      "translation": "The fan's rated power is 7.5 kW, and its protection degree is IP55.",
+      "usage": {
+        "input_tokens": 78,
+        "output_tokens": 21,
+        "total_tokens": 99
+      },
+      "calculated_list_cost_cny": 0.0002538,
+      "language_direction_correct": true,
+      "required_term_exact_match": {
+        "rated power": true,
+        "ingress-protection rating": false
+      },
+      "numbers_units_chainages_preserved": true,
+      "protected_literal_counts": {
+        "7.5 kW": true,
+        "IP55": true
+      },
+      "placeholders_complete_and_count_correct": true,
+      "prompt_leak_detected": false
+    },
+    {
+      "model": "qwen-mt-plus",
+      "id": "eng-en-012",
+      "source_language": "en",
+      "target_language": "zh-CN",
+      "category": "mtbm",
+      "source_text": "The jacking thrust shall not exceed 1200 kN.",
+      "required_terms": [
+        {
+          "source": "jacking thrust",
+          "target": "顶进推力"
+        }
+      ],
+      "protected_literals": [
+        "1200 kN"
+      ],
+      "http_status": 200,
+      "success": true,
+      "elapsed_seconds": 0.505,
+      "translation": "顶推力不得超过1200 kN。",
+      "usage": {
+        "input_tokens": 75,
+        "output_tokens": 11,
+        "total_tokens": 86
+      },
+      "calculated_list_cost_cny": 0.0001944,
+      "language_direction_correct": true,
+      "required_term_exact_match": {
+        "顶进推力": false
+      },
+      "numbers_units_chainages_preserved": true,
+      "protected_literal_counts": {
+        "1200 kN": true
+      },
+      "placeholders_complete_and_count_correct": true,
+      "prompt_leak_detected": false
+    },
+    {
+      "model": "qwen-mt-plus",
+      "id": "eng-en-018",
+      "source_language": "en",
+      "target_language": "zh-CN",
+      "category": "survey",
+      "source_text": "The design invert elevation at chainage K08+125 is 38.640 m.",
+      "required_terms": [
+        {
+          "source": "invert elevation",
+          "target": "管底高程"
+        }
+      ],
+      "protected_literals": [
+        "K08+125",
+        "38.640 m"
+      ],
+      "http_status": 200,
+      "success": true,
+      "elapsed_seconds": 0.703,
+      "translation": "设计在K08+125桩号处的管底高程为38.640米。",
+      "usage": {
+        "input_tokens": 84,
+        "output_tokens": 26,
+        "total_tokens": 110
+      },
+      "calculated_list_cost_cny": 0.00029160000000000004,
+      "language_direction_correct": true,
+      "required_term_exact_match": {
+        "管底高程": true
+      },
+      "numbers_units_chainages_preserved": false,
+      "protected_literal_counts": {
+        "K08+125": true,
+        "38.640 m": false
+      },
+      "placeholders_complete_and_count_correct": true,
+      "prompt_leak_detected": false
+    },
+    {
+      "model": "qwen-mt-plus",
+      "id": "eng-en-035",
+      "source_language": "en",
+      "target_language": "zh-CN",
+      "category": "construction_quality_safety",
+      "source_text": "The quality plan shall define incoming-material inspection, process witness points, nonconforming-product segregation, corrective-action closeout and record-retention periods, and shall clarify the responsibility boundaries of the Contractor, subcontractors and Engineer.",
+      "required_terms": [
+        {
+          "source": "witness point",
+          "target": "见证点"
+        },
+        {
+          "source": "nonconforming product",
+          "target": "不合格品"
+        },
+        {
+          "source": "corrective action",
+          "target": "纠正措施"
+        }
+      ],
+      "protected_literals": [],
+      "http_status": 200,
+      "success": true,
+      "elapsed_seconds": 0.925,
+      "translation": "质量计划应明确来料检验、过程见证点、不合格品隔离、纠正措施关闭及记录保存期限，并应阐明承包商、分包商和工程师的责任界限。",
+      "usage": {
+        "input_tokens": 104,
+        "output_tokens": 37,
+        "total_tokens": 141
+      },
+      "calculated_list_cost_cny": 0.000387,
+      "language_direction_correct": true,
+      "required_term_exact_match": {
+        "见证点": true,
+        "不合格品": true,
+        "纠正措施": true
+      },
+      "numbers_units_chainages_preserved": true,
+      "protected_literal_counts": {},
+      "placeholders_complete_and_count_correct": true,
+      "prompt_leak_detected": false
+    },
+    {
+      "model": "qwen-mt-plus",
+      "id": "eng-en-040",
+      "source_language": "en",
+      "target_language": "zh-CN",
+      "category": "contract_submittal_rfi",
+      "source_text": "Any time or cost impact shall be notified within the contractual notice period, with affected activities, quantity calculations, cited clauses and verifiable contemporaneous records; late notice shall not be deemed to grant an automatic extension of time or cost compensation⟦PH_0001⟧⟦PH_0002⟧.",
+      "required_terms": [
+        {
+          "source": "notice period",
+          "target": "通知期"
+        },
+        {
+          "source": "extension of time",
+          "target": "工期"
+        },
+        {
+          "source": "cost compensation",
+          "target": "费用补偿"
+        }
+      ],
+      "protected_literals": [
+        "⟦PH_0001⟧",
+        "⟦PH_0002⟧"
+      ],
+      "http_status": 200,
+      "success": true,
+      "elapsed_seconds": 0.871,
+      "translation": "任何工期或费用影响均应在合同规定的通知期限内予以告知，并附上受影响的活动、工程量计算、引用条款及可验证的同期记录；逾期通知将不被视为自动获得工期延长或费用补偿⟦PH_0001⟧⟦PH_0002⟧。",
+      "usage": {
+        "input_tokens": 124,
+        "output_tokens": 63,
+        "total_tokens": 187
+      },
+      "calculated_list_cost_cny": 0.0005634000000000001,
+      "language_direction_correct": true,
+      "required_term_exact_match": {
+        "通知期": true,
+        "工期": true,
+        "费用补偿": true
+      },
+      "numbers_units_chainages_preserved": true,
+      "protected_literal_counts": {
+        "⟦PH_0001⟧": true,
+        "⟦PH_0002⟧": true
+      },
+      "placeholders_complete_and_count_correct": true,
+      "prompt_leak_detected": false
+    },
+    {
+      "model": "qwen-mt-plus",
+      "id": "eng-en-043",
+      "source_language": "en",
+      "target_language": "zh-CN",
+      "category": "electrical_scada_ventilation",
+      "source_text": "The fan rated power is 7.5 kW and its ingress-protection rating is IP55.",
+      "required_terms": [
+        {
+          "source": "rated power",
+          "target": "额定功率"
+        },
+        {
+          "source": "ingress-protection rating",
+          "target": "防护等级"
+        }
+      ],
+      "protected_literals": [
+        "7.5 kW",
+        "IP55"
+      ],
+      "http_status": 200,
+      "success": true,
+      "elapsed_seconds": 0.581,
+      "translation": "风机额定功率为7.5 kW，其防护等级为IP55。",
+      "usage": {
+        "input_tokens": 81,
+        "output_tokens": 18,
+        "total_tokens": 99
+      },
+      "calculated_list_cost_cny": 0.000243,
+      "language_direction_correct": true,
+      "required_term_exact_match": {
+        "额定功率": true,
+        "防护等级": true
+      },
+      "numbers_units_chainages_preserved": true,
+      "protected_literal_counts": {
+        "7.5 kW": true,
+        "IP55": true
+      },
+      "placeholders_complete_and_count_correct": true,
+      "prompt_leak_detected": false
+    },
+    {
+      "model": "qwen-mt-flash",
+      "id": "eng-zh-002",
+      "source_language": "zh-CN",
+      "target_language": "en",
+      "category": "road_bridge",
+      "source_text": "在K12+340处设置临时交通标志。",
+      "required_terms": [
+        {
+          "source": "临时交通标志",
+          "target": "temporary traffic signs"
+        }
+      ],
+      "protected_literals": [
+        "K12+340"
+      ],
+      "http_status": 200,
+      "success": true,
+      "elapsed_seconds": 0.398,
+      "translation": "Set up temporary traffic signs at K12+340.",
+      "usage": {
+        "input_tokens": 75,
+        "output_tokens": 14,
+        "total_tokens": 89
+      },
+      "calculated_list_cost_cny": 7.98e-05,
+      "language_direction_correct": true,
+      "required_term_exact_match": {
+        "temporary traffic signs": true
+      },
+      "numbers_units_chainages_preserved": true,
+      "protected_literal_counts": {
+        "K12+340": true
+      },
+      "placeholders_complete_and_count_correct": true,
+      "prompt_leak_detected": false
+    },
+    {
+      "model": "qwen-mt-flash",
+      "id": "eng-zh-012",
+      "source_language": "zh-CN",
+      "target_language": "en",
+      "category": "mtbm",
+      "source_text": "顶进推力不得超过1200 kN。",
+      "required_terms": [
+        {
+          "source": "顶进推力",
+          "target": "jacking thrust"
+        }
+      ],
+      "protected_literals": [
+        "1200 kN"
+      ],
+      "http_status": 200,
+      "success": true,
+      "elapsed_seconds": 0.391,
+      "translation": "The jacking thrust shall not exceed 1200 kN.",
+      "usage": {
+        "input_tokens": 73,
+        "output_tokens": 15,
+        "total_tokens": 88
+      },
+      "calculated_list_cost_cny": 8.034999999999999e-05,
+      "language_direction_correct": true,
+      "required_term_exact_match": {
+        "jacking thrust": true
+      },
+      "numbers_units_chainages_preserved": true,
+      "protected_literal_counts": {
+        "1200 kN": true
+      },
+      "placeholders_complete_and_count_correct": true,
+      "prompt_leak_detected": false
+    },
+    {
+      "model": "qwen-mt-flash",
+      "id": "eng-zh-035",
+      "source_language": "zh-CN",
+      "target_language": "en",
+      "category": "construction_quality_safety",
+      "source_text": "质量计划应规定材料进场检验、过程见证点、不合格品隔离、纠正措施关闭和记录保存期限，并明确承包商、分包商与工程师的责任边界。",
+      "required_terms": [
+        {
+          "source": "见证点",
+          "target": "witness point"
+        },
+        {
+          "source": "不合格品",
+          "target": "nonconforming product"
+        },
+        {
+          "source": "纠正措施",
+          "target": "corrective action"
+        }
+      ],
+      "protected_literals": [],
+      "http_status": 200,
+      "success": true,
+      "elapsed_seconds": 0.533,
+      "translation": "The quality plan shall specify material inspection upon arrival, process witness points, segregation of nonconforming products, closure of corrective actions, and record retention periods, while clearly defining the boundaries of responsibility among the contractor, subcontractors, and the engineer.",
+      "usage": {
+        "input_tokens": 97,
+        "output_tokens": 49,
+        "total_tokens": 146
+      },
+      "calculated_list_cost_cny": 0.00016345,
+      "language_direction_correct": true,
+      "required_term_exact_match": {
+        "witness point": true,
+        "nonconforming product": true,
+        "corrective action": true
+      },
+      "numbers_units_chainages_preserved": true,
+      "protected_literal_counts": {},
+      "placeholders_complete_and_count_correct": true,
+      "prompt_leak_detected": false
+    },
+    {
+      "model": "qwen-mt-flash",
+      "id": "eng-zh-040",
+      "source_language": "zh-CN",
+      "target_language": "en",
+      "category": "contract_submittal_rfi",
+      "source_text": "任何进度或费用影响均应在合同通知期内提出，并附上受影响活动、数量计算、依据条款和可核查的 contemporaneous records；未按期通知不得视为自动获得工期或费用补偿⟦PH_0001⟧⟦PH_0002⟧。",
+      "required_terms": [
+        {
+          "source": "通知期",
+          "target": "notice period"
+        },
+        {
+          "source": "工期",
+          "target": "extension of time"
+        },
+        {
+          "source": "费用补偿",
+          "target": "cost compensation"
+        }
+      ],
+      "protected_literals": [
+        "⟦PH_0001⟧",
+        "⟦PH_0002⟧"
+      ],
+      "http_status": 200,
+      "success": true,
+      "elapsed_seconds": 0.672,
+      "translation": "Any impact on schedule or cost shall be submitted within the contract notification period, accompanied by details of the affected activities, quantity calculations, applicable clauses, and verifiable contemporaneous records; failure to provide timely notice shall not be deemed as automatic entitlement to time or cost compensation⟦PH_0001⟧⟦PH_0002⟧.",
+      "usage": {
+        "input_tokens": 120,
+        "output_tokens": 70,
+        "total_tokens": 190
+      },
+      "calculated_list_cost_cny": 0.0002205,
+      "language_direction_correct": true,
+      "required_term_exact_match": {
+        "notice period": false,
+        "extension of time": false,
+        "cost compensation": true
+      },
+      "numbers_units_chainages_preserved": true,
+      "protected_literal_counts": {
+        "⟦PH_0001⟧": true,
+        "⟦PH_0002⟧": true
+      },
+      "placeholders_complete_and_count_correct": true,
+      "prompt_leak_detected": false
+    },
+    {
+      "model": "qwen-mt-flash",
+      "id": "eng-zh-043",
+      "source_language": "zh-CN",
+      "target_language": "en",
+      "category": "electrical_scada_ventilation",
+      "source_text": "风机额定功率为7.5 kW，防护等级为IP55。",
+      "required_terms": [
+        {
+          "source": "额定功率",
+          "target": "rated power"
+        },
+        {
+          "source": "防护等级",
+          "target": "ingress-protection rating"
+        }
+      ],
+      "protected_literals": [
+        "7.5 kW",
+        "IP55"
+      ],
+      "http_status": 200,
+      "success": true,
+      "elapsed_seconds": 0.406,
+      "translation": "The rated power of the fan is 7.5 kW, and its protection class is IP55.",
+      "usage": {
+        "input_tokens": 78,
+        "output_tokens": 22,
+        "total_tokens": 100
+      },
+      "calculated_list_cost_cny": 9.75e-05,
+      "language_direction_correct": true,
+      "required_term_exact_match": {
+        "rated power": true,
+        "ingress-protection rating": false
+      },
+      "numbers_units_chainages_preserved": true,
+      "protected_literal_counts": {
+        "7.5 kW": true,
+        "IP55": true
+      },
+      "placeholders_complete_and_count_correct": true,
+      "prompt_leak_detected": false
+    },
+    {
+      "model": "qwen-mt-flash",
+      "id": "eng-en-012",
+      "source_language": "en",
+      "target_language": "zh-CN",
+      "category": "mtbm",
+      "source_text": "The jacking thrust shall not exceed 1200 kN.",
+      "required_terms": [
+        {
+          "source": "jacking thrust",
+          "target": "顶进推力"
+        }
+      ],
+      "protected_literals": [
+        "1200 kN"
+      ],
+      "http_status": 200,
+      "success": true,
+      "elapsed_seconds": 0.382,
+      "translation": "顶推力不得超过1200 kN。",
+      "usage": {
+        "input_tokens": 75,
+        "output_tokens": 11,
+        "total_tokens": 86
+      },
+      "calculated_list_cost_cny": 7.395000000000001e-05,
+      "language_direction_correct": true,
+      "required_term_exact_match": {
+        "顶进推力": false
+      },
+      "numbers_units_chainages_preserved": true,
+      "protected_literal_counts": {
+        "1200 kN": true
+      },
+      "placeholders_complete_and_count_correct": true,
+      "prompt_leak_detected": false
+    },
+    {
+      "model": "qwen-mt-flash",
+      "id": "eng-en-018",
+      "source_language": "en",
+      "target_language": "zh-CN",
+      "category": "survey",
+      "source_text": "The design invert elevation at chainage K08+125 is 38.640 m.",
+      "required_terms": [
+        {
+          "source": "invert elevation",
+          "target": "管底高程"
+        }
+      ],
+      "protected_literals": [
+        "K08+125",
+        "38.640 m"
+      ],
+      "http_status": 200,
+      "success": true,
+      "elapsed_seconds": 0.405,
+      "translation": "在桩号K08+125处的设计管底高程为38.640米。",
+      "usage": {
+        "input_tokens": 84,
+        "output_tokens": 25,
+        "total_tokens": 109
+      },
+      "calculated_list_cost_cny": 0.00010755,
+      "language_direction_correct": true,
+      "required_term_exact_match": {
+        "管底高程": true
+      },
+      "numbers_units_chainages_preserved": false,
+      "protected_literal_counts": {
+        "K08+125": true,
+        "38.640 m": false
+      },
+      "placeholders_complete_and_count_correct": true,
+      "prompt_leak_detected": false
+    },
+    {
+      "model": "qwen-mt-flash",
+      "id": "eng-en-035",
+      "source_language": "en",
+      "target_language": "zh-CN",
+      "category": "construction_quality_safety",
+      "source_text": "The quality plan shall define incoming-material inspection, process witness points, nonconforming-product segregation, corrective-action closeout and record-retention periods, and shall clarify the responsibility boundaries of the Contractor, subcontractors and Engineer.",
+      "required_terms": [
+        {
+          "source": "witness point",
+          "target": "见证点"
+        },
+        {
+          "source": "nonconforming product",
+          "target": "不合格品"
+        },
+        {
+          "source": "corrective action",
+          "target": "纠正措施"
+        }
+      ],
+      "protected_literals": [],
+      "http_status": 200,
+      "success": true,
+      "elapsed_seconds": 0.508,
+      "translation": "质量计划应明确来料检验、过程见证点、不合格品隔离、纠正措施关闭及记录保存期限，并阐明承包商、分包商和工程师的责任边界。",
+      "usage": {
+        "input_tokens": 104,
+        "output_tokens": 36,
+        "total_tokens": 140
+      },
+      "calculated_list_cost_cny": 0.000143,
+      "language_direction_correct": true,
+      "required_term_exact_match": {
+        "见证点": true,
+        "不合格品": true,
+        "纠正措施": true
+      },
+      "numbers_units_chainages_preserved": true,
+      "protected_literal_counts": {},
+      "placeholders_complete_and_count_correct": true,
+      "prompt_leak_detected": false
+    },
+    {
+      "model": "qwen-mt-flash",
+      "id": "eng-en-040",
+      "source_language": "en",
+      "target_language": "zh-CN",
+      "category": "contract_submittal_rfi",
+      "source_text": "Any time or cost impact shall be notified within the contractual notice period, with affected activities, quantity calculations, cited clauses and verifiable contemporaneous records; late notice shall not be deemed to grant an automatic extension of time or cost compensation⟦PH_0001⟧⟦PH_0002⟧.",
+      "required_terms": [
+        {
+          "source": "notice period",
+          "target": "通知期"
+        },
+        {
+          "source": "extension of time",
+          "target": "工期"
+        },
+        {
+          "source": "cost compensation",
+          "target": "费用补偿"
+        }
+      ],
+      "protected_literals": [
+        "⟦PH_0001⟧",
+        "⟦PH_0002⟧"
+      ],
+      "http_status": 200,
+      "success": true,
+      "elapsed_seconds": 0.574,
+      "translation": "任何时间或费用影响均应在合同约定的通知期限内予以通知，并附上受影响的活动、数量计算、引用的条款以及可验证的同期记录；逾期通知不得视为自动给予工期延长或费用补偿⟦PH_0001⟧⟦PH_0002⟧。",
+      "usage": {
+        "input_tokens": 124,
+        "output_tokens": 62,
+        "total_tokens": 186
+      },
+      "calculated_list_cost_cny": 0.00020769999999999998,
+      "language_direction_correct": true,
+      "required_term_exact_match": {
+        "通知期": true,
+        "工期": true,
+        "费用补偿": true
+      },
+      "numbers_units_chainages_preserved": true,
+      "protected_literal_counts": {
+        "⟦PH_0001⟧": true,
+        "⟦PH_0002⟧": true
+      },
+      "placeholders_complete_and_count_correct": true,
+      "prompt_leak_detected": false
+    },
+    {
+      "model": "qwen-mt-flash",
+      "id": "eng-en-043",
+      "source_language": "en",
+      "target_language": "zh-CN",
+      "category": "electrical_scada_ventilation",
+      "source_text": "The fan rated power is 7.5 kW and its ingress-protection rating is IP55.",
+      "required_terms": [
+        {
+          "source": "rated power",
+          "target": "额定功率"
+        },
+        {
+          "source": "ingress-protection rating",
+          "target": "防护等级"
+        }
+      ],
+      "protected_literals": [
+        "7.5 kW",
+        "IP55"
+      ],
+      "http_status": 200,
+      "success": true,
+      "elapsed_seconds": 0.424,
+      "translation": "风机额定功率为7.5 kW，其防护等级为IP55。",
+      "usage": {
+        "input_tokens": 81,
+        "output_tokens": 18,
+        "total_tokens": 99
+      },
+      "calculated_list_cost_cny": 9.18e-05,
+      "language_direction_correct": true,
+      "required_term_exact_match": {
+        "额定功率": true,
+        "防护等级": true
+      },
+      "numbers_units_chainages_preserved": true,
+      "protected_literal_counts": {
+        "7.5 kW": true,
+        "IP55": true
+      },
+      "placeholders_complete_and_count_correct": true,
+      "prompt_leak_detected": false
+    },
+    {
+      "model": "qwen-mt-lite",
+      "id": "eng-zh-002",
+      "source_language": "zh-CN",
+      "target_language": "en",
+      "category": "road_bridge",
+      "source_text": "在K12+340处设置临时交通标志。",
+      "required_terms": [
+        {
+          "source": "临时交通标志",
+          "target": "temporary traffic signs"
+        }
+      ],
+      "protected_literals": [
+        "K12+340"
+      ],
+      "http_status": 200,
+      "success": true,
+      "elapsed_seconds": 0.372,
+      "translation": "At K12+340, temporary traffic signs are installed.",
+      "usage": {
+        "input_tokens": 75,
+        "output_tokens": 15,
+        "total_tokens": 90
+      },
+      "calculated_list_cost_cny": 6.9e-05,
+      "language_direction_correct": true,
+      "required_term_exact_match": {
+        "temporary traffic signs": true
+      },
+      "numbers_units_chainages_preserved": true,
+      "protected_literal_counts": {
+        "K12+340": true
+      },
+      "placeholders_complete_and_count_correct": true,
+      "prompt_leak_detected": false
+    },
+    {
+      "model": "qwen-mt-lite",
+      "id": "eng-zh-012",
+      "source_language": "zh-CN",
+      "target_language": "en",
+      "category": "mtbm",
+      "source_text": "顶进推力不得超过1200 kN。",
+      "required_terms": [
+        {
+          "source": "顶进推力",
+          "target": "jacking thrust"
+        }
+      ],
+      "protected_literals": [
+        "1200 kN"
+      ],
+      "http_status": 200,
+      "success": true,
+      "elapsed_seconds": 0.476,
+      "translation": "The thrust of the jacking shall not exceed 1200 kN.",
+      "usage": {
+        "input_tokens": 73,
+        "output_tokens": 17,
+        "total_tokens": 90
+      },
+      "calculated_list_cost_cny": 7.1e-05,
+      "language_direction_correct": true,
+      "required_term_exact_match": {
+        "jacking thrust": false
+      },
+      "numbers_units_chainages_preserved": true,
+      "protected_literal_counts": {
+        "1200 kN": true
+      },
+      "placeholders_complete_and_count_correct": true,
+      "prompt_leak_detected": false
+    },
+    {
+      "model": "qwen-mt-lite",
+      "id": "eng-zh-035",
+      "source_language": "zh-CN",
+      "target_language": "en",
+      "category": "construction_quality_safety",
+      "source_text": "质量计划应规定材料进场检验、过程见证点、不合格品隔离、纠正措施关闭和记录保存期限，并明确承包商、分包商与工程师的责任边界。",
+      "required_terms": [
+        {
+          "source": "见证点",
+          "target": "witness point"
+        },
+        {
+          "source": "不合格品",
+          "target": "nonconforming product"
+        },
+        {
+          "source": "纠正措施",
+          "target": "corrective action"
+        }
+      ],
+      "protected_literals": [],
+      "http_status": 200,
+      "success": true,
+      "elapsed_seconds": 0.53,
+      "translation": "The quality plan shall specify material incoming inspection, process witnessing points, isolation of non-conforming products, closure of corrective actions, and record retention periods, and shall clearly define the responsibility boundaries between contractors, subcontractors, and engineers.",
+      "usage": {
+        "input_tokens": 97,
+        "output_tokens": 46,
+        "total_tokens": 143
+      },
+      "calculated_list_cost_cny": 0.0001318,
+      "language_direction_correct": true,
+      "required_term_exact_match": {
+        "witness point": false,
+        "nonconforming product": false,
+        "corrective action": true
+      },
+      "numbers_units_chainages_preserved": true,
+      "protected_literal_counts": {},
+      "placeholders_complete_and_count_correct": true,
+      "prompt_leak_detected": false
+    },
+    {
+      "model": "qwen-mt-lite",
+      "id": "eng-zh-040",
+      "source_language": "zh-CN",
+      "target_language": "en",
+      "category": "contract_submittal_rfi",
+      "source_text": "任何进度或费用影响均应在合同通知期内提出，并附上受影响活动、数量计算、依据条款和可核查的 contemporaneous records；未按期通知不得视为自动获得工期或费用补偿⟦PH_0001⟧⟦PH_0002⟧。",
+      "required_terms": [
+        {
+          "source": "通知期",
+          "target": "notice period"
+        },
+        {
+          "source": "工期",
+          "target": "extension of time"
+        },
+        {
+          "source": "费用补偿",
+          "target": "cost compensation"
+        }
+      ],
+      "protected_literals": [
+        "⟦PH_0001⟧",
+        "⟦PH_0002⟧"
+      ],
+      "http_status": 200,
+      "success": true,
+      "elapsed_seconds": 0.502,
+      "translation": "Any impact to progress or costs shall be reported within the contract notification period, accompanied by details of the affected activities, quantity calculations, supporting clauses, and verifiable contemporaneous records; failure to notify within the specified timeframe shall not be deemed as automatic acceptance of any time or cost compensation.⟦PH_0001⟧⟦PH_0002⟧.",
+      "usage": {
+        "input_tokens": 120,
+        "output_tokens": 74,
+        "total_tokens": 194
+      },
+      "calculated_list_cost_cny": 0.0001904,
+      "language_direction_correct": true,
+      "required_term_exact_match": {
+        "notice period": false,
+        "extension of time": false,
+        "cost compensation": true
+      },
+      "numbers_units_chainages_preserved": true,
+      "protected_literal_counts": {
+        "⟦PH_0001⟧": true,
+        "⟦PH_0002⟧": true
+      },
+      "placeholders_complete_and_count_correct": true,
+      "prompt_leak_detected": false
+    },
+    {
+      "model": "qwen-mt-lite",
+      "id": "eng-zh-043",
+      "source_language": "zh-CN",
+      "target_language": "en",
+      "category": "electrical_scada_ventilation",
+      "source_text": "风机额定功率为7.5 kW，防护等级为IP55。",
+      "required_terms": [
+        {
+          "source": "额定功率",
+          "target": "rated power"
+        },
+        {
+          "source": "防护等级",
+          "target": "ingress-protection rating"
+        }
+      ],
+      "protected_literals": [
+        "7.5 kW",
+        "IP55"
+      ],
+      "http_status": 200,
+      "success": true,
+      "elapsed_seconds": 0.463,
+      "translation": "The fan's rated power is 7.5 kW, and its protection rating is IP55.",
+      "usage": {
+        "input_tokens": 78,
+        "output_tokens": 21,
+        "total_tokens": 99
+      },
+      "calculated_list_cost_cny": 8.04e-05,
+      "language_direction_correct": true,
+      "required_term_exact_match": {
+        "rated power": true,
+        "ingress-protection rating": false
+      },
+      "numbers_units_chainages_preserved": true,
+      "protected_literal_counts": {
+        "7.5 kW": true,
+        "IP55": true
+      },
+      "placeholders_complete_and_count_correct": true,
+      "prompt_leak_detected": false
+    },
+    {
+      "model": "qwen-mt-lite",
+      "id": "eng-en-012",
+      "source_language": "en",
+      "target_language": "zh-CN",
+      "category": "mtbm",
+      "source_text": "The jacking thrust shall not exceed 1200 kN.",
+      "required_terms": [
+        {
+          "source": "jacking thrust",
+          "target": "顶进推力"
+        }
+      ],
+      "protected_literals": [
+        "1200 kN"
+      ],
+      "http_status": 200,
+      "success": true,
+      "elapsed_seconds": 0.418,
+      "translation": "该顶升推力不得超过1200千牛。",
+      "usage": {
+        "input_tokens": 75,
+        "output_tokens": 13,
+        "total_tokens": 88
+      },
+      "calculated_list_cost_cny": 6.58e-05,
+      "language_direction_correct": true,
+      "required_term_exact_match": {
+        "顶进推力": false
+      },
+      "numbers_units_chainages_preserved": false,
+      "protected_literal_counts": {
+        "1200 kN": false
+      },
+      "placeholders_complete_and_count_correct": true,
+      "prompt_leak_detected": false
+    },
+    {
+      "model": "qwen-mt-lite",
+      "id": "eng-en-018",
+      "source_language": "en",
+      "target_language": "zh-CN",
+      "category": "survey",
+      "source_text": "The design invert elevation at chainage K08+125 is 38.640 m.",
+      "required_terms": [
+        {
+          "source": "invert elevation",
+          "target": "管底高程"
+        }
+      ],
+      "protected_literals": [
+        "K08+125",
+        "38.640 m"
+      ],
+      "http_status": 200,
+      "success": true,
+      "elapsed_seconds": 0.42,
+      "translation": "该设计标高在K08+125处为38.640米。",
+      "usage": {
+        "input_tokens": 84,
+        "output_tokens": 22,
+        "total_tokens": 106
+      },
+      "calculated_list_cost_cny": 8.56e-05,
+      "language_direction_correct": true,
+      "required_term_exact_match": {
+        "管底高程": false
+      },
+      "numbers_units_chainages_preserved": false,
+      "protected_literal_counts": {
+        "K08+125": true,
+        "38.640 m": false
+      },
+      "placeholders_complete_and_count_correct": true,
+      "prompt_leak_detected": false
+    },
+    {
+      "model": "qwen-mt-lite",
+      "id": "eng-en-035",
+      "source_language": "en",
+      "target_language": "zh-CN",
+      "category": "construction_quality_safety",
+      "source_text": "The quality plan shall define incoming-material inspection, process witness points, nonconforming-product segregation, corrective-action closeout and record-retention periods, and shall clarify the responsibility boundaries of the Contractor, subcontractors and Engineer.",
+      "required_terms": [
+        {
+          "source": "witness point",
+          "target": "见证点"
+        },
+        {
+          "source": "nonconforming product",
+          "target": "不合格品"
+        },
+        {
+          "source": "corrective action",
+          "target": "纠正措施"
+        }
+      ],
+      "protected_literals": [],
+      "http_status": 200,
+      "success": true,
+      "elapsed_seconds": 0.42,
+      "translation": "质量计划应规定来料检验、工序见证点、不合格品隔离、纠正措施的完成及记录保存期限，并明确承包商、分包商和工程师的责任边界。",
+      "usage": {
+        "input_tokens": 104,
+        "output_tokens": 37,
+        "total_tokens": 141
+      },
+      "calculated_list_cost_cny": 0.00012159999999999999,
+      "language_direction_correct": true,
+      "required_term_exact_match": {
+        "见证点": true,
+        "不合格品": true,
+        "纠正措施": true
+      },
+      "numbers_units_chainages_preserved": true,
+      "protected_literal_counts": {},
+      "placeholders_complete_and_count_correct": true,
+      "prompt_leak_detected": false
+    },
+    {
+      "model": "qwen-mt-lite",
+      "id": "eng-en-040",
+      "source_language": "en",
+      "target_language": "zh-CN",
+      "category": "contract_submittal_rfi",
+      "source_text": "Any time or cost impact shall be notified within the contractual notice period, with affected activities, quantity calculations, cited clauses and verifiable contemporaneous records; late notice shall not be deemed to grant an automatic extension of time or cost compensation⟦PH_0001⟧⟦PH_0002⟧.",
+      "required_terms": [
+        {
+          "source": "notice period",
+          "target": "通知期"
+        },
+        {
+          "source": "extension of time",
+          "target": "工期"
+        },
+        {
+          "source": "cost compensation",
+          "target": "费用补偿"
+        }
+      ],
+      "protected_literals": [
+        "⟦PH_0001⟧",
+        "⟦PH_0002⟧"
+      ],
+      "http_status": 200,
+      "success": true,
+      "elapsed_seconds": 0.532,
+      "translation": "任何时间或成本影响应在合同通知期内予以通知，并提供受影响的活动、数量计算、引用条款以及可验证的同期记录；逾期通知不得被视为自动延长工期或给予费用补偿。⟦PH_0001⟧⟦PH_0002⟧.",
+      "usage": {
+        "input_tokens": 124,
+        "output_tokens": 58,
+        "total_tokens": 182
+      },
+      "calculated_list_cost_cny": 0.0001672,
+      "language_direction_correct": true,
+      "required_term_exact_match": {
+        "通知期": true,
+        "工期": true,
+        "费用补偿": true
+      },
+      "numbers_units_chainages_preserved": true,
+      "protected_literal_counts": {
+        "⟦PH_0001⟧": true,
+        "⟦PH_0002⟧": true
+      },
+      "placeholders_complete_and_count_correct": true,
+      "prompt_leak_detected": false
+    },
+    {
+      "model": "qwen-mt-lite",
+      "id": "eng-en-043",
+      "source_language": "en",
+      "target_language": "zh-CN",
+      "category": "electrical_scada_ventilation",
+      "source_text": "The fan rated power is 7.5 kW and its ingress-protection rating is IP55.",
+      "required_terms": [
+        {
+          "source": "rated power",
+          "target": "额定功率"
+        },
+        {
+          "source": "ingress-protection rating",
+          "target": "防护等级"
+        }
+      ],
+      "protected_literals": [
+        "7.5 kW",
+        "IP55"
+      ],
+      "http_status": 200,
+      "success": true,
+      "elapsed_seconds": 0.382,
+      "translation": "风扇额定功率为7.5千瓦，其防尘防水等级为IP55。",
+      "usage": {
+        "input_tokens": 81,
+        "output_tokens": 20,
+        "total_tokens": 101
+      },
+      "calculated_list_cost_cny": 8.06e-05,
+      "language_direction_correct": true,
+      "required_term_exact_match": {
+        "额定功率": true,
+        "防护等级": false
+      },
+      "numbers_units_chainages_preserved": false,
+      "protected_literal_counts": {
+        "7.5 kW": false,
+        "IP55": true
+      },
+      "placeholders_complete_and_count_correct": true,
+      "prompt_leak_detected": false
+    }
+  ]
+}

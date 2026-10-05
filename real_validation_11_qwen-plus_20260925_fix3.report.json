@@ -1,0 +1,476 @@
+{
+  "status": "FAILED",
+  "preflight": {
+    "source_hash": "ab0bc499bd067242c1eb95809fa5efe2aea1e80f749f70777db1911d61aba24d",
+    "page_count": 21,
+    "page_sizes": [
+      [
+        612.0,
+        792.0
+      ],
+      [
+        842.04,
+        595.32
+      ],
+      [
+        842.04,
+        595.32
+      ],
+      [
+        842.04,
+        595.32
+      ],
+      [
+        842.04,
+        595.32
+      ],
+      [
+        842.04,
+        595.32
+      ],
+      [
+        842.04,
+        595.32
+      ],
+      [
+        842.04,
+        595.32
+      ],
+      [
+        842.04,
+        595.32
+      ],
+      [
+        842.04,
+        595.32
+      ],
+      [
+        842.04,
+        595.32
+      ],
+      [
+        612.0,
+        792.0
+      ],
+      [
+        1191.0,
+        842.0
+      ],
+      [
+        1191.0,
+        842.0
+      ],
+      [
+        1191.0,
+        842.0
+      ],
+      [
+        612.0,
+        792.0
+      ],
+      [
+        1191.0,
+        842.0
+      ],
+      [
+        612.0,
+        792.0
+      ],
+      [
+        612.0,
+        792.0
+      ],
+      [
+        612.0,
+        792.0
+      ],
+      [
+        1043.26,
+        737.26
+      ]
+    ],
+    "classification": "B",
+    "reasons": [
+      "complex layout requires full visual review",
+      "table-like grid detected on page(s) 2, 3, 4, 5, 6, 7, 8, 9, 10, 13, 14, 15, 17, 19; table translation is experimental and requires separate visual acceptance"
+    ],
+    "table_pages": [
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      13,
+      14,
+      15,
+      17,
+      19
+    ],
+    "visual_review_required": true
+  },
+  "provider": "qwen",
+  "model": "qwen-plus",
+  "error": "candidate contains non-ASCII dash characters in immutable identifiers: IG‑541, LW‑TD‑403, LW‑TD‑411, PAK‑01, TD‑401",
+  "error_type": "PdfPreflightError",
+  "run": {
+    "engine": "babeldoc.format.pdf.high_level.async_translate",
+    "gateway": "local",
+    "source_hash": "ab0bc499bd067242c1eb95809fa5efe2aea1e80f749f70777db1911d61aba24d",
+    "timing_seconds": {
+      "table_translation": 192.673,
+      "babeldoc_translation": 75.025,
+      "table_render": 74.207,
+      "layout_restore": 5.775,
+      "total_until_failure": 354.622
+    },
+    "table_route": {
+      "status": "patched",
+      "table_count": 9,
+      "cell_count": 132,
+      "translated_cell_count": 117,
+      "gateway_batch_size": 117,
+      "gateway_batches": 10,
+      "gateway_attempts": 10,
+      "rendered_cell_count": 117,
+      "fontfile": "C:\\Windows\\Fonts\\Noto Sans SC (TrueType).otf",
+      "font_sizes": {
+        "pdf:p2:t1:r1:c1": 10.0,
+        "pdf:p2:t1:r1:c2": 10.0,
+        "pdf:p2:t1:r1:c3": 10.0,
+        "pdf:p2:t1:r1:c4": 10.0,
+        "pdf:p2:t1:r2:c1": 10.0,
+        "pdf:p2:t1:r2:c2": 10.0,
+        "pdf:p2:t1:r2:c3": 10.0,
+        "pdf:p2:t1:r2:c4": 10.0,
+        "pdf:p2:t1:r3:c1": 10.0,
+        "pdf:p2:t1:r3:c2": 10.0,
+        "pdf:p2:t1:r3:c3": 10.0,
+        "pdf:p2:t1:r3:c4": 10.0,
+        "pdf:p2:t1:r4:c1": 10.0,
+        "pdf:p2:t1:r4:c2": 10.0,
+        "pdf:p2:t1:r4:c3": 10.0,
+        "pdf:p2:t1:r4:c4": 10.0,
+        "pdf:p3:t1:r1:c1": 10.0,
+        "pdf:p3:t1:r1:c2": 10.0,
+        "pdf:p3:t1:r1:c3": 10.0,
+        "pdf:p3:t1:r1:c4": 10.0,
+        "pdf:p3:t1:r2:c3": 10.0,
+        "pdf:p3:t1:r2:c4": 10.0,
+        "pdf:p3:t1:r3:c1": 10.0,
+        "pdf:p3:t1:r3:c2": 10.0,
+        "pdf:p3:t1:r3:c3": 10.0,
+        "pdf:p3:t1:r3:c4": 10.0,
+        "pdf:p3:t1:r4:c1": 7.5,
+        "pdf:p3:t1:r4:c2": 7.5,
+        "pdf:p3:t1:r4:c3": 7.5,
+        "pdf:p3:t1:r4:c4": 7.5,
+        "pdf:p4:t1:r1:c1": 10.0,
+        "pdf:p4:t1:r1:c2": 10.0,
+        "pdf:p4:t1:r1:c3": 10.0,
+        "pdf:p4:t1:r1:c4": 10.0,
+        "pdf:p4:t1:r2:c2": 10.0,
+        "pdf:p4:t1:r2:c3": 10.0,
+        "pdf:p4:t1:r2:c4": 10.0,
+        "pdf:p4:t1:r3:c1": 10.0,
+        "pdf:p4:t1:r3:c2": 10.0,
+        "pdf:p4:t1:r3:c3": 10.0,
+        "pdf:p4:t1:r3:c4": 10.0,
+        "pdf:p4:t1:r4:c1": 10.0,
+        "pdf:p4:t1:r4:c2": 10.0,
+        "pdf:p4:t1:r4:c3": 10.0,
+        "pdf:p4:t1:r4:c4": 10.0,
+        "pdf:p4:t1:r5:c1": 10.0,
+        "pdf:p4:t1:r5:c2": 10.0,
+        "pdf:p4:t1:r5:c3": 9.5,
+        "pdf:p4:t1:r5:c4": 10.0,
+        "pdf:p5:t1:r1:c1": 10.0,
+        "pdf:p5:t1:r1:c2": 10.0,
+        "pdf:p5:t1:r1:c3": 10.0,
+        "pdf:p5:t1:r1:c4": 10.0,
+        "pdf:p5:t1:r2:c2": 10.0,
+        "pdf:p5:t1:r2:c3": 10.0,
+        "pdf:p5:t1:r3:c1": 10.0,
+        "pdf:p5:t1:r3:c2": 10.0,
+        "pdf:p5:t1:r3:c3": 10.0,
+        "pdf:p5:t1:r3:c4": 10.0,
+        "pdf:p5:t1:r4:c1": 10.0,
+        "pdf:p5:t1:r4:c2": 10.0,
+        "pdf:p5:t1:r4:c3": 10.0,
+        "pdf:p5:t1:r4:c4": 10.0,
+        "pdf:p6:t1:r1:c1": 10.0,
+        "pdf:p6:t1:r1:c2": 10.0,
+        "pdf:p6:t1:r1:c3": 10.0,
+        "pdf:p6:t1:r1:c4": 10.0,
+        "pdf:p6:t1:r2:c3": 10.0,
+        "pdf:p6:t1:r2:c4": 10.0,
+        "pdf:p7:t1:r1:c1": 10.0,
+        "pdf:p7:t1:r1:c2": 10.0,
+        "pdf:p7:t1:r1:c3": 10.0,
+        "pdf:p7:t1:r1:c4": 10.0,
+        "pdf:p7:t1:r2:c3": 10.0,
+        "pdf:p7:t1:r2:c4": 10.0,
+        "pdf:p7:t1:r3:c1": 10.0,
+        "pdf:p7:t1:r3:c2": 10.0,
+        "pdf:p7:t1:r3:c3": 10.0,
+        "pdf:p7:t1:r3:c4": 10.0,
+        "pdf:p7:t1:r4:c1": 10.0,
+        "pdf:p7:t1:r4:c2": 10.0,
+        "pdf:p7:t1:r4:c3": 10.0,
+        "pdf:p7:t1:r4:c4": 10.0,
+        "pdf:p8:t1:r1:c1": 10.0,
+        "pdf:p8:t1:r1:c2": 10.0,
+        "pdf:p8:t1:r1:c3": 10.0,
+        "pdf:p8:t1:r1:c4": 10.0,
+        "pdf:p8:t1:r2:c1": 10.0,
+        "pdf:p8:t1:r2:c2": 10.0,
+        "pdf:p8:t1:r2:c3": 10.0,
+        "pdf:p8:t1:r2:c4": 10.0,
+        "pdf:p9:t1:r1:c1": 10.0,
+        "pdf:p9:t1:r1:c2": 10.0,
+        "pdf:p9:t1:r1:c3": 10.0,
+        "pdf:p9:t1:r1:c4": 10.0,
+        "pdf:p9:t1:r2:c3": 10.0,
+        "pdf:p9:t1:r3:c1": 10.0,
+        "pdf:p9:t1:r3:c2": 10.0,
+        "pdf:p9:t1:r3:c3": 10.0,
+        "pdf:p9:t1:r3:c4": 10.0,
+        "pdf:p9:t1:r4:c1": 10.0,
+        "pdf:p9:t1:r4:c2": 10.0,
+        "pdf:p9:t1:r4:c3": 10.0,
+        "pdf:p9:t1:r4:c4": 10.0,
+        "pdf:p10:t1:r1:c1": 10.0,
+        "pdf:p10:t1:r1:c2": 10.0,
+        "pdf:p10:t1:r1:c3": 10.0,
+        "pdf:p10:t1:r1:c4": 10.0,
+        "pdf:p10:t1:r2:c3": 10.0,
+        "pdf:p10:t1:r3:c1": 10.0,
+        "pdf:p10:t1:r3:c2": 10.0,
+        "pdf:p10:t1:r3:c3": 10.0,
+        "pdf:p10:t1:r3:c4": 10.0,
+        "pdf:p10:t1:r4:c1": 10.0,
+        "pdf:p10:t1:r4:c2": 10.0,
+        "pdf:p10:t1:r4:c3": 10.0,
+        "pdf:p10:t1:r4:c4": 10.0
+      },
+      "drawing_counts": [
+        [
+          1,
+          0,
+          3
+        ],
+        [
+          2,
+          71,
+          0
+        ],
+        [
+          3,
+          69,
+          1
+        ],
+        [
+          4,
+          85,
+          0
+        ],
+        [
+          5,
+          71,
+          0
+        ],
+        [
+          6,
+          41,
+          0
+        ],
+        [
+          7,
+          76,
+          0
+        ],
+        [
+          8,
+          87,
+          0
+        ],
+        [
+          9,
+          111,
+          0
+        ],
+        [
+          10,
+          87,
+          0
+        ],
+        [
+          11,
+          46,
+          0
+        ],
+        [
+          12,
+          0,
+          0
+        ],
+        [
+          13,
+          2568,
+          3
+        ],
+        [
+          14,
+          1974,
+          3
+        ],
+        [
+          15,
+          2334,
+          3
+        ],
+        [
+          16,
+          0,
+          0
+        ],
+        [
+          17,
+          17968,
+          3
+        ],
+        [
+          18,
+          0,
+          0
+        ],
+        [
+          19,
+          3,
+          0
+        ],
+        [
+          20,
+          0,
+          0
+        ],
+        [
+          21,
+          126,
+          23
+        ]
+      ]
+    },
+    "progress_events": 103,
+    "last_stage": "Save PDF",
+    "worker_mode": "project_subprocess_babeldoc",
+    "stage_durations": {
+      "Parse PDF and Create Intermediate Representation": 8.862,
+      "DetectScannedFile": 0.45,
+      "Parse Page Layout": 33.726,
+      "Parse Paragraphs": 2.844,
+      "Parse Formulas and Styles": 2.961,
+      "Translate Paragraphs": 1.736,
+      "Typesetting": 1.917,
+      "Add Fonts": 0.265,
+      "Generate drawing instructions": 3.611,
+      "Subset font": 2.086,
+      "Save PDF": 0.098
+    },
+    "babeldoc_translation_stats": {
+      "successful_paragraphs": 873,
+      "fallback_paragraphs": 33,
+      "translated_paragraphs": 906
+    },
+    "gateway_requests": 12,
+    "gateway_batch_sizes": [
+      16,
+      14,
+      15,
+      14,
+      14,
+      2,
+      15,
+      1,
+      13,
+      13
+    ],
+    "gateway_structured_requests": 10,
+    "gateway_fallback_requests": 2,
+    "gateway_upstream_results": 12,
+    "gateway_upstream_elapsed_ms_total": 194272,
+    "gateway_upstream_elapsed_ms_max": 23897,
+    "gateway_upstream_failures": 0,
+    "layout_contract": {
+      "status": "restored",
+      "contract_count": 7,
+      "operation_count": 7,
+      "roles": {
+        "centered_text": 6,
+        "salutation": 1
+      },
+      "profile": {
+        "target_language": "zh",
+        "chapter_label": "",
+        "article_label": "",
+        "chapter_numbering": "source",
+        "article_numbering": "source"
+      }
+    },
+    "cmap_repairs": {
+      "repaired_fonts": 9,
+      "repairs": [
+        {
+          "font": "SourceHanSerifCN-Regular.ttf",
+          "mapping": "U+0003->U+0020",
+          "control_count": 5
+        },
+        {
+          "font": "NotoSerif-Regular.ttf",
+          "mapping": "U+0003->U+0020",
+          "control_count": 5
+        },
+        {
+          "font": "SourceHanSansCN-Regular.ttf",
+          "mapping": "U+0003->U+0020",
+          "control_count": 5
+        },
+        {
+          "font": "NotoSans-Regular.ttf",
+          "mapping": "U+0003->U+0020",
+          "control_count": 5
+        },
+        {
+          "font": "pdfTable8da78525da",
+          "mapping": "U+0003->U+0020",
+          "control_count": 5
+        },
+        {
+          "font": "NotoSerif-Bold.ttf",
+          "mapping": "U+0003->U+0020",
+          "control_count": 6
+        },
+        {
+          "font": "NotoSans-Bold.ttf",
+          "mapping": "U+0003->U+0020",
+          "control_count": 6
+        },
+        {
+          "font": "SourceHanSerifCN-Bold.ttf",
+          "mapping": "U+0003->U+0020",
+          "control_count": 6
+        },
+        {
+          "font": "PDFLayout_times",
+          "mapping": "U+0000->U+0020",
+          "control_count": 2
+        }
+      ]
+    }
+  },
+  "quarantine_dir": "D:\\01 绿色程序\\文档翻译器\\.pdf_quarantine\\real_validation_11_qwen-plus_20260925_fix3-0c01f894cf94",
+  "quarantined_candidate": "D:\\01 绿色程序\\文档翻译器\\.pdf_quarantine\\real_validation_11_qwen-plus_20260925_fix3-0c01f894cf94\\candidate.pdf"
+}

@@ -1,0 +1,1235 @@
+{
+  "status": "PENDING_VISUAL_REVIEW",
+  "preflight": {
+    "source_hash": "f9a5160a890af7c408e120c6d06e85768c58c200a5f94be75d915d742830daf5",
+    "page_count": 3,
+    "page_sizes": [
+      [
+        595.3,
+        866.9
+      ],
+      [
+        595.3,
+        866.9
+      ],
+      [
+        595.3,
+        866.9
+      ]
+    ],
+    "text_characters": 1409,
+    "image_count": 0,
+    "rotated_text_spans": 0,
+    "classification": "B",
+    "reasons": [
+      "complex layout requires full visual review",
+      "table-like grid detected on page(s) 3; table translation is experimental and requires separate visual acceptance"
+    ],
+    "table_pages": [
+      3
+    ],
+    "visual_review_required": true
+  },
+  "validation": {
+    "candidate_hash": "79001b221c4a880065eac5e9434a2229680bead0227a4daee80b548c5768cc81",
+    "embedded_font_references": 11,
+    "blank_pages": [],
+    "cjk_residue": 0,
+    "control_characters": [],
+    "unicode_dashes": [],
+    "candidate_warnings": [],
+    "identifier_dash_mismatches": [],
+    "missing_identifiers": [],
+    "mixed_document_references": [
+      "中土经营〔2024〕341号",
+      "福设院〔2024〕54号"
+    ],
+    "preserved_mixed_document_references": [],
+    "minimum_font_size": 6.0,
+    "font_size_acceptance_policy": "candidate >= 0.5 * corresponding source",
+    "name_acceptance_policy": "Chinese rendering or original English spelling accepted; Chinese + English bilingual output is not required",
+    "name_warnings": [],
+    "font_size_ratio_checks": [
+      {
+        "page": 1,
+        "source_font_size": 14.050000190734863,
+        "candidate_font_size": 9.835000038146973,
+        "ratio": 0.6999999932122826,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 14.050000190734863,
+        "candidate_font_size": 9.835000038146973,
+        "ratio": 0.6999999932122826,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 14.050000190734863,
+        "candidate_font_size": 9.835000038146973,
+        "ratio": 0.6999999932122826,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 15.949999809265137,
+        "candidate_font_size": 11.164999961853027,
+        "ratio": 0.7000000059791494,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 15.949999809265137,
+        "candidate_font_size": 11.164999961853027,
+        "ratio": 0.7000000059791494,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 15.949999809265137,
+        "candidate_font_size": 11.164999961853027,
+        "ratio": 0.7000000059791494,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 15.949999809265137,
+        "candidate_font_size": 11.164999961853027,
+        "ratio": 0.7000000059791494,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 15.949999809265137,
+        "candidate_font_size": 11.164999961853027,
+        "ratio": 0.7000000059791494,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 15.949999809265137,
+        "candidate_font_size": 11.164999961853027,
+        "ratio": 0.7000000059791494,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 15.949999809265137,
+        "candidate_font_size": 11.164999961853027,
+        "ratio": 0.7000000059791494,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 15.949999809265137,
+        "candidate_font_size": 11.164999961853027,
+        "ratio": 0.7000000059791494,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 15.949999809265137,
+        "candidate_font_size": 11.164999961853027,
+        "ratio": 0.7000000059791494,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 15.949999809265137,
+        "candidate_font_size": 11.164999961853027,
+        "ratio": 0.7000000059791494,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 15.949999809265137,
+        "candidate_font_size": 11.164999961853027,
+        "ratio": 0.7000000059791494,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 15.949999809265137,
+        "candidate_font_size": 11.164999961853027,
+        "ratio": 0.7000000059791494,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 15.949999809265137,
+        "candidate_font_size": 11.164999961853027,
+        "ratio": 0.7000000059791494,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 15.949999809265137,
+        "candidate_font_size": 11.164999961853027,
+        "ratio": 0.7000000059791494,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 28.666391372680664,
+        "candidate_font_size": 15.670000076293945,
+        "ratio": 0.5466331591086697,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 15.949999809265137,
+        "candidate_font_size": 15.949999809265137,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 21.950000762939453,
+        "candidate_font_size": 13.449999809265137,
+        "ratio": 0.6127562342491677,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 21.950000762939453,
+        "candidate_font_size": 13.449999809265137,
+        "ratio": 0.6127562342491677,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 15.949999809265137,
+        "candidate_font_size": 15.949999809265137,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 2,
+        "source_font_size": 14.050000190734863,
+        "candidate_font_size": 9.835000038146973,
+        "ratio": 0.6999999932122826,
+        "below_minimum": false
+      },
+      {
+        "page": 2,
+        "source_font_size": 14.050000190734863,
+        "candidate_font_size": 9.835000038146973,
+        "ratio": 0.6999999932122826,
+        "below_minimum": false
+      },
+      {
+        "page": 2,
+        "source_font_size": 14.050000190734863,
+        "candidate_font_size": 9.835000038146973,
+        "ratio": 0.6999999932122826,
+        "below_minimum": false
+      },
+      {
+        "page": 2,
+        "source_font_size": 21.950000762939453,
+        "candidate_font_size": 18.950000762939453,
+        "ratio": 0.8633257450694388,
+        "below_minimum": false
+      },
+      {
+        "page": 2,
+        "source_font_size": 21.950000762939453,
+        "candidate_font_size": 18.950000762939453,
+        "ratio": 0.8633257450694388,
+        "below_minimum": false
+      },
+      {
+        "page": 2,
+        "source_font_size": 15.949999809265137,
+        "candidate_font_size": 15.949999809265137,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 2,
+        "source_font_size": 15.949999809265137,
+        "candidate_font_size": 15.449999809265137,
+        "ratio": 0.9686520372426866,
+        "below_minimum": false
+      },
+      {
+        "page": 2,
+        "source_font_size": 15.949999809265137,
+        "candidate_font_size": 15.449999809265137,
+        "ratio": 0.9686520372426866,
+        "below_minimum": false
+      },
+      {
+        "page": 2,
+        "source_font_size": 15.949999809265137,
+        "candidate_font_size": 15.449999809265137,
+        "ratio": 0.9686520372426866,
+        "below_minimum": false
+      },
+      {
+        "page": 2,
+        "source_font_size": 15.949999809265137,
+        "candidate_font_size": 15.449999809265137,
+        "ratio": 0.9686520372426866,
+        "below_minimum": false
+      },
+      {
+        "page": 2,
+        "source_font_size": 15.949999809265137,
+        "candidate_font_size": 15.449999809265137,
+        "ratio": 0.9686520372426866,
+        "below_minimum": false
+      },
+      {
+        "page": 2,
+        "source_font_size": 15.949999809265137,
+        "candidate_font_size": 15.449999809265137,
+        "ratio": 0.9686520372426866,
+        "below_minimum": false
+      },
+      {
+        "page": 2,
+        "source_font_size": 15.949999809265137,
+        "candidate_font_size": 14.449999809265137,
+        "ratio": 0.9059561117280597,
+        "below_minimum": false
+      },
+      {
+        "page": 2,
+        "source_font_size": 15.949999809265137,
+        "candidate_font_size": 14.449999809265137,
+        "ratio": 0.9059561117280597,
+        "below_minimum": false
+      },
+      {
+        "page": 2,
+        "source_font_size": 15.949999809265137,
+        "candidate_font_size": 14.449999809265137,
+        "ratio": 0.9059561117280597,
+        "below_minimum": false
+      },
+      {
+        "page": 2,
+        "source_font_size": 15.949999809265137,
+        "candidate_font_size": 14.449999809265137,
+        "ratio": 0.9059561117280597,
+        "below_minimum": false
+      },
+      {
+        "page": 2,
+        "source_font_size": 15.949999809265137,
+        "candidate_font_size": 14.449999809265137,
+        "ratio": 0.9059561117280597,
+        "below_minimum": false
+      },
+      {
+        "page": 2,
+        "source_font_size": 15.949999809265137,
+        "candidate_font_size": 14.449999809265137,
+        "ratio": 0.9059561117280597,
+        "below_minimum": false
+      },
+      {
+        "page": 2,
+        "source_font_size": 15.949999809265137,
+        "candidate_font_size": 15.949999809265137,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 2,
+        "source_font_size": 15.949999809265137,
+        "candidate_font_size": 15.949999809265137,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 2,
+        "source_font_size": 15.949999809265137,
+        "candidate_font_size": 15.949999809265137,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 2,
+        "source_font_size": 15.949999809265137,
+        "candidate_font_size": 15.949999809265137,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 2,
+        "source_font_size": 15.949999809265137,
+        "candidate_font_size": 15.949999809265137,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 2,
+        "source_font_size": 15.949999809265137,
+        "candidate_font_size": 15.949999809265137,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 2,
+        "source_font_size": 15.949999809265137,
+        "candidate_font_size": 15.949999809265137,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 2,
+        "source_font_size": 15.949999809265137,
+        "candidate_font_size": 15.949999809265137,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 2,
+        "source_font_size": 15.949999809265137,
+        "candidate_font_size": 15.949999809265137,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 2,
+        "source_font_size": 15.949999809265137,
+        "candidate_font_size": 14.449999809265137,
+        "ratio": 0.9059561117280597,
+        "below_minimum": false
+      },
+      {
+        "page": 2,
+        "source_font_size": 15.949999809265137,
+        "candidate_font_size": 14.449999809265137,
+        "ratio": 0.9059561117280597,
+        "below_minimum": false
+      },
+      {
+        "page": 2,
+        "source_font_size": 15.949999809265137,
+        "candidate_font_size": 14.449999809265137,
+        "ratio": 0.9059561117280597,
+        "below_minimum": false
+      },
+      {
+        "page": 2,
+        "source_font_size": 15.949999809265137,
+        "candidate_font_size": 15.949999809265137,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 2,
+        "source_font_size": 15.949999809265137,
+        "candidate_font_size": 15.949999809265137,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 14.050000190734863,
+        "candidate_font_size": 9.835000038146973,
+        "ratio": 0.6999999932122826,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 14.050000190734863,
+        "candidate_font_size": 9.835000038146973,
+        "ratio": 0.6999999932122826,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 14.050000190734863,
+        "candidate_font_size": 9.835000038146973,
+        "ratio": 0.6999999932122826,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 12.0,
+        "candidate_font_size": 7.800000190734863,
+        "ratio": 0.6500000158945719,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 15.949999809265137,
+        "candidate_font_size": 11.164999961853027,
+        "ratio": 0.7000000059791494,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 15.949999809265137,
+        "candidate_font_size": 11.164999961853027,
+        "ratio": 0.7000000059791494,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 15.949999809265137,
+        "candidate_font_size": 11.164999961853027,
+        "ratio": 0.7000000059791494,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 15.949999809265137,
+        "candidate_font_size": 11.164999961853027,
+        "ratio": 0.7000000059791494,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 15.949999809265137,
+        "candidate_font_size": 11.164999961853027,
+        "ratio": 0.7000000059791494,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 12.0,
+        "candidate_font_size": 12.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 12.0,
+        "candidate_font_size": 12.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 12.0,
+        "candidate_font_size": 12.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 12.0,
+        "candidate_font_size": 12.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 12.0,
+        "candidate_font_size": 10.5,
+        "ratio": 0.875,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 12.0,
+        "candidate_font_size": 10.5,
+        "ratio": 0.875,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 12.0,
+        "candidate_font_size": 10.5,
+        "ratio": 0.875,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 12.0,
+        "candidate_font_size": 10.5,
+        "ratio": 0.875,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 12.0,
+        "candidate_font_size": 10.5,
+        "ratio": 0.875,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 12.0,
+        "candidate_font_size": 10.5,
+        "ratio": 0.875,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 12.0,
+        "candidate_font_size": 10.5,
+        "ratio": 0.875,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 12.0,
+        "candidate_font_size": 10.5,
+        "ratio": 0.875,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 12.0,
+        "candidate_font_size": 12.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 12.0,
+        "candidate_font_size": 12.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 12.0,
+        "candidate_font_size": 10.5,
+        "ratio": 0.875,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 12.0,
+        "candidate_font_size": 10.5,
+        "ratio": 0.875,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 12.0,
+        "candidate_font_size": 10.5,
+        "ratio": 0.875,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 12.0,
+        "candidate_font_size": 10.5,
+        "ratio": 0.875,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 12.0,
+        "candidate_font_size": 10.5,
+        "ratio": 0.875,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 12.0,
+        "candidate_font_size": 10.5,
+        "ratio": 0.875,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 12.0,
+        "candidate_font_size": 10.5,
+        "ratio": 0.875,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 12.0,
+        "candidate_font_size": 12.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 12.0,
+        "candidate_font_size": 12.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 12.0,
+        "candidate_font_size": 9.5,
+        "ratio": 0.7916666666666666,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 12.0,
+        "candidate_font_size": 9.5,
+        "ratio": 0.7916666666666666,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 12.0,
+        "candidate_font_size": 9.5,
+        "ratio": 0.7916666666666666,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 12.0,
+        "candidate_font_size": 9.5,
+        "ratio": 0.7916666666666666,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 12.0,
+        "candidate_font_size": 9.5,
+        "ratio": 0.7916666666666666,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 12.0,
+        "candidate_font_size": 9.5,
+        "ratio": 0.7916666666666666,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 12.0,
+        "candidate_font_size": 9.5,
+        "ratio": 0.7916666666666666,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 12.0,
+        "candidate_font_size": 9.5,
+        "ratio": 0.7916666666666666,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 12.0,
+        "candidate_font_size": 9.5,
+        "ratio": 0.7916666666666666,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 12.0,
+        "candidate_font_size": 10.0,
+        "ratio": 0.8333333333333334,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 12.0,
+        "candidate_font_size": 9.5,
+        "ratio": 0.7916666666666666,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 12.0,
+        "candidate_font_size": 9.5,
+        "ratio": 0.7916666666666666,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 12.0,
+        "candidate_font_size": 12.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 12.0,
+        "candidate_font_size": 9.5,
+        "ratio": 0.7916666666666666,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 12.0,
+        "candidate_font_size": 9.5,
+        "ratio": 0.7916666666666666,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 12.0,
+        "candidate_font_size": 11.5,
+        "ratio": 0.9583333333333334,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 12.0,
+        "candidate_font_size": 11.5,
+        "ratio": 0.9583333333333334,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 12.0,
+        "candidate_font_size": 11.5,
+        "ratio": 0.9583333333333334,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 12.0,
+        "candidate_font_size": 9.5,
+        "ratio": 0.7916666666666666,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 12.0,
+        "candidate_font_size": 9.5,
+        "ratio": 0.7916666666666666,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 12.0,
+        "candidate_font_size": 9.5,
+        "ratio": 0.7916666666666666,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 12.0,
+        "candidate_font_size": 12.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 12.0,
+        "candidate_font_size": 12.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 12.0,
+        "candidate_font_size": 10.5,
+        "ratio": 0.875,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 12.0,
+        "candidate_font_size": 10.5,
+        "ratio": 0.875,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 12.0,
+        "candidate_font_size": 10.5,
+        "ratio": 0.875,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 12.0,
+        "candidate_font_size": 12.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 12.0,
+        "candidate_font_size": 8.5,
+        "ratio": 0.7083333333333334,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 12.0,
+        "candidate_font_size": 8.5,
+        "ratio": 0.7083333333333334,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 12.0,
+        "candidate_font_size": 8.5,
+        "ratio": 0.7083333333333334,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 14.050000190734863,
+        "candidate_font_size": 14.050000190734863,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 15.949999809265137,
+        "candidate_font_size": 15.949999809265137,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 15.949999809265137,
+        "candidate_font_size": 15.949999809265137,
+        "ratio": 1.0,
+        "below_minimum": false
+      }
+    ],
+    "minimum_observed_font_size": 7.800000190734863,
+    "visual_review_required": true,
+    "layout_contract": {
+      "status": "passed",
+      "contract_count": 16,
+      "failures": [],
+      "observed": [
+        {
+          "page": 1,
+          "role": "centered_text",
+          "source_block": 1,
+          "candidate_block": 3,
+          "candidate_line_count": 1,
+          "center_error": 1.118,
+          "text": "CCECC FUZHOU SURVEY & DESIGN INSTITUTE CO. Document"
+        },
+        {
+          "page": 1,
+          "role": "document_reference",
+          "source_block": 2,
+          "candidate_block": 4,
+          "candidate_line_count": 1,
+          "center_error": 7.961,
+          "text": "Fu She Yuan [2024] No. 54"
+        },
+        {
+          "page": 1,
+          "role": "centered_text",
+          "source_block": 3,
+          "candidate_block": 6,
+          "candidate_line_count": 2,
+          "center_error": 0.075,
+          "text": "Notice on Revising the \"Administrative Measures for Domestic Project Operation and Management of CCECC Fuzhou Survey & Design Institute Co., Ltd.\""
+        },
+        {
+          "page": 1,
+          "role": "salutation",
+          "source_block": 5,
+          "candidate_block": 7,
+          "candidate_line_count": 1,
+          "center_error": 57.866,
+          "text": "To all company departments and affiliated units:"
+        },
+        {
+          "page": 2,
+          "role": "centered_text",
+          "source_block": 1,
+          "candidate_block": 2,
+          "candidate_line_count": 2,
+          "center_error": 3.899,
+          "text": "CCECC FUZHOU SURVEY & DESIGN INSTITUTE CO. Management Measures for Domestic Project Operations"
+        },
+        {
+          "page": 2,
+          "role": "chapter_heading",
+          "source_block": 3,
+          "candidate_block": 3,
+          "candidate_line_count": 1,
+          "center_error": 3.947,
+          "text": "Chapter 1 General Provisions"
+        },
+        {
+          "page": 2,
+          "role": "article_text",
+          "source_block": 4,
+          "candidate_block": 4,
+          "candidate_line_count": 6,
+          "center_error": 12.863,
+          "text": "Article 1 In accordance with the Guidance on High­Quality Business Operations of\nthe Joint­Stock Company and the Implementation Rules for High­Quality\nBusiness Operations (Trial) of CCECC (CCECC Operations [2024]341 No.), to\ncomprehensively improve project business quality, effectively manage domestic\nbusiness operations of the company, and standardize business procedures and\nworkflows, these Measures are hereby formulated."
+        },
+        {
+          "page": 2,
+          "role": "article_text",
+          "source_block": 8,
+          "candidate_block": 5,
+          "candidate_line_count": 3,
+          "center_error": 15.936,
+          "text": "Article 2 The projects referred to in these Measures include consulting, survey, design,\nsupervision, general contracting, and other business operations undertaken by the\ncompany through direct commission or bidding."
+        },
+        {
+          "page": 2,
+          "role": "article_text",
+          "source_block": 10,
+          "candidate_block": 6,
+          "candidate_line_count": 3,
+          "center_error": 33.917,
+          "text": "Article 3 In principle, project acquisition work shall follow the procedure of first\nconducting project evaluation, then applying for approval, and finally signing the\ncontract."
+        },
+        {
+          "page": 2,
+          "role": "article_text",
+          "source_block": 12,
+          "candidate_block": 7,
+          "candidate_line_count": 8,
+          "center_error": 15.947,
+          "text": "Article 4 When undertaking project acquisition work, factors such as the\ncompany's development strategy, business direction, responsibility cost,\nproduction and technical capabilities, and current status shall be co\nmprehensively considered. In accordance with the procedures specified in\nthese Measures, the following stages shall be completed: information tracking,\nproject evaluation and application, bid preparation and review, contract\nnegotiation, contract review and signing, owner service during project\nimplementation, and project follow­up visit."
+        },
+        {
+          "page": 2,
+          "role": "chapter_heading",
+          "source_block": 17,
+          "candidate_block": 8,
+          "candidate_line_count": 1,
+          "center_error": 3.826,
+          "text": "Chapter 2 Relevant Responsibilities"
+        },
+        {
+          "page": 2,
+          "role": "article_text",
+          "source_block": 18,
+          "candidate_block": 9,
+          "candidate_line_count": 3,
+          "center_error": 22.193,
+          "text": "Article 5 The Business Development Department is the management department for\nthe company's domestic project business operations, responsible for the layout and\ndevelopment of the institute's business market."
+        },
+        {
+          "page": 2,
+          "role": "article_text",
+          "source_block": 20,
+          "candidate_block": 10,
+          "candidate_line_count": 2,
+          "center_error": 24.028,
+          "text": "Article 6 The relevant personnel involved in project operation work and their\nmain responsibilities are shown in Table 1:"
+        },
+        {
+          "page": 3,
+          "role": "centered_text",
+          "source_block": 1,
+          "candidate_block": 19,
+          "candidate_line_count": 1,
+          "center_error": 0.084,
+          "text": "Table 1 Main Responsibilities of Personnel"
+        },
+        {
+          "page": 3,
+          "role": "chapter_heading",
+          "source_block": 18,
+          "candidate_block": 20,
+          "candidate_line_count": 1,
+          "center_error": 0.1,
+          "text": "Chapter 3 Project Evaluation and Acquisition"
+        },
+        {
+          "page": 3,
+          "role": "article_heading",
+          "source_block": 19,
+          "candidate_block": 21,
+          "candidate_line_count": 1,
+          "center_error": 37.844,
+          "text": "Article 7 Information Tracking"
+        }
+      ]
+    }
+  },
+  "provider": "qwen",
+  "model": "qwen3.8-flash",
+  "run": {
+    "engine": "babeldoc.format.pdf.high_level.async_translate",
+    "gateway": "local",
+    "source_hash": "f9a5160a890af7c408e120c6d06e85768c58c200a5f94be75d915d742830daf5",
+    "timing_seconds": {
+      "table_translation": 14.773,
+      "babeldoc_translation": 35.876,
+      "table_render": 1.89,
+      "rotated_text": 0.013,
+      "layout_restore": 0.518,
+      "validation_and_cmap": 0.274,
+      "total": 54.827
+    },
+    "table_route": {
+      "status": "patched",
+      "table_count": 1,
+      "cell_count": 20,
+      "translated_cell_count": 20,
+      "gateway_batch_size": 20,
+      "gateway_batches": 1,
+      "gateway_attempts": 1,
+      "rendered_cell_count": 20,
+      "fontfile": "C:\\Windows\\Fonts\\ARIALN.TTF",
+      "font_sizes": {
+        "pdf:p3:t1:r1:c1": 12.0,
+        "pdf:p3:t1:r1:c2": 12.0,
+        "pdf:p3:t1:r2:c1": 12.0,
+        "pdf:p3:t1:r2:c2": 10.5,
+        "pdf:p3:t1:r3:c1": 12.0,
+        "pdf:p3:t1:r3:c2": 10.5,
+        "pdf:p3:t1:r4:c1": 12.0,
+        "pdf:p3:t1:r4:c2": 9.5,
+        "pdf:p3:t1:r5:c1": 9.5,
+        "pdf:p3:t1:r5:c2": 9.5,
+        "pdf:p3:t1:r6:c1": 10.0,
+        "pdf:p3:t1:r6:c2": 9.5,
+        "pdf:p3:t1:r7:c1": 12.0,
+        "pdf:p3:t1:r7:c2": 9.5,
+        "pdf:p3:t1:r8:c1": 11.5,
+        "pdf:p3:t1:r8:c2": 9.5,
+        "pdf:p3:t1:r9:c1": 12.0,
+        "pdf:p3:t1:r9:c2": 10.5,
+        "pdf:p3:t1:r10:c1": 12.0,
+        "pdf:p3:t1:r10:c2": 8.5
+      },
+      "drawing_counts": [
+        [
+          1,
+          1,
+          0
+        ],
+        [
+          2,
+          0,
+          0
+        ],
+        [
+          3,
+          14,
+          0
+        ]
+      ]
+    },
+    "progress_events": 71,
+    "last_stage": "Save PDF",
+    "worker_mode": "project_subprocess_babeldoc",
+    "stage_durations": {
+      "Parse PDF and Create Intermediate Representation": 1.644,
+      "DetectScannedFile": 0.156,
+      "Parse Page Layout": 5.695,
+      "Parse Paragraphs": 1.292,
+      "Parse Formulas and Styles": 2.519,
+      "Translate Paragraphs": 12.957,
+      "Typesetting": 1.639,
+      "Add Fonts": 0.04,
+      "Generate drawing instructions": 0.155,
+      "Subset font": 1.049,
+      "Save PDF": 0.045
+    },
+    "babeldoc_translation_stats": {
+      "successful_paragraphs": 59,
+      "fallback_paragraphs": 4,
+      "translated_paragraphs": 63
+    },
+    "gateway_requests": 34,
+    "gateway_batch_sizes": [
+      20,
+      2,
+      2,
+      6,
+      2,
+      6,
+      6,
+      6,
+      6,
+      6,
+      6,
+      6,
+      6,
+      3
+    ],
+    "gateway_structured_requests": 14,
+    "gateway_fallback_requests": 20,
+    "gateway_upstream_results": 40,
+    "gateway_upstream_elapsed_ms_total": 144665,
+    "gateway_upstream_elapsed_ms_max": 14697,
+    "gateway_upstream_failures": 0,
+    "rotated_text_route": {
+      "status": "not_required",
+      "item_count": 0,
+      "batch_count": 0
+    },
+    "layout_contract": {
+      "status": "restored",
+      "contract_count": 16,
+      "operation_count": 16,
+      "roles": {
+        "article_heading": 1,
+        "article_text": 6,
+        "centered_text": 4,
+        "chapter_heading": 3,
+        "document_reference": 1,
+        "salutation": 1
+      },
+      "profile": {
+        "target_language": "en",
+        "chapter_label": "Chapter",
+        "article_label": "Article",
+        "chapter_numbering": "arabic",
+        "article_numbering": "arabic"
+      }
+    },
+    "deterministic_label_repairs": {
+      "status": "not_required",
+      "repairs": []
+    },
+    "cmap_repairs": {
+      "repaired_fonts": 10,
+      "repairs": [
+        {
+          "font": "NotoSerif-Regular.ttf",
+          "mapping": "U+0003->U+0020",
+          "control_count": 52
+        },
+        {
+          "font": "PDFLayout_times",
+          "mapping": "U+0003->U+0020",
+          "control_count": 52
+        },
+        {
+          "font": "PDFLayout_times",
+          "mapping": "U+2010->U+002D",
+          "control_count": 1
+        },
+        {
+          "font": "PDFLayout_times",
+          "mapping": "U+2012->U+002D",
+          "control_count": 1
+        },
+        {
+          "font": "PDFLayout_times",
+          "mapping": "U+2013->U+002D",
+          "control_count": 1
+        },
+        {
+          "font": "PDFLayout_times",
+          "mapping": "U+2015->U+002D",
+          "control_count": 1
+        },
+        {
+          "font": "PDFLayout_ARIALN",
+          "mapping": "U+2013->U+002D",
+          "control_count": 1
+        },
+        {
+          "font": "PDFLayout_ARIALN",
+          "mapping": "U+2015->U+002D",
+          "control_count": 1
+        },
+        {
+          "font": "pdfTabled72b7da0fb",
+          "mapping": "U+2013->U+002D",
+          "control_count": 1
+        },
+        {
+          "font": "pdfTabled72b7da0fb",
+          "mapping": "U+2015->U+002D",
+          "control_count": 1
+        }
+      ]
+    }
+  }
+}

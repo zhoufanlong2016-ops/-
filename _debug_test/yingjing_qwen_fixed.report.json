@@ -1,0 +1,23 @@
+{
+  "status": "FAILED",
+  "source_hash": "e4de18cc01636f89cd20e59bbb10e313492080f3a8a4a620eac05301f57791ca",
+  "classification": "B",
+  "provider": "qwen",
+  "model": "qwen-plus",
+  "run": {
+    "engine": "mineru4",
+    "mineru_tier": "flash",
+    "mineru_ocr_mode": "txt",
+    "source_hash": "e4de18cc01636f89cd20e59bbb10e313492080f3a8a4a620eac05301f57791ca",
+    "hybrid_parse": {
+      "parser": "native",
+      "native_line_count": 91,
+      "semantic_block_count": 36,
+      "rotated_pages": [],
+      "table_pages": [
+        3
+      ]
+    }
+  },
+  "error": "QwenChatError: Qwen Chat batch IDs are incomplete"
+}

@@ -1,0 +1,38 @@
+{
+  "status": "FAILED",
+  "source_hash": "ab0bc499bd067242c1eb95809fa5efe2aea1e80f749f70777db1911d61aba24d",
+  "classification": "B",
+  "provider": "qwen",
+  "model": "qwen-plus",
+  "run": {
+    "engine": "mineru4",
+    "mineru_tier": "flash",
+    "mineru_ocr_mode": "txt",
+    "source_hash": "ab0bc499bd067242c1eb95809fa5efe2aea1e80f749f70777db1911d61aba24d",
+    "hybrid_parse": {
+      "parser": "native",
+      "native_line_count": 1034,
+      "semantic_block_count": 541,
+      "rotated_pages": [
+        21
+      ],
+      "table_pages": [
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        13,
+        14,
+        15,
+        17,
+        19
+      ]
+    }
+  },
+  "error": "QwenChatError: DashScope Qwen Chat response was invalid"
+}

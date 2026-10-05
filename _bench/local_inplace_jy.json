@@ -1,0 +1,656 @@
+{
+  "status": "PENDING_VISUAL_REVIEW",
+  "preflight": {
+    "source_hash": "f9a5160a890af7c408e120c6d06e85768c58c200a5f94be75d915d742830daf5",
+    "page_count": 3,
+    "page_sizes": [
+      [
+        595.3,
+        866.9
+      ],
+      [
+        595.3,
+        866.9
+      ],
+      [
+        595.3,
+        866.9
+      ]
+    ],
+    "text_characters": 1409,
+    "image_count": 0,
+    "rotated_text_spans": 0,
+    "classification": "B",
+    "reasons": [
+      "complex layout requires full visual review",
+      "table-like grid detected on page(s) 3; table translation is experimental and requires separate visual acceptance"
+    ],
+    "table_pages": [
+      3
+    ],
+    "visual_review_required": true
+  },
+  "validation": {
+    "candidate_hash": "e8a571adec850f2df9d5d068f6959932870eaf807e22206a78116b28570c147a",
+    "embedded_font_references": 17,
+    "blank_pages": [],
+    "cjk_residue": 0,
+    "control_characters": [],
+    "unicode_dashes": [],
+    "candidate_warnings": [],
+    "identifier_dash_mismatches": [],
+    "missing_identifiers": [],
+    "mixed_document_references": [
+      "中土经营〔2024〕341号",
+      "福设院〔2024〕54号"
+    ],
+    "preserved_mixed_document_references": [],
+    "minimum_font_size": 6.0,
+    "font_size_acceptance_policy": "candidate >= 0.5 * corresponding source",
+    "name_acceptance_policy": "Chinese rendering or original English spelling accepted; Chinese + English bilingual output is not required",
+    "name_warnings": [],
+    "font_size_ratio_checks": [
+      {
+        "page": 1,
+        "source_font_size": 14.050000190734863,
+        "candidate_font_size": 14.050000190734863,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 28.666391372680664,
+        "candidate_font_size": 28.5,
+        "ratio": 0.994195594048882,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 15.949999809265137,
+        "candidate_font_size": 16.0,
+        "ratio": 1.0031348082340301,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 21.950000762939453,
+        "candidate_font_size": 22.0,
+        "ratio": 1.0022778694907823,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 15.949999809265137,
+        "candidate_font_size": 16.0,
+        "ratio": 1.0031348082340301,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 15.949999809265137,
+        "candidate_font_size": 16.0,
+        "ratio": 1.0031348082340301,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 15.949999809265137,
+        "candidate_font_size": 16.0,
+        "ratio": 1.0031348082340301,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 15.949999809265137,
+        "candidate_font_size": 16.0,
+        "ratio": 1.0031348082340301,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 15.949999809265137,
+        "candidate_font_size": 16.0,
+        "ratio": 1.0031348082340301,
+        "below_minimum": false
+      },
+      {
+        "page": 2,
+        "source_font_size": 14.050000190734863,
+        "candidate_font_size": 14.050000190734863,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 2,
+        "source_font_size": 21.950000762939453,
+        "candidate_font_size": 22.0,
+        "ratio": 1.0022778694907823,
+        "below_minimum": false
+      },
+      {
+        "page": 2,
+        "source_font_size": 15.949999809265137,
+        "candidate_font_size": 16.0,
+        "ratio": 1.0031348082340301,
+        "below_minimum": false
+      },
+      {
+        "page": 2,
+        "source_font_size": 15.949999809265137,
+        "candidate_font_size": 16.0,
+        "ratio": 1.0031348082340301,
+        "below_minimum": false
+      },
+      {
+        "page": 2,
+        "source_font_size": 15.949999809265137,
+        "candidate_font_size": 16.0,
+        "ratio": 1.0031348082340301,
+        "below_minimum": false
+      },
+      {
+        "page": 2,
+        "source_font_size": 15.949999809265137,
+        "candidate_font_size": 16.0,
+        "ratio": 1.0031348082340301,
+        "below_minimum": false
+      },
+      {
+        "page": 2,
+        "source_font_size": 15.949999809265137,
+        "candidate_font_size": 16.0,
+        "ratio": 1.0031348082340301,
+        "below_minimum": false
+      },
+      {
+        "page": 2,
+        "source_font_size": 15.949999809265137,
+        "candidate_font_size": 16.0,
+        "ratio": 1.0031348082340301,
+        "below_minimum": false
+      },
+      {
+        "page": 2,
+        "source_font_size": 15.949999809265137,
+        "candidate_font_size": 16.0,
+        "ratio": 1.0031348082340301,
+        "below_minimum": false
+      },
+      {
+        "page": 2,
+        "source_font_size": 15.949999809265137,
+        "candidate_font_size": 16.0,
+        "ratio": 1.0031348082340301,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 14.050000190734863,
+        "candidate_font_size": 14.050000190734863,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 14.050000190734863,
+        "candidate_font_size": 13.0,
+        "ratio": 0.9252668913536901,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 15.949999809265137,
+        "candidate_font_size": 16.0,
+        "ratio": 1.0031348082340301,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 15.949999809265137,
+        "candidate_font_size": 16.0,
+        "ratio": 1.0031348082340301,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 15.949999809265137,
+        "candidate_font_size": 16.0,
+        "ratio": 1.0031348082340301,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 12.0,
+        "candidate_font_size": 12.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 12.0,
+        "candidate_font_size": 12.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 12.0,
+        "candidate_font_size": 12.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 12.0,
+        "candidate_font_size": 12.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 12.0,
+        "candidate_font_size": 12.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 12.0,
+        "candidate_font_size": 12.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 12.0,
+        "candidate_font_size": 12.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 12.0,
+        "candidate_font_size": 12.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 12.0,
+        "candidate_font_size": 12.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 12.0,
+        "candidate_font_size": 12.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 12.0,
+        "candidate_font_size": 12.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 12.0,
+        "candidate_font_size": 12.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 12.0,
+        "candidate_font_size": 12.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 12.0,
+        "candidate_font_size": 12.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 12.0,
+        "candidate_font_size": 12.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 12.0,
+        "candidate_font_size": 12.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 12.0,
+        "candidate_font_size": 12.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 12.0,
+        "candidate_font_size": 12.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 12.0,
+        "candidate_font_size": 12.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 3,
+        "source_font_size": 12.0,
+        "candidate_font_size": 12.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      }
+    ],
+    "minimum_observed_font_size": 12.0,
+    "visual_review_required": true,
+    "layout_contract": {
+      "status": "passed",
+      "contract_count": 16,
+      "failures": [],
+      "observed": [
+        {
+          "page": 1,
+          "role": "centered_text",
+          "source_block": 1,
+          "candidate_block": 1,
+          "candidate_line_count": 1,
+          "center_error": 0.098,
+          "text": "Translated sample text."
+        },
+        {
+          "page": 1,
+          "role": "document_reference",
+          "source_block": 2,
+          "candidate_block": 2,
+          "candidate_line_count": 1,
+          "center_error": 0.11,
+          "text": "[2024] No. 54 Translated sample text."
+        },
+        {
+          "page": 1,
+          "role": "centered_text",
+          "source_block": 3,
+          "candidate_block": 3,
+          "candidate_line_count": 1,
+          "center_error": 0.045,
+          "text": "Translated sample text."
+        },
+        {
+          "page": 1,
+          "role": "salutation",
+          "source_block": 5,
+          "candidate_block": 4,
+          "candidate_line_count": 1,
+          "center_error": 13.404,
+          "text": "Translated sample text."
+        },
+        {
+          "page": 2,
+          "role": "centered_text",
+          "source_block": 1,
+          "candidate_block": 1,
+          "candidate_line_count": 1,
+          "center_error": 0.106,
+          "text": "Translated sample text."
+        },
+        {
+          "page": 2,
+          "role": "chapter_heading",
+          "source_block": 3,
+          "candidate_block": 2,
+          "candidate_line_count": 1,
+          "center_error": 0.107,
+          "text": "Chapter 1 Translated sample text."
+        },
+        {
+          "page": 2,
+          "role": "article_text",
+          "source_block": 4,
+          "candidate_block": 3,
+          "candidate_line_count": 1,
+          "center_error": 57.529,
+          "text": "Article 1 [2024] No. 341 Translated sample text."
+        },
+        {
+          "page": 2,
+          "role": "article_text",
+          "source_block": 8,
+          "candidate_block": 4,
+          "candidate_line_count": 1,
+          "center_error": 112.245,
+          "text": "Article 2 Translated sample text."
+        },
+        {
+          "page": 2,
+          "role": "article_text",
+          "source_block": 10,
+          "candidate_block": 5,
+          "candidate_line_count": 1,
+          "center_error": 112.185,
+          "text": "Article 3 Translated sample text."
+        },
+        {
+          "page": 2,
+          "role": "article_text",
+          "source_block": 12,
+          "candidate_block": 6,
+          "candidate_line_count": 1,
+          "center_error": 112.185,
+          "text": "Article 4 Translated sample text."
+        },
+        {
+          "page": 2,
+          "role": "chapter_heading",
+          "source_block": 17,
+          "candidate_block": 7,
+          "candidate_line_count": 1,
+          "center_error": 0.107,
+          "text": "Chapter 2 Translated sample text."
+        },
+        {
+          "page": 2,
+          "role": "article_text",
+          "source_block": 18,
+          "candidate_block": 8,
+          "candidate_line_count": 1,
+          "center_error": 112.245,
+          "text": "Article 5 Translated sample text."
+        },
+        {
+          "page": 2,
+          "role": "article_text",
+          "source_block": 20,
+          "candidate_block": 9,
+          "candidate_line_count": 1,
+          "center_error": 112.219,
+          "text": "Article 6 Translated sample text."
+        },
+        {
+          "page": 3,
+          "role": "centered_text",
+          "source_block": 1,
+          "candidate_block": 1,
+          "candidate_line_count": 1,
+          "center_error": 0.049,
+          "text": "Translated sample text."
+        },
+        {
+          "page": 3,
+          "role": "chapter_heading",
+          "source_block": 18,
+          "candidate_block": 2,
+          "candidate_line_count": 1,
+          "center_error": 0.107,
+          "text": "Chapter 3 Translated sample text."
+        },
+        {
+          "page": 3,
+          "role": "article_heading",
+          "source_block": 19,
+          "candidate_block": 3,
+          "candidate_line_count": 1,
+          "center_error": 53.622,
+          "text": "Article 7 Translated sample text."
+        }
+      ]
+    }
+  },
+  "provider": "fake",
+  "model": "fake-model",
+  "run": {
+    "engine": "inplace",
+    "source_hash": "f9a5160a890af7c408e120c6d06e85768c58c200a5f94be75d915d742830daf5",
+    "paragraph_count": 23,
+    "translated_paragraph_count": 20,
+    "rendered_paragraphs": {
+      "paragraphs": 20,
+      "style_sizes": [
+        {
+          "source_size": 28.5,
+          "font": "FZXBSK--GBK1-0",
+          "size": 28.5
+        },
+        {
+          "source_size": 16.0,
+          "font": "FangSong",
+          "size": 16.0
+        },
+        {
+          "source_size": 22.0,
+          "font": "FZXBSJW--GB1-0",
+          "size": 22.0
+        },
+        {
+          "source_size": 16.0,
+          "font": "FangSong_GB2312",
+          "size": 16.0
+        },
+        {
+          "source_size": 16.0,
+          "font": "SimHei",
+          "size": 16.0
+        },
+        {
+          "source_size": 14.0,
+          "font": "FangSong_GB2312",
+          "size": 13.0
+        }
+      ],
+      "size_reduced": [
+        {
+          "page": 1,
+          "source_size": 28.67,
+          "size": 28.5,
+          "text": "Translated sample text."
+        },
+        {
+          "page": 3,
+          "source_size": 14.05,
+          "size": 13.0,
+          "text": "Translated sample text."
+        }
+      ]
+    },
+    "table_translation": {
+      "status": "patched",
+      "table_count": 1,
+      "skipped_table_count": 0,
+      "pages": {
+        "3": {
+          "font_size": 12.0,
+          "tables": 1
+        }
+      }
+    },
+    "rotated_lines_left_untouched": 0,
+    "translation_warning_count": 0,
+    "cmap_repairs": {
+      "repaired_fonts": 13,
+      "repairs": [
+        {
+          "font": "IPc95e2223",
+          "mapping": "U+2010->U+002D",
+          "control_count": 1
+        },
+        {
+          "font": "IPc95e2223",
+          "mapping": "U+2012->U+002D",
+          "control_count": 1
+        },
+        {
+          "font": "IPc95e2223",
+          "mapping": "U+2013->U+002D",
+          "control_count": 1
+        },
+        {
+          "font": "IPc95e2223",
+          "mapping": "U+2015->U+002D",
+          "control_count": 1
+        },
+        {
+          "font": "IPcd1b8ba5",
+          "mapping": "U+2012->U+002D",
+          "control_count": 1
+        },
+        {
+          "font": "IPcd1b8ba5",
+          "mapping": "U+2013->U+002D",
+          "control_count": 1
+        },
+        {
+          "font": "IPcd1b8ba5",
+          "mapping": "U+2015->U+002D",
+          "control_count": 1
+        },
+        {
+          "font": "IP71407665",
+          "mapping": "U+2012->U+002D",
+          "control_count": 1
+        },
+        {
+          "font": "IP71407665",
+          "mapping": "U+2013->U+002D",
+          "control_count": 1
+        },
+        {
+          "font": "IP71407665",
+          "mapping": "U+2015->U+002D",
+          "control_count": 1
+        },
+        {
+          "font": "pdfTablecd1b8ba52f",
+          "mapping": "U+2012->U+002D",
+          "control_count": 1
+        },
+        {
+          "font": "pdfTablecd1b8ba52f",
+          "mapping": "U+2013->U+002D",
+          "control_count": 1
+        },
+        {
+          "font": "pdfTablecd1b8ba52f",
+          "mapping": "U+2015->U+002D",
+          "control_count": 1
+        }
+      ]
+    }
+  }
+}

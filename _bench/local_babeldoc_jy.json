@@ -1,0 +1,143 @@
+{
+  "status": "FAILED",
+  "preflight": {
+    "source_hash": "f9a5160a890af7c408e120c6d06e85768c58c200a5f94be75d915d742830daf5",
+    "page_count": 3,
+    "page_sizes": [
+      [
+        595.3,
+        866.9
+      ],
+      [
+        595.3,
+        866.9
+      ],
+      [
+        595.3,
+        866.9
+      ]
+    ],
+    "classification": "B",
+    "reasons": [
+      "complex layout requires full visual review",
+      "table-like grid detected on page(s) 3; table translation is experimental and requires separate visual acceptance"
+    ],
+    "table_pages": [
+      3
+    ],
+    "visual_review_required": true
+  },
+  "provider": "qwen",
+  "model": "qwen3.8-flash",
+  "error": "unmatched PDF layout contracts: [{\"page\": 2, \"role\": \"chapter_heading\", \"source_text\": \"第二章有关职责\"}, {\"page\": 2, \"role\": \"article_text\", \"source_text\": \"第六条项目经营工作中涉及的相关人员及主要职责如表1\\n所示：\"}]",
+  "error_type": "LayoutContractError",
+  "run": {
+    "engine": "babeldoc.format.pdf.high_level.async_translate",
+    "gateway": "local",
+    "source_hash": "f9a5160a890af7c408e120c6d06e85768c58c200a5f94be75d915d742830daf5",
+    "timing_seconds": {
+      "table_translation": 0.086,
+      "babeldoc_translation": 35.487,
+      "table_render": 1.862,
+      "rotated_text": 0.016,
+      "total_until_failure": 39.617
+    },
+    "table_route": {
+      "status": "patched",
+      "table_count": 1,
+      "cell_count": 20,
+      "translated_cell_count": 20,
+      "gateway_batch_size": 20,
+      "gateway_batches": 1,
+      "gateway_attempts": 1,
+      "rendered_cell_count": 20,
+      "fontfile": "C:\\Windows\\Fonts\\ARIALN.TTF",
+      "font_sizes": {
+        "pdf:p3:t1:r1:c1": 12.0,
+        "pdf:p3:t1:r1:c2": 12.0,
+        "pdf:p3:t1:r2:c1": 12.0,
+        "pdf:p3:t1:r2:c2": 12.0,
+        "pdf:p3:t1:r3:c1": 12.0,
+        "pdf:p3:t1:r3:c2": 12.0,
+        "pdf:p3:t1:r4:c1": 12.0,
+        "pdf:p3:t1:r4:c2": 12.0,
+        "pdf:p3:t1:r5:c1": 12.0,
+        "pdf:p3:t1:r5:c2": 12.0,
+        "pdf:p3:t1:r6:c1": 12.0,
+        "pdf:p3:t1:r6:c2": 12.0,
+        "pdf:p3:t1:r7:c1": 12.0,
+        "pdf:p3:t1:r7:c2": 12.0,
+        "pdf:p3:t1:r8:c1": 12.0,
+        "pdf:p3:t1:r8:c2": 12.0,
+        "pdf:p3:t1:r9:c1": 12.0,
+        "pdf:p3:t1:r9:c2": 12.0,
+        "pdf:p3:t1:r10:c1": 12.0,
+        "pdf:p3:t1:r10:c2": 12.0
+      },
+      "drawing_counts": [
+        [
+          1,
+          1,
+          0
+        ],
+        [
+          2,
+          0,
+          0
+        ],
+        [
+          3,
+          14,
+          0
+        ]
+      ]
+    },
+    "progress_events": 73,
+    "last_stage": "Save PDF",
+    "worker_mode": "project_subprocess_babeldoc",
+    "stage_durations": {
+      "Parse PDF and Create Intermediate Representation": 2.386,
+      "DetectScannedFile": 0.182,
+      "Parse Page Layout": 9.803,
+      "Parse Paragraphs": 1.747,
+      "Parse Formulas and Styles": 3.515,
+      "Translate Paragraphs": 5.015,
+      "Typesetting": 1.962,
+      "Add Fonts": 0.108,
+      "Generate drawing instructions": 0.157,
+      "Subset font": 1.562,
+      "Save PDF": 0.05
+    },
+    "babeldoc_translation_stats": {
+      "successful_paragraphs": 45,
+      "fallback_paragraphs": 18,
+      "translated_paragraphs": 63
+    },
+    "gateway_requests": 27,
+    "gateway_batch_sizes": [
+      20,
+      2,
+      6,
+      6,
+      2,
+      6,
+      6,
+      2,
+      6,
+      6
+    ],
+    "gateway_structured_requests": 10,
+    "gateway_fallback_requests": 17,
+    "gateway_upstream_results": 52,
+    "gateway_upstream_elapsed_ms_total": 17,
+    "gateway_upstream_elapsed_ms_max": 7,
+    "gateway_upstream_failures": 9,
+    "rotated_text_route": {
+      "status": "not_required",
+      "item_count": 0,
+      "batch_count": 0
+    }
+  },
+  "quarantine_dir": "D:\\01 绿色程序\\文档翻译器\\_bench\\.pdf_quarantine\\local_babeldoc_jy-a975229691bd",
+  "quarantined_candidate": "D:\\01 绿色程序\\文档翻译器\\_bench\\.pdf_quarantine\\local_babeldoc_jy-a975229691bd\\candidate.pdf"
+}

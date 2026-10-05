@@ -1,0 +1,8 @@
+translation: 133 distinct texts (145 total), 0 from cache, 6 requests
+translation: 28/133
+translation: 47/133
+translation: 55/133
+translation: 83/133
+translation: 103/133
+translation: 133/133
+translated PDF in place on the original PDF; class=B; output=D:\01 绿色程序\文档翻译器\_final_v2\addenda2\v5\zh.pdf; report=D:\01 绿色程序\文档翻译器\_final_v2\addenda2\v5\zh.json

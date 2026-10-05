@@ -1,0 +1,5681 @@
+{
+  "status": "PENDING_VISUAL_REVIEW",
+  "preflight": {
+    "source_hash": "06ce684641bfa7eac790496ae5cef9bc8ddd8458f0137581c3e83180dbab653e",
+    "page_count": 47,
+    "page_sizes": [
+      [
+        960.0,
+        540.0
+      ],
+      [
+        960.0,
+        540.0
+      ],
+      [
+        960.0,
+        540.0
+      ],
+      [
+        960.0,
+        540.0
+      ],
+      [
+        960.0,
+        540.0
+      ],
+      [
+        960.0,
+        540.0
+      ],
+      [
+        960.0,
+        540.0
+      ],
+      [
+        960.0,
+        540.0
+      ],
+      [
+        960.0,
+        540.0
+      ],
+      [
+        960.0,
+        540.0
+      ],
+      [
+        960.0,
+        540.0
+      ],
+      [
+        960.0,
+        540.0
+      ],
+      [
+        960.0,
+        540.0
+      ],
+      [
+        960.0,
+        540.0
+      ],
+      [
+        960.0,
+        540.0
+      ],
+      [
+        960.0,
+        540.0
+      ],
+      [
+        960.0,
+        540.0
+      ],
+      [
+        960.0,
+        540.0
+      ],
+      [
+        960.0,
+        540.0
+      ],
+      [
+        960.0,
+        540.0
+      ],
+      [
+        960.0,
+        540.0
+      ],
+      [
+        960.0,
+        540.0
+      ],
+      [
+        960.0,
+        540.0
+      ],
+      [
+        960.0,
+        540.0
+      ],
+      [
+        960.0,
+        540.0
+      ],
+      [
+        960.0,
+        540.0
+      ],
+      [
+        960.0,
+        540.0
+      ],
+      [
+        960.0,
+        540.0
+      ],
+      [
+        960.0,
+        540.0
+      ],
+      [
+        960.0,
+        540.0
+      ],
+      [
+        960.0,
+        540.0
+      ],
+      [
+        960.0,
+        540.0
+      ],
+      [
+        960.0,
+        540.0
+      ],
+      [
+        960.0,
+        540.0
+      ],
+      [
+        960.0,
+        540.0
+      ],
+      [
+        960.0,
+        540.0
+      ],
+      [
+        960.0,
+        540.0
+      ],
+      [
+        960.0,
+        540.0
+      ],
+      [
+        960.0,
+        540.0
+      ],
+      [
+        960.0,
+        540.0
+      ],
+      [
+        960.0,
+        540.0
+      ],
+      [
+        960.0,
+        540.0
+      ],
+      [
+        960.0,
+        540.0
+      ],
+      [
+        960.0,
+        540.0
+      ],
+      [
+        960.0,
+        540.0
+      ],
+      [
+        960.0,
+        540.0
+      ],
+      [
+        960.0,
+        540.0
+      ]
+    ],
+    "text_characters": 22867,
+    "image_count": 188,
+    "rotated_text_spans": 0,
+    "classification": "B",
+    "reasons": [
+      "complex layout requires full visual review",
+      "table-like grid detected on page(s) 30, 31, 32, 33, 34, 35, 36, 42; table translation is experimental and requires separate visual acceptance"
+    ],
+    "table_pages": [
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      42
+    ],
+    "visual_review_required": true
+  },
+  "validation": {
+    "candidate_hash": "0b5aa2d6d18f046969366d7750fe1f9ed3ca68b3447529c3808e0e4b3e210500",
+    "embedded_font_references": 173,
+    "blank_pages": [],
+    "cjk_residue": 4311,
+    "control_characters": [],
+    "unicode_dashes": [],
+    "candidate_warnings": [
+      "PDF layout contract validation failed: page 1: salutation wrapped unexpectedly; page 1: missing salutation; page 4: centered_text wrapped unexpectedly; page 14: centered_text center drift 226.36pt; page 14: centered_text center drift 88.36pt; page 14: centered_text wrapped unexpectedly; page 14: centered_text center drift 370.36pt; page 14: centered_text center drift 103.61pt; page 15: centered_text center drift 182.61pt; page 15: centered_text wrapped unexpectedly; page 15: centered_text wrapped unexpectedly; page 15: centered_text wrapped unexpectedly"
+    ],
+    "identifier_dash_mismatches": [],
+    "missing_identifiers": [],
+    "mixed_document_references": [],
+    "preserved_mixed_document_references": [],
+    "minimum_font_size": 6.0,
+    "font_size_acceptance_policy": "candidate >= 0.5 * corresponding source",
+    "name_acceptance_policy": "Chinese rendering or original English spelling accepted; Chinese + English bilingual output is not required",
+    "name_warnings": [],
+    "font_size_ratio_checks": [
+      {
+        "page": 1,
+        "source_font_size": 24.0,
+        "candidate_font_size": 24.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 45.0,
+        "candidate_font_size": 45.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 24.0,
+        "candidate_font_size": 24.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 24.0,
+        "candidate_font_size": 24.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 15.960000038146973,
+        "candidate_font_size": 24.0,
+        "ratio": 1.5037593949020132,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 18.0,
+        "candidate_font_size": 15.0,
+        "ratio": 0.8333333333333334,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 18.0,
+        "candidate_font_size": 15.0,
+        "ratio": 0.8333333333333334,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 18.02400016784668,
+        "candidate_font_size": 15.0,
+        "ratio": 0.8322236939810262,
+        "below_minimum": false
+      },
+      {
+        "page": 2,
+        "source_font_size": 21.959999084472656,
+        "candidate_font_size": 21.959999084472656,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 2,
+        "source_font_size": 21.959999084472656,
+        "candidate_font_size": 21.959999084472656,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 2,
+        "source_font_size": 21.959999084472656,
+        "candidate_font_size": 21.959999084472656,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 2,
+        "source_font_size": 9.960000038146973,
+        "candidate_font_size": 9.960000038146973,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 2,
+        "source_font_size": 12.0,
+        "candidate_font_size": 12.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 2,
+        "source_font_size": 26.040000915527344,
+        "candidate_font_size": 26.0,
+        "ratio": 0.9984638665852161,
+        "below_minimum": false
+      },
+      {
+        "page": 2,
+        "source_font_size": 21.959999084472656,
+        "candidate_font_size": 22.0,
+        "ratio": 1.001821535391394,
+        "below_minimum": false
+      },
+      {
+        "page": 2,
+        "source_font_size": 21.959999084472656,
+        "candidate_font_size": 22.0,
+        "ratio": 1.001821535391394,
+        "below_minimum": false
+      },
+      {
+        "page": 2,
+        "source_font_size": 21.959999084472656,
+        "candidate_font_size": 22.0,
+        "ratio": 1.001821535391394,
+        "below_minimum": false
+      },
+      {
+        "page": 2,
+        "source_font_size": 21.983999252319336,
+        "candidate_font_size": 22.0,
+        "ratio": 1.000727836072819,
+        "below_minimum": false
+      },
+      {
+        "page": 2,
+        "source_font_size": 21.983999252319336,
+        "candidate_font_size": 22.0,
+        "ratio": 1.000727836072819,
+        "below_minimum": false
+      },
+      {
+        "page": 2,
+        "source_font_size": 21.959999084472656,
+        "candidate_font_size": 22.0,
+        "ratio": 1.001821535391394,
+        "below_minimum": false
+      },
+      {
+        "page": 2,
+        "source_font_size": 21.959999084472656,
+        "candidate_font_size": 22.0,
+        "ratio": 1.001821535391394,
+        "below_minimum": false
+      },
+      {
+        "page": 2,
+        "source_font_size": 21.959999084472656,
+        "candidate_font_size": 22.0,
+        "ratio": 1.001821535391394,
+        "below_minimum": false
+      },
+      {
+        "page": 2,
+        "source_font_size": 21.959999084472656,
+        "candidate_font_size": 22.0,
+        "ratio": 1.001821535391394,
+        "below_minimum": false
+      },
+      {
+        "page": 2,
+        "source_font_size": 21.959999084472656,
+        "candidate_font_size": 22.0,
+        "ratio": 1.001821535391394,
+        "below_minimum": false
+      },
+      {
+        "page": 4,
+        "source_font_size": 12.0,
+        "candidate_font_size": 12.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 4,
+        "source_font_size": 26.040000915527344,
+        "candidate_font_size": 26.0,
+        "ratio": 0.9984638665852161,
+        "below_minimum": false
+      },
+      {
+        "page": 4,
+        "source_font_size": 27.983999252319336,
+        "candidate_font_size": 28.0,
+        "ratio": 1.0005717820221618,
+        "below_minimum": false
+      },
+      {
+        "page": 4,
+        "source_font_size": 27.959999084472656,
+        "candidate_font_size": 28.0,
+        "ratio": 1.0014306479555486,
+        "below_minimum": false
+      },
+      {
+        "page": 4,
+        "source_font_size": 27.959999084472656,
+        "candidate_font_size": 28.0,
+        "ratio": 1.0014306479555486,
+        "below_minimum": false
+      },
+      {
+        "page": 4,
+        "source_font_size": 26.040000915527344,
+        "candidate_font_size": 26.0,
+        "ratio": 0.9984638665852161,
+        "below_minimum": false
+      },
+      {
+        "page": 4,
+        "source_font_size": 26.06399917602539,
+        "candidate_font_size": 26.0,
+        "ratio": 0.9975445373676861,
+        "below_minimum": false
+      },
+      {
+        "page": 5,
+        "source_font_size": 27.959999084472656,
+        "candidate_font_size": 27.959999084472656,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 5,
+        "source_font_size": 12.0,
+        "candidate_font_size": 12.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 5,
+        "source_font_size": 27.959999084472656,
+        "candidate_font_size": 28.0,
+        "ratio": 1.0014306479555486,
+        "below_minimum": false
+      },
+      {
+        "page": 5,
+        "source_font_size": 27.959999084472656,
+        "candidate_font_size": 28.0,
+        "ratio": 1.0014306479555486,
+        "below_minimum": false
+      },
+      {
+        "page": 6,
+        "source_font_size": 14.039999961853027,
+        "candidate_font_size": 14.039999961853027,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 6,
+        "source_font_size": 14.039999961853027,
+        "candidate_font_size": 14.039999961853027,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 6,
+        "source_font_size": 14.039999961853027,
+        "candidate_font_size": 14.039999961853027,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 6,
+        "source_font_size": 14.039999961853027,
+        "candidate_font_size": 14.039999961853027,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 6,
+        "source_font_size": 27.959999084472656,
+        "candidate_font_size": 28.0,
+        "ratio": 1.0014306479555486,
+        "below_minimum": false
+      },
+      {
+        "page": 6,
+        "source_font_size": 15.960000038146973,
+        "candidate_font_size": 15.5,
+        "ratio": 0.9711779425408835,
+        "below_minimum": false
+      },
+      {
+        "page": 6,
+        "source_font_size": 15.960000038146973,
+        "candidate_font_size": 15.5,
+        "ratio": 0.9711779425408835,
+        "below_minimum": false
+      },
+      {
+        "page": 6,
+        "source_font_size": 15.960000038146973,
+        "candidate_font_size": 15.5,
+        "ratio": 0.9711779425408835,
+        "below_minimum": false
+      },
+      {
+        "page": 6,
+        "source_font_size": 15.984000205993652,
+        "candidate_font_size": 15.5,
+        "ratio": 0.9697197072224659,
+        "below_minimum": false
+      },
+      {
+        "page": 6,
+        "source_font_size": 15.960000038146973,
+        "candidate_font_size": 15.5,
+        "ratio": 0.9711779425408835,
+        "below_minimum": false
+      },
+      {
+        "page": 6,
+        "source_font_size": 15.960000038146973,
+        "candidate_font_size": 15.5,
+        "ratio": 0.9711779425408835,
+        "below_minimum": false
+      },
+      {
+        "page": 6,
+        "source_font_size": 15.960000038146973,
+        "candidate_font_size": 15.5,
+        "ratio": 0.9711779425408835,
+        "below_minimum": false
+      },
+      {
+        "page": 6,
+        "source_font_size": 15.960000038146973,
+        "candidate_font_size": 15.5,
+        "ratio": 0.9711779425408835,
+        "below_minimum": false
+      },
+      {
+        "page": 6,
+        "source_font_size": 15.960000038146973,
+        "candidate_font_size": 15.5,
+        "ratio": 0.9711779425408835,
+        "below_minimum": false
+      },
+      {
+        "page": 6,
+        "source_font_size": 15.960000038146973,
+        "candidate_font_size": 15.5,
+        "ratio": 0.9711779425408835,
+        "below_minimum": false
+      },
+      {
+        "page": 6,
+        "source_font_size": 15.960000038146973,
+        "candidate_font_size": 15.5,
+        "ratio": 0.9711779425408835,
+        "below_minimum": false
+      },
+      {
+        "page": 6,
+        "source_font_size": 15.960000038146973,
+        "candidate_font_size": 15.5,
+        "ratio": 0.9711779425408835,
+        "below_minimum": false
+      },
+      {
+        "page": 6,
+        "source_font_size": 15.960000038146973,
+        "candidate_font_size": 15.5,
+        "ratio": 0.9711779425408835,
+        "below_minimum": false
+      },
+      {
+        "page": 6,
+        "source_font_size": 15.960000038146973,
+        "candidate_font_size": 15.5,
+        "ratio": 0.9711779425408835,
+        "below_minimum": false
+      },
+      {
+        "page": 6,
+        "source_font_size": 15.960000038146973,
+        "candidate_font_size": 15.5,
+        "ratio": 0.9711779425408835,
+        "below_minimum": false
+      },
+      {
+        "page": 6,
+        "source_font_size": 15.960000038146973,
+        "candidate_font_size": 15.5,
+        "ratio": 0.9711779425408835,
+        "below_minimum": false
+      },
+      {
+        "page": 6,
+        "source_font_size": 15.960000038146973,
+        "candidate_font_size": 15.5,
+        "ratio": 0.9711779425408835,
+        "below_minimum": false
+      },
+      {
+        "page": 6,
+        "source_font_size": 15.960000038146973,
+        "candidate_font_size": 15.5,
+        "ratio": 0.9711779425408835,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 54.0,
+        "candidate_font_size": 54.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 27.983999252319336,
+        "candidate_font_size": 28.0,
+        "ratio": 1.0005717820221618,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 30.0,
+        "candidate_font_size": 30.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 30.02400016784668,
+        "candidate_font_size": 30.0,
+        "ratio": 0.999200633902461,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 30.02400016784668,
+        "candidate_font_size": 30.0,
+        "ratio": 0.999200633902461,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 30.02400016784668,
+        "candidate_font_size": 30.0,
+        "ratio": 0.999200633902461,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 30.0,
+        "candidate_font_size": 30.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 30.0,
+        "candidate_font_size": 30.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 30.0,
+        "candidate_font_size": 30.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 8,
+        "source_font_size": 20.040000915527344,
+        "candidate_font_size": 20.0,
+        "ratio": 0.9980039464221606,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 20.040000915527344,
+        "candidate_font_size": 20.0,
+        "ratio": 0.9980039464221606,
+        "below_minimum": false
+      },
+      {
+        "page": 10,
+        "source_font_size": 20.040000915527344,
+        "candidate_font_size": 20.0,
+        "ratio": 0.9980039464221606,
+        "below_minimum": false
+      },
+      {
+        "page": 11,
+        "source_font_size": 27.983999252319336,
+        "candidate_font_size": 28.0,
+        "ratio": 1.0005717820221618,
+        "below_minimum": false
+      },
+      {
+        "page": 12,
+        "source_font_size": 27.983999252319336,
+        "candidate_font_size": 28.0,
+        "ratio": 1.0005717820221618,
+        "below_minimum": false
+      },
+      {
+        "page": 13,
+        "source_font_size": 27.983999252319336,
+        "candidate_font_size": 28.0,
+        "ratio": 1.0005717820221618,
+        "below_minimum": false
+      },
+      {
+        "page": 14,
+        "source_font_size": 27.983999252319336,
+        "candidate_font_size": 28.0,
+        "ratio": 1.0005717820221618,
+        "below_minimum": false
+      },
+      {
+        "page": 14,
+        "source_font_size": 27.983999252319336,
+        "candidate_font_size": 28.0,
+        "ratio": 1.0005717820221618,
+        "below_minimum": false
+      },
+      {
+        "page": 14,
+        "source_font_size": 24.0,
+        "candidate_font_size": 24.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 14,
+        "source_font_size": 24.0,
+        "candidate_font_size": 24.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 14,
+        "source_font_size": 24.0,
+        "candidate_font_size": 24.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 14,
+        "source_font_size": 24.0,
+        "candidate_font_size": 24.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 14,
+        "source_font_size": 24.0,
+        "candidate_font_size": 24.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 14,
+        "source_font_size": 24.0,
+        "candidate_font_size": 24.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 14,
+        "source_font_size": 24.0,
+        "candidate_font_size": 24.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 14,
+        "source_font_size": 24.0,
+        "candidate_font_size": 24.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 14,
+        "source_font_size": 24.0,
+        "candidate_font_size": 24.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 15,
+        "source_font_size": 18.983999252319336,
+        "candidate_font_size": 18.983999252319336,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 15,
+        "source_font_size": 18.959999084472656,
+        "candidate_font_size": 18.959999084472656,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 15,
+        "source_font_size": 18.959999084472656,
+        "candidate_font_size": 18.959999084472656,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 15,
+        "source_font_size": 9.960000038146973,
+        "candidate_font_size": 9.960000038146973,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 15,
+        "source_font_size": 27.959999084472656,
+        "candidate_font_size": 28.0,
+        "ratio": 1.0014306479555486,
+        "below_minimum": false
+      },
+      {
+        "page": 15,
+        "source_font_size": 27.959999084472656,
+        "candidate_font_size": 28.0,
+        "ratio": 1.0014306479555486,
+        "below_minimum": false
+      },
+      {
+        "page": 15,
+        "source_font_size": 18.959999084472656,
+        "candidate_font_size": 19.0,
+        "ratio": 1.0021097530305316,
+        "below_minimum": false
+      },
+      {
+        "page": 15,
+        "source_font_size": 18.959999084472656,
+        "candidate_font_size": 19.0,
+        "ratio": 1.0021097530305316,
+        "below_minimum": false
+      },
+      {
+        "page": 15,
+        "source_font_size": 18.959999084472656,
+        "candidate_font_size": 19.0,
+        "ratio": 1.0021097530305316,
+        "below_minimum": false
+      },
+      {
+        "page": 15,
+        "source_font_size": 18.959999084472656,
+        "candidate_font_size": 19.0,
+        "ratio": 1.0021097530305316,
+        "below_minimum": false
+      },
+      {
+        "page": 15,
+        "source_font_size": 18.959999084472656,
+        "candidate_font_size": 19.0,
+        "ratio": 1.0021097530305316,
+        "below_minimum": false
+      },
+      {
+        "page": 15,
+        "source_font_size": 18.959999084472656,
+        "candidate_font_size": 19.0,
+        "ratio": 1.0021097530305316,
+        "below_minimum": false
+      },
+      {
+        "page": 15,
+        "source_font_size": 18.959999084472656,
+        "candidate_font_size": 19.0,
+        "ratio": 1.0021097530305316,
+        "below_minimum": false
+      },
+      {
+        "page": 15,
+        "source_font_size": 18.983999252319336,
+        "candidate_font_size": 19.0,
+        "ratio": 1.0008428544200827,
+        "below_minimum": false
+      },
+      {
+        "page": 15,
+        "source_font_size": 18.959999084472656,
+        "candidate_font_size": 19.0,
+        "ratio": 1.0021097530305316,
+        "below_minimum": false
+      },
+      {
+        "page": 15,
+        "source_font_size": 18.983999252319336,
+        "candidate_font_size": 19.0,
+        "ratio": 1.0008428544200827,
+        "below_minimum": false
+      },
+      {
+        "page": 15,
+        "source_font_size": 18.959999084472656,
+        "candidate_font_size": 19.0,
+        "ratio": 1.0021097530305316,
+        "below_minimum": false
+      },
+      {
+        "page": 15,
+        "source_font_size": 18.959999084472656,
+        "candidate_font_size": 19.0,
+        "ratio": 1.0021097530305316,
+        "below_minimum": false
+      },
+      {
+        "page": 15,
+        "source_font_size": 18.983999252319336,
+        "candidate_font_size": 19.0,
+        "ratio": 1.0008428544200827,
+        "below_minimum": false
+      },
+      {
+        "page": 15,
+        "source_font_size": 18.959999084472656,
+        "candidate_font_size": 19.0,
+        "ratio": 1.0021097530305316,
+        "below_minimum": false
+      },
+      {
+        "page": 15,
+        "source_font_size": 18.959999084472656,
+        "candidate_font_size": 19.0,
+        "ratio": 1.0021097530305316,
+        "below_minimum": false
+      },
+      {
+        "page": 16,
+        "source_font_size": 9.960000038146973,
+        "candidate_font_size": 9.960000038146973,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 16,
+        "source_font_size": 27.959999084472656,
+        "candidate_font_size": 28.0,
+        "ratio": 1.0014306479555486,
+        "below_minimum": false
+      },
+      {
+        "page": 16,
+        "source_font_size": 27.959999084472656,
+        "candidate_font_size": 28.0,
+        "ratio": 1.0014306479555486,
+        "below_minimum": false
+      },
+      {
+        "page": 16,
+        "source_font_size": 18.02400016784668,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8877052735797613,
+        "below_minimum": false
+      },
+      {
+        "page": 16,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 16,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 16,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 16,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 16,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 16,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 16,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 16,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 16,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 16,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 16,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 16,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 16,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 16,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 16,
+        "source_font_size": 18.02400016784668,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8877052735797613,
+        "below_minimum": false
+      },
+      {
+        "page": 16,
+        "source_font_size": 18.02400016784668,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8877052735797613,
+        "below_minimum": false
+      },
+      {
+        "page": 16,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 16,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 16,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 16,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 16,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 16,
+        "source_font_size": 18.02400016784668,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8877052735797613,
+        "below_minimum": false
+      },
+      {
+        "page": 16,
+        "source_font_size": 18.02400016784668,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8877052735797613,
+        "below_minimum": false
+      },
+      {
+        "page": 16,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 16,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 16,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 16,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 16,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 17,
+        "source_font_size": 18.959999084472656,
+        "candidate_font_size": 18.959999084472656,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 17,
+        "source_font_size": 18.959999084472656,
+        "candidate_font_size": 18.959999084472656,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 17,
+        "source_font_size": 18.959999084472656,
+        "candidate_font_size": 18.959999084472656,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 17,
+        "source_font_size": 18.959999084472656,
+        "candidate_font_size": 18.959999084472656,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 17,
+        "source_font_size": 18.959999084472656,
+        "candidate_font_size": 18.959999084472656,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 17,
+        "source_font_size": 9.960000038146973,
+        "candidate_font_size": 9.960000038146973,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 17,
+        "source_font_size": 27.959999084472656,
+        "candidate_font_size": 28.0,
+        "ratio": 1.0014306479555486,
+        "below_minimum": false
+      },
+      {
+        "page": 17,
+        "source_font_size": 27.959999084472656,
+        "candidate_font_size": 28.0,
+        "ratio": 1.0014306479555486,
+        "below_minimum": false
+      },
+      {
+        "page": 17,
+        "source_font_size": 18.959999084472656,
+        "candidate_font_size": 19.0,
+        "ratio": 1.0021097530305316,
+        "below_minimum": false
+      },
+      {
+        "page": 17,
+        "source_font_size": 18.959999084472656,
+        "candidate_font_size": 19.0,
+        "ratio": 1.0021097530305316,
+        "below_minimum": false
+      },
+      {
+        "page": 17,
+        "source_font_size": 18.959999084472656,
+        "candidate_font_size": 19.0,
+        "ratio": 1.0021097530305316,
+        "below_minimum": false
+      },
+      {
+        "page": 17,
+        "source_font_size": 18.959999084472656,
+        "candidate_font_size": 19.0,
+        "ratio": 1.0021097530305316,
+        "below_minimum": false
+      },
+      {
+        "page": 17,
+        "source_font_size": 18.959999084472656,
+        "candidate_font_size": 19.0,
+        "ratio": 1.0021097530305316,
+        "below_minimum": false
+      },
+      {
+        "page": 17,
+        "source_font_size": 18.983999252319336,
+        "candidate_font_size": 19.0,
+        "ratio": 1.0008428544200827,
+        "below_minimum": false
+      },
+      {
+        "page": 17,
+        "source_font_size": 18.959999084472656,
+        "candidate_font_size": 19.0,
+        "ratio": 1.0021097530305316,
+        "below_minimum": false
+      },
+      {
+        "page": 18,
+        "source_font_size": 20.040000915527344,
+        "candidate_font_size": 20.040000915527344,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 18,
+        "source_font_size": 20.040000915527344,
+        "candidate_font_size": 20.040000915527344,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 18,
+        "source_font_size": 20.040000915527344,
+        "candidate_font_size": 20.040000915527344,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 18,
+        "source_font_size": 20.040000915527344,
+        "candidate_font_size": 20.040000915527344,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 18,
+        "source_font_size": 20.06399917602539,
+        "candidate_font_size": 20.06399917602539,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 18,
+        "source_font_size": 9.960000038146973,
+        "candidate_font_size": 9.960000038146973,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 18,
+        "source_font_size": 27.959999084472656,
+        "candidate_font_size": 28.0,
+        "ratio": 1.0014306479555486,
+        "below_minimum": false
+      },
+      {
+        "page": 18,
+        "source_font_size": 27.959999084472656,
+        "candidate_font_size": 28.0,
+        "ratio": 1.0014306479555486,
+        "below_minimum": false
+      },
+      {
+        "page": 18,
+        "source_font_size": 20.040000915527344,
+        "candidate_font_size": 20.0,
+        "ratio": 0.9980039464221606,
+        "below_minimum": false
+      },
+      {
+        "page": 18,
+        "source_font_size": 20.040000915527344,
+        "candidate_font_size": 20.0,
+        "ratio": 0.9980039464221606,
+        "below_minimum": false
+      },
+      {
+        "page": 18,
+        "source_font_size": 20.040000915527344,
+        "candidate_font_size": 20.0,
+        "ratio": 0.9980039464221606,
+        "below_minimum": false
+      },
+      {
+        "page": 18,
+        "source_font_size": 20.040000915527344,
+        "candidate_font_size": 20.0,
+        "ratio": 0.9980039464221606,
+        "below_minimum": false
+      },
+      {
+        "page": 18,
+        "source_font_size": 20.040000915527344,
+        "candidate_font_size": 20.0,
+        "ratio": 0.9980039464221606,
+        "below_minimum": false
+      },
+      {
+        "page": 18,
+        "source_font_size": 20.06399917602539,
+        "candidate_font_size": 20.0,
+        "ratio": 0.9968102482728437,
+        "below_minimum": false
+      },
+      {
+        "page": 18,
+        "source_font_size": 20.040000915527344,
+        "candidate_font_size": 20.0,
+        "ratio": 0.9980039464221606,
+        "below_minimum": false
+      },
+      {
+        "page": 18,
+        "source_font_size": 20.040000915527344,
+        "candidate_font_size": 20.0,
+        "ratio": 0.9980039464221606,
+        "below_minimum": false
+      },
+      {
+        "page": 19,
+        "source_font_size": 27.983999252319336,
+        "candidate_font_size": 28.0,
+        "ratio": 1.0005717820221618,
+        "below_minimum": false
+      },
+      {
+        "page": 20,
+        "source_font_size": 9.960000038146973,
+        "candidate_font_size": 9.960000038146973,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 20,
+        "source_font_size": 27.983999252319336,
+        "candidate_font_size": 28.0,
+        "ratio": 1.0005717820221618,
+        "below_minimum": false
+      },
+      {
+        "page": 21,
+        "source_font_size": 9.960000038146973,
+        "candidate_font_size": 9.960000038146973,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 21,
+        "source_font_size": 27.983999252319336,
+        "candidate_font_size": 28.0,
+        "ratio": 1.0005717820221618,
+        "below_minimum": false
+      },
+      {
+        "page": 22,
+        "source_font_size": 9.960000038146973,
+        "candidate_font_size": 9.960000038146973,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 22,
+        "source_font_size": 27.983999252319336,
+        "candidate_font_size": 28.0,
+        "ratio": 1.0005717820221618,
+        "below_minimum": false
+      },
+      {
+        "page": 23,
+        "source_font_size": 9.960000038146973,
+        "candidate_font_size": 9.960000038146973,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 23,
+        "source_font_size": 27.983999252319336,
+        "candidate_font_size": 28.0,
+        "ratio": 1.0005717820221618,
+        "below_minimum": false
+      },
+      {
+        "page": 24,
+        "source_font_size": 9.960000038146973,
+        "candidate_font_size": 9.960000038146973,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 24,
+        "source_font_size": 27.983999252319336,
+        "candidate_font_size": 28.0,
+        "ratio": 1.0005717820221618,
+        "below_minimum": false
+      },
+      {
+        "page": 25,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 25,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 25,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 25,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 25,
+        "source_font_size": 9.960000038146973,
+        "candidate_font_size": 9.960000038146973,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 25,
+        "source_font_size": 27.959999084472656,
+        "candidate_font_size": 28.0,
+        "ratio": 1.0014306479555486,
+        "below_minimum": false
+      },
+      {
+        "page": 25,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 25,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 25,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 25,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 25,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 26,
+        "source_font_size": 9.960000038146973,
+        "candidate_font_size": 9.960000038146973,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 26,
+        "source_font_size": 27.959999084472656,
+        "candidate_font_size": 28.0,
+        "ratio": 1.0014306479555486,
+        "below_minimum": false
+      },
+      {
+        "page": 27,
+        "source_font_size": 9.960000038146973,
+        "candidate_font_size": 9.960000038146973,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 27,
+        "source_font_size": 27.959999084472656,
+        "candidate_font_size": 28.0,
+        "ratio": 1.0014306479555486,
+        "below_minimum": false
+      },
+      {
+        "page": 27,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 27,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 27,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 27,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 27,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 27,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 27,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 27,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 27,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 27,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 27,
+        "source_font_size": 18.02400016784668,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8877052735797613,
+        "below_minimum": false
+      },
+      {
+        "page": 27,
+        "source_font_size": 18.02400016784668,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8877052735797613,
+        "below_minimum": false
+      },
+      {
+        "page": 27,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 27,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 27,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 27,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 27,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 27,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 28,
+        "source_font_size": 12.0,
+        "candidate_font_size": 12.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 28,
+        "source_font_size": 36.0,
+        "candidate_font_size": 36.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 28,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 28,
+        "source_font_size": 18.0,
+        "candidate_font_size": 15.0,
+        "ratio": 0.8333333333333334,
+        "below_minimum": false
+      },
+      {
+        "page": 28,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 28,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 28,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 28,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 28,
+        "source_font_size": 18.0,
+        "candidate_font_size": 15.0,
+        "ratio": 0.8333333333333334,
+        "below_minimum": false
+      },
+      {
+        "page": 28,
+        "source_font_size": 18.0,
+        "candidate_font_size": 15.0,
+        "ratio": 0.8333333333333334,
+        "below_minimum": false
+      },
+      {
+        "page": 28,
+        "source_font_size": 18.0,
+        "candidate_font_size": 15.0,
+        "ratio": 0.8333333333333334,
+        "below_minimum": false
+      },
+      {
+        "page": 28,
+        "source_font_size": 18.02400016784668,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8877052735797613,
+        "below_minimum": false
+      },
+      {
+        "page": 28,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 28,
+        "source_font_size": 18.0,
+        "candidate_font_size": 15.0,
+        "ratio": 0.8333333333333334,
+        "below_minimum": false
+      },
+      {
+        "page": 28,
+        "source_font_size": 18.02400016784668,
+        "candidate_font_size": 15.0,
+        "ratio": 0.8322236939810262,
+        "below_minimum": false
+      },
+      {
+        "page": 29,
+        "source_font_size": 12.0,
+        "candidate_font_size": 12.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 29,
+        "source_font_size": 32.040000915527344,
+        "candidate_font_size": 25.0,
+        "ratio": 0.7802746343831847,
+        "below_minimum": false
+      },
+      {
+        "page": 29,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 29,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 29,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 29,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 29,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 29,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 29,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 29,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 29,
+        "source_font_size": 18.02400016784668,
+        "candidate_font_size": 18.0,
+        "ratio": 0.9986684327772314,
+        "below_minimum": false
+      },
+      {
+        "page": 29,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 29,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 29,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 30,
+        "source_font_size": 15.960000038146973,
+        "candidate_font_size": 15.960000038146973,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 30,
+        "source_font_size": 15.960000038146973,
+        "candidate_font_size": 15.960000038146973,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 30,
+        "source_font_size": 15.984000205993652,
+        "candidate_font_size": 15.984000205993652,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 30,
+        "source_font_size": 15.960000038146973,
+        "candidate_font_size": 15.960000038146973,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 30,
+        "source_font_size": 15.960000038146973,
+        "candidate_font_size": 15.960000038146973,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 30,
+        "source_font_size": 12.0,
+        "candidate_font_size": 12.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 30,
+        "source_font_size": 32.040000915527344,
+        "candidate_font_size": 25.0,
+        "ratio": 0.7802746343831847,
+        "below_minimum": false
+      },
+      {
+        "page": 30,
+        "source_font_size": 15.960000038146973,
+        "candidate_font_size": 16.0,
+        "ratio": 1.0025062632680088,
+        "below_minimum": false
+      },
+      {
+        "page": 30,
+        "source_font_size": 15.960000038146973,
+        "candidate_font_size": 16.0,
+        "ratio": 1.0025062632680088,
+        "below_minimum": false
+      },
+      {
+        "page": 30,
+        "source_font_size": 15.960000038146973,
+        "candidate_font_size": 16.0,
+        "ratio": 1.0025062632680088,
+        "below_minimum": false
+      },
+      {
+        "page": 30,
+        "source_font_size": 15.960000038146973,
+        "candidate_font_size": 16.0,
+        "ratio": 1.0025062632680088,
+        "below_minimum": false
+      },
+      {
+        "page": 30,
+        "source_font_size": 15.960000038146973,
+        "candidate_font_size": 16.0,
+        "ratio": 1.0025062632680088,
+        "below_minimum": false
+      },
+      {
+        "page": 30,
+        "source_font_size": 15.960000038146973,
+        "candidate_font_size": 16.0,
+        "ratio": 1.0025062632680088,
+        "below_minimum": false
+      },
+      {
+        "page": 30,
+        "source_font_size": 15.984000205993652,
+        "candidate_font_size": 16.0,
+        "ratio": 1.0010009881006101,
+        "below_minimum": false
+      },
+      {
+        "page": 30,
+        "source_font_size": 15.960000038146973,
+        "candidate_font_size": 16.0,
+        "ratio": 1.0025062632680088,
+        "below_minimum": false
+      },
+      {
+        "page": 30,
+        "source_font_size": 15.960000038146973,
+        "candidate_font_size": 16.0,
+        "ratio": 1.0025062632680088,
+        "below_minimum": false
+      },
+      {
+        "page": 30,
+        "source_font_size": 15.960000038146973,
+        "candidate_font_size": 16.0,
+        "ratio": 1.0025062632680088,
+        "below_minimum": false
+      },
+      {
+        "page": 30,
+        "source_font_size": 15.960000038146973,
+        "candidate_font_size": 16.0,
+        "ratio": 1.0025062632680088,
+        "below_minimum": false
+      },
+      {
+        "page": 30,
+        "source_font_size": 15.960000038146973,
+        "candidate_font_size": 16.0,
+        "ratio": 1.0025062632680088,
+        "below_minimum": false
+      },
+      {
+        "page": 31,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 31,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 31,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 31,
+        "source_font_size": 12.0,
+        "candidate_font_size": 12.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 31,
+        "source_font_size": 32.040000915527344,
+        "candidate_font_size": 25.0,
+        "ratio": 0.7802746343831847,
+        "below_minimum": false
+      },
+      {
+        "page": 31,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 31,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 31,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 31,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 31,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 31,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 31,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 31,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 31,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 32,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 32,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 32,
+        "source_font_size": 12.0,
+        "candidate_font_size": 12.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 32,
+        "source_font_size": 32.040000915527344,
+        "candidate_font_size": 25.0,
+        "ratio": 0.7802746343831847,
+        "below_minimum": false
+      },
+      {
+        "page": 32,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 32,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 32,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 32,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 32,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 32,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 32,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 32,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 32,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 32,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 32,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 32,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 32,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 32,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 32,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 32,
+        "source_font_size": 18.02400016784668,
+        "candidate_font_size": 18.0,
+        "ratio": 0.9986684327772314,
+        "below_minimum": false
+      },
+      {
+        "page": 33,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 33,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 33,
+        "source_font_size": 12.0,
+        "candidate_font_size": 12.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 33,
+        "source_font_size": 32.040000915527344,
+        "candidate_font_size": 25.0,
+        "ratio": 0.7802746343831847,
+        "below_minimum": false
+      },
+      {
+        "page": 33,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 33,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 33,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 33,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 33,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 33,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 33,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 33,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 33,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 33,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 33,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 34,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 34,
+        "source_font_size": 18.02400016784668,
+        "candidate_font_size": 18.02400016784668,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 34,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 34,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 34,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 34,
+        "source_font_size": 12.0,
+        "candidate_font_size": 12.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 34,
+        "source_font_size": 32.040000915527344,
+        "candidate_font_size": 25.0,
+        "ratio": 0.7802746343831847,
+        "below_minimum": false
+      },
+      {
+        "page": 34,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 34,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 34,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 34,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 34,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 34,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 34,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 34,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 34,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 34,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 34,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 34,
+        "source_font_size": 18.02400016784668,
+        "candidate_font_size": 18.0,
+        "ratio": 0.9986684327772314,
+        "below_minimum": false
+      },
+      {
+        "page": 35,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 35,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 35,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 35,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 35,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 35,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 35,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 35,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 35,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 35,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 35,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 35,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 35,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 35,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 35,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 35,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 35,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 35,
+        "source_font_size": 18.02400016784668,
+        "candidate_font_size": 18.02400016784668,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 35,
+        "source_font_size": 18.02400016784668,
+        "candidate_font_size": 18.02400016784668,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 35,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 35,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 35,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 35,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 35,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 35,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 35,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 35,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 35,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 35,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 35,
+        "source_font_size": 32.040000915527344,
+        "candidate_font_size": 25.0,
+        "ratio": 0.7802746343831847,
+        "below_minimum": false
+      },
+      {
+        "page": 35,
+        "source_font_size": 18.02400016784668,
+        "candidate_font_size": 18.0,
+        "ratio": 0.9986684327772314,
+        "below_minimum": false
+      },
+      {
+        "page": 35,
+        "source_font_size": 18.02400016784668,
+        "candidate_font_size": 18.0,
+        "ratio": 0.9986684327772314,
+        "below_minimum": false
+      },
+      {
+        "page": 35,
+        "source_font_size": 18.0,
+        "candidate_font_size": 15.0,
+        "ratio": 0.8333333333333334,
+        "below_minimum": false
+      },
+      {
+        "page": 35,
+        "source_font_size": 18.0,
+        "candidate_font_size": 15.0,
+        "ratio": 0.8333333333333334,
+        "below_minimum": false
+      },
+      {
+        "page": 35,
+        "source_font_size": 15.960000038146973,
+        "candidate_font_size": 13.0,
+        "ratio": 0.8145363389052572,
+        "below_minimum": false
+      },
+      {
+        "page": 35,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 35,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 35,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 35,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 35,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 35,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 35,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 35,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 35,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 35,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 35,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 35,
+        "source_font_size": 18.02400016784668,
+        "candidate_font_size": 18.0,
+        "ratio": 0.9986684327772314,
+        "below_minimum": false
+      },
+      {
+        "page": 35,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 35,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 35,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 35,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 35,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 36,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 36,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 36,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 36,
+        "source_font_size": 12.0,
+        "candidate_font_size": 12.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 36,
+        "source_font_size": 32.06399917602539,
+        "candidate_font_size": 25.0,
+        "ratio": 0.7796906387988176,
+        "below_minimum": false
+      },
+      {
+        "page": 36,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 36,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 36,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 36,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 36,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 36,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 37,
+        "source_font_size": 12.0,
+        "candidate_font_size": 12.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 37,
+        "source_font_size": 32.06399917602539,
+        "candidate_font_size": 25.0,
+        "ratio": 0.7796906387988176,
+        "below_minimum": false
+      },
+      {
+        "page": 37,
+        "source_font_size": 24.0,
+        "candidate_font_size": 19.5,
+        "ratio": 0.8125,
+        "below_minimum": false
+      },
+      {
+        "page": 37,
+        "source_font_size": 24.02400016784668,
+        "candidate_font_size": 19.5,
+        "ratio": 0.8116883060173499,
+        "below_minimum": false
+      },
+      {
+        "page": 37,
+        "source_font_size": 24.0,
+        "candidate_font_size": 19.5,
+        "ratio": 0.8125,
+        "below_minimum": false
+      },
+      {
+        "page": 37,
+        "source_font_size": 24.0,
+        "candidate_font_size": 19.5,
+        "ratio": 0.8125,
+        "below_minimum": false
+      },
+      {
+        "page": 37,
+        "source_font_size": 24.02400016784668,
+        "candidate_font_size": 19.5,
+        "ratio": 0.8116883060173499,
+        "below_minimum": false
+      },
+      {
+        "page": 37,
+        "source_font_size": 24.0,
+        "candidate_font_size": 19.5,
+        "ratio": 0.8125,
+        "below_minimum": false
+      },
+      {
+        "page": 37,
+        "source_font_size": 24.0,
+        "candidate_font_size": 19.5,
+        "ratio": 0.8125,
+        "below_minimum": false
+      },
+      {
+        "page": 37,
+        "source_font_size": 24.0,
+        "candidate_font_size": 19.5,
+        "ratio": 0.8125,
+        "below_minimum": false
+      },
+      {
+        "page": 37,
+        "source_font_size": 24.0,
+        "candidate_font_size": 19.5,
+        "ratio": 0.8125,
+        "below_minimum": false
+      },
+      {
+        "page": 37,
+        "source_font_size": 24.0,
+        "candidate_font_size": 19.5,
+        "ratio": 0.8125,
+        "below_minimum": false
+      },
+      {
+        "page": 37,
+        "source_font_size": 24.0,
+        "candidate_font_size": 19.5,
+        "ratio": 0.8125,
+        "below_minimum": false
+      },
+      {
+        "page": 38,
+        "source_font_size": 12.0,
+        "candidate_font_size": 12.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 38,
+        "source_font_size": 32.06399917602539,
+        "candidate_font_size": 25.0,
+        "ratio": 0.7796906387988176,
+        "below_minimum": false
+      },
+      {
+        "page": 38,
+        "source_font_size": 24.0,
+        "candidate_font_size": 19.5,
+        "ratio": 0.8125,
+        "below_minimum": false
+      },
+      {
+        "page": 38,
+        "source_font_size": 24.02400016784668,
+        "candidate_font_size": 19.5,
+        "ratio": 0.8116883060173499,
+        "below_minimum": false
+      },
+      {
+        "page": 38,
+        "source_font_size": 24.0,
+        "candidate_font_size": 19.5,
+        "ratio": 0.8125,
+        "below_minimum": false
+      },
+      {
+        "page": 38,
+        "source_font_size": 24.0,
+        "candidate_font_size": 19.5,
+        "ratio": 0.8125,
+        "below_minimum": false
+      },
+      {
+        "page": 38,
+        "source_font_size": 24.02400016784668,
+        "candidate_font_size": 19.5,
+        "ratio": 0.8116883060173499,
+        "below_minimum": false
+      },
+      {
+        "page": 38,
+        "source_font_size": 24.0,
+        "candidate_font_size": 19.5,
+        "ratio": 0.8125,
+        "below_minimum": false
+      },
+      {
+        "page": 39,
+        "source_font_size": 12.0,
+        "candidate_font_size": 12.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 39,
+        "source_font_size": 32.06399917602539,
+        "candidate_font_size": 25.0,
+        "ratio": 0.7796906387988176,
+        "below_minimum": false
+      },
+      {
+        "page": 39,
+        "source_font_size": 24.0,
+        "candidate_font_size": 19.5,
+        "ratio": 0.8125,
+        "below_minimum": false
+      },
+      {
+        "page": 39,
+        "source_font_size": 24.0,
+        "candidate_font_size": 19.5,
+        "ratio": 0.8125,
+        "below_minimum": false
+      },
+      {
+        "page": 39,
+        "source_font_size": 24.0,
+        "candidate_font_size": 19.5,
+        "ratio": 0.8125,
+        "below_minimum": false
+      },
+      {
+        "page": 39,
+        "source_font_size": 24.02400016784668,
+        "candidate_font_size": 19.5,
+        "ratio": 0.8116883060173499,
+        "below_minimum": false
+      },
+      {
+        "page": 39,
+        "source_font_size": 24.02400016784668,
+        "candidate_font_size": 19.5,
+        "ratio": 0.8116883060173499,
+        "below_minimum": false
+      },
+      {
+        "page": 39,
+        "source_font_size": 24.02400016784668,
+        "candidate_font_size": 19.5,
+        "ratio": 0.8116883060173499,
+        "below_minimum": false
+      },
+      {
+        "page": 39,
+        "source_font_size": 24.0,
+        "candidate_font_size": 19.5,
+        "ratio": 0.8125,
+        "below_minimum": false
+      },
+      {
+        "page": 39,
+        "source_font_size": 24.0,
+        "candidate_font_size": 19.5,
+        "ratio": 0.8125,
+        "below_minimum": false
+      },
+      {
+        "page": 39,
+        "source_font_size": 24.0,
+        "candidate_font_size": 19.5,
+        "ratio": 0.8125,
+        "below_minimum": false
+      },
+      {
+        "page": 40,
+        "source_font_size": 12.0,
+        "candidate_font_size": 12.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 40,
+        "source_font_size": 32.040000915527344,
+        "candidate_font_size": 25.0,
+        "ratio": 0.7802746343831847,
+        "below_minimum": false
+      },
+      {
+        "page": 40,
+        "source_font_size": 20.040000915527344,
+        "candidate_font_size": 16.0,
+        "ratio": 0.7984031571377285,
+        "below_minimum": false
+      },
+      {
+        "page": 40,
+        "source_font_size": 20.040000915527344,
+        "candidate_font_size": 16.0,
+        "ratio": 0.7984031571377285,
+        "below_minimum": false
+      },
+      {
+        "page": 40,
+        "source_font_size": 20.040000915527344,
+        "candidate_font_size": 16.0,
+        "ratio": 0.7984031571377285,
+        "below_minimum": false
+      },
+      {
+        "page": 40,
+        "source_font_size": 20.040000915527344,
+        "candidate_font_size": 16.0,
+        "ratio": 0.7984031571377285,
+        "below_minimum": false
+      },
+      {
+        "page": 40,
+        "source_font_size": 20.040000915527344,
+        "candidate_font_size": 16.0,
+        "ratio": 0.7984031571377285,
+        "below_minimum": false
+      },
+      {
+        "page": 40,
+        "source_font_size": 20.040000915527344,
+        "candidate_font_size": 16.0,
+        "ratio": 0.7984031571377285,
+        "below_minimum": false
+      },
+      {
+        "page": 40,
+        "source_font_size": 20.040000915527344,
+        "candidate_font_size": 16.0,
+        "ratio": 0.7984031571377285,
+        "below_minimum": false
+      },
+      {
+        "page": 40,
+        "source_font_size": 20.040000915527344,
+        "candidate_font_size": 16.0,
+        "ratio": 0.7984031571377285,
+        "below_minimum": false
+      },
+      {
+        "page": 40,
+        "source_font_size": 20.06399917602539,
+        "candidate_font_size": 16.0,
+        "ratio": 0.7974481986182749,
+        "below_minimum": false
+      },
+      {
+        "page": 40,
+        "source_font_size": 20.040000915527344,
+        "candidate_font_size": 16.0,
+        "ratio": 0.7984031571377285,
+        "below_minimum": false
+      },
+      {
+        "page": 40,
+        "source_font_size": 20.040000915527344,
+        "candidate_font_size": 16.0,
+        "ratio": 0.7984031571377285,
+        "below_minimum": false
+      },
+      {
+        "page": 40,
+        "source_font_size": 20.040000915527344,
+        "candidate_font_size": 16.0,
+        "ratio": 0.7984031571377285,
+        "below_minimum": false
+      },
+      {
+        "page": 40,
+        "source_font_size": 20.06399917602539,
+        "candidate_font_size": 16.0,
+        "ratio": 0.7974481986182749,
+        "below_minimum": false
+      },
+      {
+        "page": 41,
+        "source_font_size": 12.0,
+        "candidate_font_size": 12.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 41,
+        "source_font_size": 32.040000915527344,
+        "candidate_font_size": 25.0,
+        "ratio": 0.7802746343831847,
+        "below_minimum": false
+      },
+      {
+        "page": 41,
+        "source_font_size": 24.0,
+        "candidate_font_size": 19.5,
+        "ratio": 0.8125,
+        "below_minimum": false
+      },
+      {
+        "page": 41,
+        "source_font_size": 24.0,
+        "candidate_font_size": 21.0,
+        "ratio": 0.875,
+        "below_minimum": false
+      },
+      {
+        "page": 41,
+        "source_font_size": 24.02400016784668,
+        "candidate_font_size": 19.5,
+        "ratio": 0.8116883060173499,
+        "below_minimum": false
+      },
+      {
+        "page": 41,
+        "source_font_size": 24.0,
+        "candidate_font_size": 19.5,
+        "ratio": 0.8125,
+        "below_minimum": false
+      },
+      {
+        "page": 41,
+        "source_font_size": 24.0,
+        "candidate_font_size": 19.5,
+        "ratio": 0.8125,
+        "below_minimum": false
+      },
+      {
+        "page": 41,
+        "source_font_size": 24.0,
+        "candidate_font_size": 21.0,
+        "ratio": 0.875,
+        "below_minimum": false
+      },
+      {
+        "page": 41,
+        "source_font_size": 24.02400016784668,
+        "candidate_font_size": 19.5,
+        "ratio": 0.8116883060173499,
+        "below_minimum": false
+      },
+      {
+        "page": 41,
+        "source_font_size": 24.0,
+        "candidate_font_size": 21.0,
+        "ratio": 0.875,
+        "below_minimum": false
+      },
+      {
+        "page": 41,
+        "source_font_size": 24.0,
+        "candidate_font_size": 21.0,
+        "ratio": 0.875,
+        "below_minimum": false
+      },
+      {
+        "page": 42,
+        "source_font_size": 32.040000915527344,
+        "candidate_font_size": 25.0,
+        "ratio": 0.7802746343831847,
+        "below_minimum": false
+      },
+      {
+        "page": 42,
+        "source_font_size": 24.0,
+        "candidate_font_size": 19.5,
+        "ratio": 0.8125,
+        "below_minimum": false
+      },
+      {
+        "page": 42,
+        "source_font_size": 24.0,
+        "candidate_font_size": 24.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 42,
+        "source_font_size": 24.0,
+        "candidate_font_size": 24.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 42,
+        "source_font_size": 24.0,
+        "candidate_font_size": 24.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 42,
+        "source_font_size": 24.02400016784668,
+        "candidate_font_size": 24.0,
+        "ratio": 0.9990009920213536,
+        "below_minimum": false
+      },
+      {
+        "page": 42,
+        "source_font_size": 24.02400016784668,
+        "candidate_font_size": 24.0,
+        "ratio": 0.9990009920213536,
+        "below_minimum": false
+      },
+      {
+        "page": 42,
+        "source_font_size": 24.0,
+        "candidate_font_size": 24.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 42,
+        "source_font_size": 24.0,
+        "candidate_font_size": 24.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 42,
+        "source_font_size": 24.0,
+        "candidate_font_size": 24.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 42,
+        "source_font_size": 24.0,
+        "candidate_font_size": 24.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 42,
+        "source_font_size": 24.0,
+        "candidate_font_size": 24.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 43,
+        "source_font_size": 32.040000915527344,
+        "candidate_font_size": 25.0,
+        "ratio": 0.7802746343831847,
+        "below_minimum": false
+      },
+      {
+        "page": 43,
+        "source_font_size": 27.959999084472656,
+        "candidate_font_size": 28.0,
+        "ratio": 1.0014306479555486,
+        "below_minimum": false
+      },
+      {
+        "page": 44,
+        "source_font_size": 12.0,
+        "candidate_font_size": 12.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 44,
+        "source_font_size": 36.02399826049805,
+        "candidate_font_size": 36.0,
+        "ratio": 0.9993338257368183,
+        "below_minimum": false
+      },
+      {
+        "page": 44,
+        "source_font_size": 20.040000915527344,
+        "candidate_font_size": 16.0,
+        "ratio": 0.7984031571377285,
+        "below_minimum": false
+      },
+      {
+        "page": 44,
+        "source_font_size": 20.040000915527344,
+        "candidate_font_size": 19.5,
+        "ratio": 0.9730538477616065,
+        "below_minimum": false
+      },
+      {
+        "page": 44,
+        "source_font_size": 20.040000915527344,
+        "candidate_font_size": 19.5,
+        "ratio": 0.9730538477616065,
+        "below_minimum": false
+      },
+      {
+        "page": 44,
+        "source_font_size": 20.040000915527344,
+        "candidate_font_size": 16.0,
+        "ratio": 0.7984031571377285,
+        "below_minimum": false
+      },
+      {
+        "page": 44,
+        "source_font_size": 20.040000915527344,
+        "candidate_font_size": 19.5,
+        "ratio": 0.9730538477616065,
+        "below_minimum": false
+      },
+      {
+        "page": 44,
+        "source_font_size": 20.040000915527344,
+        "candidate_font_size": 20.0,
+        "ratio": 0.9980039464221606,
+        "below_minimum": false
+      },
+      {
+        "page": 44,
+        "source_font_size": 20.040000915527344,
+        "candidate_font_size": 20.0,
+        "ratio": 0.9980039464221606,
+        "below_minimum": false
+      },
+      {
+        "page": 44,
+        "source_font_size": 20.040000915527344,
+        "candidate_font_size": 19.5,
+        "ratio": 0.9730538477616065,
+        "below_minimum": false
+      },
+      {
+        "page": 44,
+        "source_font_size": 20.040000915527344,
+        "candidate_font_size": 19.5,
+        "ratio": 0.9730538477616065,
+        "below_minimum": false
+      },
+      {
+        "page": 44,
+        "source_font_size": 20.040000915527344,
+        "candidate_font_size": 20.0,
+        "ratio": 0.9980039464221606,
+        "below_minimum": false
+      },
+      {
+        "page": 45,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 45,
+        "source_font_size": 9.960000038146973,
+        "candidate_font_size": 9.960000038146973,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 45,
+        "source_font_size": 27.959999084472656,
+        "candidate_font_size": 28.0,
+        "ratio": 1.0014306479555486,
+        "below_minimum": false
+      },
+      {
+        "page": 45,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 45,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 45,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 45,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 45,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 45,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 45,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 45,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 45,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 45,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 45,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 45,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 46,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 46,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 46,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 46,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 46,
+        "source_font_size": 18.0,
+        "candidate_font_size": 18.0,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 46,
+        "source_font_size": 9.960000038146973,
+        "candidate_font_size": 9.960000038146973,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 46,
+        "source_font_size": 27.959999084472656,
+        "candidate_font_size": 28.0,
+        "ratio": 1.0014306479555486,
+        "below_minimum": false
+      },
+      {
+        "page": 46,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 46,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 46,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 46,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 46,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 46,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 46,
+        "source_font_size": 18.0,
+        "candidate_font_size": 16.0,
+        "ratio": 0.8888888888888888,
+        "below_minimum": false
+      },
+      {
+        "page": 47,
+        "source_font_size": 60.02399826049805,
+        "candidate_font_size": 60.0,
+        "ratio": 0.9996001889045462,
+        "below_minimum": false
+      }
+    ],
+    "minimum_observed_font_size": 9.960000038146973,
+    "visual_review_required": true,
+    "layout_contract": {
+      "status": "failed",
+      "contract_count": 59,
+      "failures": [
+        "page 1: salutation wrapped unexpectedly",
+        "page 1: missing salutation",
+        "page 4: centered_text wrapped unexpectedly",
+        "page 14: centered_text center drift 226.36pt",
+        "page 14: centered_text center drift 88.36pt",
+        "page 14: centered_text wrapped unexpectedly",
+        "page 14: centered_text center drift 370.36pt",
+        "page 14: centered_text center drift 103.61pt",
+        "page 15: centered_text center drift 182.61pt",
+        "page 15: centered_text wrapped unexpectedly",
+        "page 15: centered_text wrapped unexpectedly",
+        "page 15: centered_text wrapped unexpectedly",
+        "page 16: centered_text center drift 109.34pt",
+        "page 17: centered_text center drift 84.23pt",
+        "page 18: centered_text center drift 93.54pt",
+        "page 27: centered_text wrapped unexpectedly",
+        "page 27: centered_text center drift 50.51pt",
+        "page 27: centered_text wrapped unexpectedly",
+        "page 27: centered_text center drift 106.51pt",
+        "page 27: centered_text center drift 26.51pt",
+        "page 43: centered_text center drift 129.11pt",
+        "page 44: centered_text center drift 104.89pt",
+        "page 45: centered_text wrapped unexpectedly",
+        "page 45: missing salutation",
+        "page 45: centered_text center drift 219.55pt",
+        "page 45: centered_text center drift 139.55pt",
+        "page 46: centered_text wrapped unexpectedly",
+        "page 46: centered_text wrapped unexpectedly",
+        "page 47: centered_text center drift 58.15pt"
+      ],
+      "observed": [
+        {
+          "page": 1,
+          "role": "salutation",
+          "source_block": 10,
+          "candidate_block": 13,
+          "candidate_line_count": 2,
+          "center_error": 255.817,
+          "text": "实施机构：\n项目管理咨询顾问："
+        },
+        {
+          "page": 1,
+          "role": "salutation",
+          "source_block": 11,
+          "candidate_block": 7,
+          "candidate_line_count": 1,
+          "center_error": 587.887,
+          "text": "Government of Punjab"
+        },
+        {
+          "page": 2,
+          "role": "salutation",
+          "source_block": 7,
+          "candidate_block": 16,
+          "candidate_line_count": 1,
+          "center_error": 27.266,
+          "text": "此外，请填写以下链接中的表格："
+        },
+        {
+          "page": 4,
+          "role": "centered_text",
+          "source_block": 2,
+          "candidate_block": 9,
+          "candidate_line_count": 1,
+          "center_error": 0.0,
+          "text": "“LAHORE供水与污水管理项目（LWWMP）”"
+        },
+        {
+          "page": 4,
+          "role": "centered_text",
+          "source_block": 3,
+          "candidate_block": 10,
+          "candidate_line_count": 1,
+          "center_error": 0.0,
+          "text": "第一阶段：Lahore Wastewater and Drainage Management Project"
+        },
+        {
+          "page": 4,
+          "role": "centered_text",
+          "source_block": 4,
+          "candidate_block": 11,
+          "candidate_line_count": 1,
+          "center_error": 12.717,
+          "text": "(LWDMP) - 从LARECHS Colony至Gulshan-e-Ravi Lahore的污水系统（采用"
+        },
+        {
+          "page": 4,
+          "role": "centered_text",
+          "source_block": 6,
+          "candidate_block": 13,
+          "candidate_line_count": 2,
+          "center_error": 12.416,
+          "text": "第二阶段：Lahore Water Supply Project (LWSP) - 在BRBD Canal Lahore建设\n地表水处理厂（54MGD）"
+        },
+        {
+          "page": 5,
+          "role": "centered_text",
+          "source_block": 2,
+          "candidate_block": 2,
+          "candidate_line_count": 1,
+          "center_error": 0.0,
+          "text": "Lahore Wastewater and Drainage Management Project (LWDMP)"
+        },
+        {
+          "page": 5,
+          "role": "centered_text",
+          "source_block": 3,
+          "candidate_block": 10,
+          "candidate_line_count": 1,
+          "center_error": 0.0,
+          "text": "从LARECHS Colony至Gulshan-e-Ravi Lahore的污水系统（采用非开挖技"
+        },
+        {
+          "page": 5,
+          "role": "centered_text",
+          "source_block": 4,
+          "candidate_block": 11,
+          "candidate_line_count": 1,
+          "center_error": 4.175,
+          "text": "术）"
+        },
+        {
+          "page": 7,
+          "role": "centered_text",
+          "source_block": 2,
+          "candidate_block": 1,
+          "candidate_line_count": 1,
+          "center_error": 0.0,
+          "text": "LWDMP"
+        },
+        {
+          "page": 8,
+          "role": "centered_text",
+          "source_block": 1,
+          "candidate_block": 1,
+          "candidate_line_count": 1,
+          "center_error": 0.0,
+          "text": "项目最终线位"
+        },
+        {
+          "page": 9,
+          "role": "centered_text",
+          "source_block": 1,
+          "candidate_block": 2,
+          "candidate_line_count": 1,
+          "center_error": 0.0,
+          "text": "项目与结构的线位"
+        },
+        {
+          "page": 10,
+          "role": "centered_text",
+          "source_block": 1,
+          "candidate_block": 2,
+          "candidate_line_count": 1,
+          "center_error": 0.0,
+          "text": "项目与现场营地的线位"
+        },
+        {
+          "page": 11,
+          "role": "centered_text",
+          "source_block": 1,
+          "candidate_block": 2,
+          "candidate_line_count": 1,
+          "center_error": 0.0,
+          "text": "现有系统"
+        },
+        {
+          "page": 12,
+          "role": "centered_text",
+          "source_block": 1,
+          "candidate_block": 3,
+          "candidate_line_count": 1,
+          "center_error": 0.0,
+          "text": "现有系统"
+        },
+        {
+          "page": 13,
+          "role": "centered_text",
+          "source_block": 1,
+          "candidate_block": 3,
+          "candidate_line_count": 1,
+          "center_error": 0.0,
+          "text": "现有系统"
+        },
+        {
+          "page": 14,
+          "role": "centered_text",
+          "source_block": 1,
+          "candidate_block": 3,
+          "candidate_line_count": 1,
+          "center_error": 226.356,
+          "text": "·污水收集系统将包括二十三个进水构筑物"
+        },
+        {
+          "page": 14,
+          "role": "centered_text",
+          "source_block": 3,
+          "candidate_block": 5,
+          "candidate_line_count": 1,
+          "center_error": 88.356,
+          "text": "·九个（9）进水构筑物专用于雨水管理，以缓解受影响区域的内涝。"
+        },
+        {
+          "page": 14,
+          "role": "centered_text",
+          "source_block": 5,
+          "candidate_block": 6,
+          "candidate_line_count": 2,
+          "center_error": 10.356,
+          "text": "· 提升泵站的进水构筑物将包括进水室、格栅间、出水室、跌水构筑物（16个）、脱"
+        },
+        {
+          "page": 14,
+          "role": "centered_text",
+          "source_block": 6,
+          "candidate_block": 7,
+          "candidate_line_count": 1,
+          "center_error": 10.356,
+          "text": "气室、平硐和臭气控制系统（16个），臭气控制设备安置在跌水构筑物附近专门建"
+        },
+        {
+          "page": 14,
+          "role": "centered_text",
+          "source_block": 7,
+          "candidate_block": 8,
+          "candidate_line_count": 1,
+          "center_error": 370.356,
+          "text": "造的房间内。"
+        },
+        {
+          "page": 14,
+          "role": "centered_text",
+          "source_block": 9,
+          "candidate_block": 2,
+          "candidate_line_count": 1,
+          "center_error": 103.607,
+          "text": "1.收集系统"
+        },
+        {
+          "page": 15,
+          "role": "centered_text",
+          "source_block": 1,
+          "candidate_block": 6,
+          "candidate_line_count": 1,
+          "center_error": 182.607,
+          "text": "污水输送系统由主干污水管线A、B和C及其相应的支管组成。"
+        },
+        {
+          "page": 15,
+          "role": "centered_text",
+          "source_block": 3,
+          "candidate_block": 7,
+          "candidate_line_count": 2,
+          "center_error": 12.107,
+          "text": "a.Line A：LARECHs Colony至Qartaba Chowk, Lahore（含管道直径1050、1500和2400mm）。长度 =\n12.14km（约）"
+        },
+        {
+          "page": 15,
+          "role": "centered_text",
+          "source_block": 5,
+          "candidate_block": 8,
+          "candidate_line_count": 2,
+          "center_error": 6.893,
+          "text": "b.Line B：Gurumangat至Qartaba Chowk, Lahore（含管道直径1050、1500、2400mm）。长度 = 12.82km\n（约）"
+        },
+        {
+          "page": 15,
+          "role": "centered_text",
+          "source_block": 7,
+          "candidate_block": 9,
+          "candidate_line_count": 2,
+          "center_error": 12.111,
+          "text": "c.Line C：Qartaba Chowk至Gulshan-e-Ravi, Lahore（含管道直径1050、1500和3500mm）。长度 =\n7.25km（约）"
+        },
+        {
+          "page": 16,
+          "role": "salutation",
+          "source_block": 1,
+          "candidate_block": 6,
+          "candidate_line_count": 1,
+          "center_error": 9.483,
+          "text": "竖井："
+        },
+        {
+          "page": 16,
+          "role": "salutation",
+          "source_block": 5,
+          "candidate_block": 18,
+          "candidate_line_count": 1,
+          "center_error": 26.955,
+          "text": "其他构筑物："
+        },
+        {
+          "page": 16,
+          "role": "centered_text",
+          "source_block": 8,
+          "candidate_block": 5,
+          "candidate_line_count": 1,
+          "center_error": 109.341,
+          "text": "2.输送系统"
+        },
+        {
+          "page": 17,
+          "role": "centered_text",
+          "source_block": 13,
+          "candidate_block": 7,
+          "candidate_line_count": 1,
+          "center_error": 84.233,
+          "text": "3.处置系统"
+        },
+        {
+          "page": 18,
+          "role": "salutation",
+          "source_block": 1,
+          "candidate_block": 8,
+          "candidate_line_count": 1,
+          "center_error": 182.432,
+          "text": "建造全装修三层框架结构办公楼："
+        },
+        {
+          "page": 18,
+          "role": "centered_text",
+          "source_block": 11,
+          "candidate_block": 7,
+          "candidate_line_count": 1,
+          "center_error": 93.54,
+          "text": "4.建筑物和办公室"
+        },
+        {
+          "page": 19,
+          "role": "centered_text",
+          "source_block": 1,
+          "candidate_block": 2,
+          "candidate_line_count": 1,
+          "center_error": 0.0,
+          "text": "拟建系统示意图"
+        },
+        {
+          "page": 20,
+          "role": "centered_text",
+          "source_block": 3,
+          "candidate_block": 3,
+          "candidate_line_count": 1,
+          "center_error": 0.0,
+          "text": "取水构筑物"
+        },
+        {
+          "page": 21,
+          "role": "centered_text",
+          "source_block": 2,
+          "candidate_block": 2,
+          "candidate_line_count": 1,
+          "center_error": 0.0,
+          "text": "格栅间平面图"
+        },
+        {
+          "page": 22,
+          "role": "centered_text",
+          "source_block": 2,
+          "candidate_block": 2,
+          "candidate_line_count": 1,
+          "center_error": 0.0,
+          "text": "格栅间横剖面图"
+        },
+        {
+          "page": 23,
+          "role": "centered_text",
+          "source_block": 2,
+          "candidate_block": 2,
+          "candidate_line_count": 1,
+          "center_error": 0.0,
+          "text": "跌水构筑物"
+        },
+        {
+          "page": 24,
+          "role": "centered_text",
+          "source_block": 3,
+          "candidate_block": 3,
+          "candidate_line_count": 1,
+          "center_error": 0.0,
+          "text": "雨水取水构筑物"
+        },
+        {
+          "page": 26,
+          "role": "centered_text",
+          "source_block": 3,
+          "candidate_block": 3,
+          "candidate_line_count": 1,
+          "center_error": 0.0,
+          "text": "地下管线（示例）"
+        },
+        {
+          "page": 27,
+          "role": "centered_text",
+          "source_block": 5,
+          "candidate_block": 9,
+          "candidate_line_count": 3,
+          "center_error": 5.488,
+          "text": "iii.已计算并提及的管道尺寸也不得更改。 iv. 沿主干污水管线和支线需建造的检查井最低数量为九十一（91）座（1050mm -（27座）、1500mm（16座）、2400（34"
+        },
+        {
+          "page": 27,
+          "role": "centered_text",
+          "source_block": 8,
+          "candidate_block": 11,
+          "candidate_line_count": 2,
+          "center_error": 50.512,
+          "text": "v.EPC建议将所有取水构筑物保留在处置站现有土地范围内。 vi.用于MTBM顶管施工的污水管应采用带HDPE内衬的钢筋混凝土管，其抗压强度至少为6000 psi或以上。"
+        },
+        {
+          "page": 27,
+          "role": "centered_text",
+          "source_block": 10,
+          "candidate_block": 12,
+          "candidate_line_count": 1,
+          "center_error": 106.512,
+          "text": "vii.业主在处置系统图纸（图号LW-TD-401至图号LW-TD-403）中提出的最终处置站位置。"
+        },
+        {
+          "page": 27,
+          "role": "centered_text",
+          "source_block": 12,
+          "candidate_block": 13,
+          "candidate_line_count": 1,
+          "center_error": 26.512,
+          "text": "viii.承包商应在Gulshan e Ravi处置站安装干式坑垂直无堵塞万向轴泵（累计最终排放能力848立方英尺/秒）。"
+        },
+        {
+          "page": 32,
+          "role": "salutation",
+          "source_block": 3,
+          "candidate_block": 1,
+          "candidate_line_count": 1,
+          "center_error": 362.804,
+          "text": "ITT 11.2 (k)"
+        },
+        {
+          "page": 42,
+          "role": "salutation",
+          "source_block": 0,
+          "candidate_block": 1,
+          "candidate_line_count": 1,
+          "center_error": 76.97,
+          "text": "项目阶段："
+        },
+        {
+          "page": 43,
+          "role": "salutation",
+          "source_block": 0,
+          "candidate_block": 2,
+          "candidate_line_count": 1,
+          "center_error": 89.636,
+          "text": "项目完成时间："
+        },
+        {
+          "page": 43,
+          "role": "centered_text",
+          "source_block": 1,
+          "candidate_block": 1,
+          "candidate_line_count": 1,
+          "center_error": 129.113,
+          "text": "第六节 - 业主要求"
+        },
+        {
+          "page": 44,
+          "role": "salutation",
+          "source_block": 8,
+          "candidate_block": 8,
+          "candidate_line_count": 1,
+          "center_error": 77.276,
+          "text": "合同条件总则："
+        },
+        {
+          "page": 44,
+          "role": "centered_text",
+          "source_block": 9,
+          "candidate_block": 9,
+          "candidate_line_count": 1,
+          "center_error": 2.511,
+          "text": "合同条件为“通用条件”，其构成“EPC/交钥匙项目合同条件（“银皮书”）第二版2017，2022"
+        },
+        {
+          "page": 44,
+          "role": "centered_text",
+          "source_block": 10,
+          "candidate_block": 10,
+          "candidate_line_count": 1,
+          "center_error": 104.886,
+          "text": "年重印并经修订”的一部分，由国际咨询工程师联合会（FIDIC）出版。"
+        },
+        {
+          "page": 45,
+          "role": "centered_text",
+          "source_block": 1,
+          "candidate_block": 4,
+          "candidate_line_count": 2,
+          "center_error": 5.951,
+          "text": "以下草案文件已在WASA网站（https://wasa.punjab.gov.pk/node/52）披露，其中包含根据E&S政策为符合E&S保障要求而 采取的详细行动方案："
+        },
+        {
+          "page": 45,
+          "role": "centered_text",
+          "source_block": 3,
+          "candidate_block": 5,
+          "candidate_line_count": 1,
+          "center_error": 219.551,
+          "text": "1.环境和社会影响评估（ESIA），包括环境和社会管理计划"
+        },
+        {
+          "page": 45,
+          "role": "centered_text",
+          "source_block": 8,
+          "candidate_block": 9,
+          "candidate_line_count": 1,
+          "center_error": 139.551,
+          "text": "5.Babu Sabo污水处理厂作为关联设施的《环境与社会尽职调查报告》（ESDDR）。"
+        },
+        {
+          "page": 46,
+          "role": "centered_text",
+          "source_block": 1,
+          "candidate_block": 8,
+          "candidate_line_count": 2,
+          "center_error": 6.432,
+          "text": "钢筋混凝土（RCC）管将在EPC承包商建立的制造单元预制。这些管将具有6000 PSI的强度，并需要建立制造车间， 以及配料、养护和测试设施。"
+        },
+        {
+          "page": 46,
+          "role": "centered_text",
+          "source_block": 7,
+          "candidate_block": 12,
+          "candidate_line_count": 2,
+          "center_error": 14.432,
+          "text": "115个钻孔已在设计阶段由PMC作为岩土工程勘察报告的一部分完成。岩土勘察揭示了以下土壤地层：低液限黏土 （CL-ML）、粉土（ML）、含砂粉土（ML）、级配不良砂（SP-SM）和粉砂（SM）。"
+        },
+        {
+          "page": 47,
+          "role": "centered_text",
+          "source_block": 4,
+          "candidate_block": 4,
+          "candidate_line_count": 1,
+          "center_error": 58.147,
+          "text": "谢谢"
+        }
+      ]
+    }
+  },
+  "provider": "deepseek",
+  "model": "deepseek-chat",
+  "run": {
+    "engine": "inplace",
+    "source_hash": "06ce684641bfa7eac790496ae5cef9bc8ddd8458f0137581c3e83180dbab653e",
+    "paragraph_count": 262,
+    "translated_paragraph_count": 247,
+    "rendered_paragraphs": {
+      "paragraphs": 247,
+      "style_sizes": [
+        {
+          "source_size": 45.0,
+          "font": "TwCenMT-Bold",
+          "size": 45.0
+        },
+        {
+          "source_size": 24.0,
+          "font": "TwCenMT-Bold",
+          "size": 24.0
+        },
+        {
+          "source_size": 18.0,
+          "font": "Calibri",
+          "size": 15.0
+        },
+        {
+          "source_size": 26.0,
+          "font": "Tahoma-Bold",
+          "size": 26.0
+        },
+        {
+          "source_size": 22.0,
+          "font": "TwCenMT-Regular",
+          "size": 22.0
+        },
+        {
+          "source_size": 26.0,
+          "font": "Tahoma-Bold",
+          "size": 26.0
+        },
+        {
+          "source_size": 28.0,
+          "font": "Tahoma-Bold",
+          "size": 28.0
+        },
+        {
+          "source_size": 28.0,
+          "font": "Tahoma",
+          "size": 28.0
+        },
+        {
+          "source_size": 26.0,
+          "font": "Tahoma-Bold",
+          "size": 26.0
+        },
+        {
+          "source_size": 28.0,
+          "font": "Tahoma-Bold",
+          "size": 28.0
+        },
+        {
+          "source_size": 28.0,
+          "font": "Tahoma-Bold",
+          "size": 28.0
+        },
+        {
+          "source_size": 16.0,
+          "font": "Tahoma",
+          "size": 15.5
+        },
+        {
+          "source_size": 30.0,
+          "font": "ArialMT",
+          "size": 30.0
+        },
+        {
+          "source_size": 30.0,
+          "font": "TwCenMT-Regular",
+          "size": 30.0
+        },
+        {
+          "source_size": 20.0,
+          "font": "Tahoma-Bold",
+          "size": 20.0
+        },
+        {
+          "source_size": 28.0,
+          "font": "Tahoma-Bold",
+          "size": 28.0
+        },
+        {
+          "source_size": 24.0,
+          "font": "ArialMT",
+          "size": 24.0
+        },
+        {
+          "source_size": 19.0,
+          "font": "ArialMT",
+          "size": 19.0
+        },
+        {
+          "source_size": 19.0,
+          "font": "Arial-BoldMT",
+          "size": 19.0
+        },
+        {
+          "source_size": 18.0,
+          "font": "Arial-BoldMT",
+          "size": 16.0
+        },
+        {
+          "source_size": 18.0,
+          "font": "ArialMT",
+          "size": 16.0
+        },
+        {
+          "source_size": 20.0,
+          "font": "ArialMT",
+          "size": 20.0
+        },
+        {
+          "source_size": 36.0,
+          "font": "Calibri-Bold",
+          "size": 36.0
+        },
+        {
+          "source_size": 18.0,
+          "font": "Calibri-Bold",
+          "size": 16.0
+        },
+        {
+          "source_size": 32.0,
+          "font": "Calibri-Bold",
+          "size": 25.0
+        },
+        {
+          "source_size": 18.0,
+          "font": "Calibri-Bold",
+          "size": 18.0
+        },
+        {
+          "source_size": 18.0,
+          "font": "Calibri-Bold",
+          "size": 18.0
+        },
+        {
+          "source_size": 16.0,
+          "font": "Calibri",
+          "size": 13.0
+        },
+        {
+          "source_size": 24.0,
+          "font": "Calibri-Bold",
+          "size": 19.5
+        },
+        {
+          "source_size": 20.0,
+          "font": "Calibri-Bold",
+          "size": 16.0
+        },
+        {
+          "source_size": 24.0,
+          "font": "Calibri",
+          "size": 21.0
+        },
+        {
+          "source_size": 28.0,
+          "font": "Calibri-Bold",
+          "size": 28.0
+        },
+        {
+          "source_size": 36.0,
+          "font": "Calibri-Bold",
+          "size": 36.0
+        },
+        {
+          "source_size": 20.0,
+          "font": "Calibri",
+          "size": 19.5
+        },
+        {
+          "source_size": 20.0,
+          "font": "Calibri-Italic",
+          "size": 20.0
+        },
+        {
+          "source_size": 20.0,
+          "font": "Calibri",
+          "size": 20.0
+        },
+        {
+          "source_size": 60.0,
+          "font": "TwCenMT-CondensedBold",
+          "size": 60.0
+        }
+      ],
+      "size_reduced": [
+        {
+          "page": 1,
+          "source_size": 18.0,
+          "size": 15.0,
+          "text": "实施机构："
+        },
+        {
+          "page": 1,
+          "source_size": 18.0,
+          "size": 15.0,
+          "text": "项目管理咨询顾问："
+        },
+        {
+          "page": 1,
+          "source_size": 18.02,
+          "size": 15.0,
+          "text": "资助方："
+        },
+        {
+          "page": 2,
+          "source_size": 26.04,
+          "size": 26.0,
+          "text": "参会人员介绍"
+        },
+        {
+          "page": 4,
+          "source_size": 26.04,
+          "size": 26.0,
+          "text": "“LAHORE供水与污水管理项目（LWWMP）”"
+        },
+        {
+          "page": 4,
+          "source_size": 26.05,
+          "size": 26.0,
+          "text": "第二阶段：Lahore Water Supply Project (LWSP) - 在BRBD Canal Lahore"
+        },
+        {
+          "page": 6,
+          "source_size": 15.96,
+          "size": 15.5,
+          "text": "概念文件于25.10.2019获CCC批准。"
+        },
+        {
+          "page": 6,
+          "source_size": 15.96,
+          "size": 15.5,
+          "text": "原始PC-I于25.06.2020获ECNEC批准。"
+        },
+        {
+          "page": 6,
+          "source_size": 15.96,
+          "size": 15.5,
+          "text": "项目管理咨询顾问（PMC）于25.04.2022聘用："
+        },
+        {
+          "page": 6,
+          "source_size": 15.96,
+          "size": 15.5,
+          "text": "PMC于30.04.2024受聘，在获得AIIB的NOC后编制更新的可行性研究和修订版PC-I。"
+        },
+        {
+          "page": 6,
+          "source_size": 15.96,
+          "size": 15.5,
+          "text": "CDWP于24.04.2025批准了修订版PC-I。ECNEC于07.08.2025批准。"
+        },
+        {
+          "page": 6,
+          "source_size": 15.96,
+          "size": 15.5,
+          "text": "E&S文件已于15.09.2025在WASA网站上披露。"
+        },
+        {
+          "page": 6,
+          "source_size": 15.96,
+          "size": 15.5,
+          "text": "AIIB董事会于09.10.2025批准了该贷款（100%为工程融资）"
+        },
+        {
+          "page": 6,
+          "source_size": 15.96,
+          "size": 15.5,
+          "text": "具体采购通知（SPN）发布于14.10.2025，投标提交日期为11.12.2025。"
+        },
+        {
+          "page": 6,
+          "source_size": 15.96,
+          "size": 15.5,
+          "text": "第二次标前会议定于20.11.2025举行。"
+        },
+        {
+          "page": 7,
+          "source_size": 30.01,
+          "size": 30.0,
+          "text": "收集系统"
+        },
+        {
+          "page": 7,
+          "source_size": 30.01,
+          "size": 30.0,
+          "text": "2. 输送系统"
+        },
+        {
+          "page": 7,
+          "source_size": 30.01,
+          "size": 30.0,
+          "text": "3. 处置系统"
+        },
+        {
+          "page": 8,
+          "source_size": 20.04,
+          "size": 20.0,
+          "text": "项目最终线位"
+        },
+        {
+          "page": 9,
+          "source_size": 20.04,
+          "size": 20.0,
+          "text": "项目与结构的线位"
+        },
+        {
+          "page": 10,
+          "source_size": 20.04,
+          "size": 20.0,
+          "text": "项目与现场营地的线位"
+        },
+        {
+          "page": 16,
+          "source_size": 18.02,
+          "size": 16.0,
+          "text": "竖井："
+        },
+        {
+          "page": 16,
+          "source_size": 18.0,
+          "size": 16.0,
+          "text": "顶进竖井：82"
+        },
+        {
+          "page": 16,
+          "source_size": 18.0,
+          "size": 16.0,
+          "text": "接收竖井：83"
+        },
+        {
+          "page": 16,
+          "source_size": 18.0,
+          "size": 16.0,
+          "text": "深度：8m至20m"
+        },
+        {
+          "page": 16,
+          "source_size": 18.0,
+          "size": 16.0,
+          "text": "形状：圆形/矩形"
+        },
+        {
+          "page": 16,
+          "source_size": 18.0,
+          "size": 16.0,
+          "text": "方法：拟通过安装钢板桩进行施工"
+        },
+        {
+          "page": 16,
+          "source_size": 18.0,
+          "size": 16.0,
+          "text": "检查井："
+        },
+        {
+          "page": 16,
+          "source_size": 18.0,
+          "size": 16.0,
+          "text": "在这些165竖井中，部分竖井将在指定位置改建为检修井。"
+        },
+        {
+          "page": 16,
+          "source_size": 18.0,
+          "size": 16.0,
+          "text": "检修井编号：91"
+        },
+        {
+          "page": 16,
+          "source_size": 18.02,
+          "size": 16.0,
+          "text": "形状：圆形"
+        },
+        {
+          "page": 16,
+          "source_size": 18.0,
+          "size": 16.0,
+          "text": "方法：现场浇筑或预制"
+        },
+        {
+          "page": 16,
+          "source_size": 18.0,
+          "size": 16.0,
+          "text": "用途：检修井用于人员及机械进行检查和维护。"
+        },
+        {
+          "page": 16,
+          "source_size": 18.0,
+          "size": 16.0,
+          "text": "其他构筑物："
+        },
+        {
+          "page": 16,
+          "source_size": 18.02,
+          "size": 16.0,
+          "text": "跌水构筑物：2"
+        },
+        {
+          "page": 16,
+          "source_size": 18.0,
+          "size": 16.0,
+          "text": "除臭系统：15"
+        },
+        {
+          "page": 16,
+          "source_size": 18.0,
+          "size": 16.0,
+          "text": "通风系统：15"
+        },
+        {
+          "page": 16,
+          "source_size": 18.0,
+          "size": 16.0,
+          "text": "MTBM：6号（新增），按业主要求第5.1子条款的规定"
+        },
+        {
+          "page": 18,
+          "source_size": 20.04,
+          "size": 20.0,
+          "text": "建造全装修三层框架结构办公楼："
+        },
+        {
+          "page": 18,
+          "source_size": 20.04,
+          "size": 20.0,
+          "text": "建造带SMD多媒体墙的SCADA控制室"
+        },
+        {
+          "page": 18,
+          "source_size": 20.04,
+          "size": 20.0,
+          "text": "为处置站工作人员建造行政办公室"
+        },
+        {
+          "page": 18,
+          "source_size": 20.04,
+          "size": 20.0,
+          "text": "太阳能机房（空调）"
+        },
+        {
+          "page": 18,
+          "source_size": 20.04,
+          "size": 20.0,
+          "text": "最先进的MTBM项目展示厅，专门建造微型隧道主题"
+        },
+        {
+          "page": 18,
+          "source_size": 20.06,
+          "size": 20.0,
+          "text": "可容纳40-50人的会议室"
+        },
+        {
+          "page": 18,
+          "source_size": 20.04,
+          "size": 20.0,
+          "text": "为处置站拆除建筑的工作人员建造行政办公室"
+        },
+        {
+          "page": 18,
+          "source_size": 20.04,
+          "size": 20.0,
+          "text": "为业主建造PMU办公室"
+        },
+        {
+          "page": 25,
+          "source_size": 18.0,
+          "size": 16.0,
+          "text": "在与相关部门（WASA、LESCO、PSCA、SNGPL、PTCL等）进行现场考察后，已初步识别并绘制了污水系统、电力线"
+        },
+        {
+          "page": 25,
+          "source_size": 18.0,
+          "size": 16.0,
+          "text": "为验证这些管线，EPC承包商须进行探地雷达（GPR）勘测。"
+        },
+        {
+          "page": 25,
+          "source_size": 18.0,
+          "size": 16.0,
+          "text": "承包商应负责在适用情况下对管线进行临时改移和恢复。"
+        },
+        {
+          "page": 25,
+          "source_size": 18.0,
+          "size": 16.0,
+          "text": "如涉及管线永久改移，承包商应按业主要求所述为业主提供协助。"
+        },
+        {
+          "page": 27,
+          "source_size": 18.0,
+          "size": 16.0,
+          "text": "以下数据和信息不可变。"
+        },
+        {
+          "page": 27,
+          "source_size": 18.0,
+          "size": 16.0,
+          "text": "拟建系统的计算排放量不得由EPC承包商更改。"
+        },
+        {
+          "page": 27,
+          "source_size": 18.0,
+          "size": 16.0,
+          "text": "主干污水管线及其支线的路线走向不得更改。"
+        },
+        {
+          "page": 27,
+          "source_size": 18.0,
+          "size": 16.0,
+          "text": "已计算并提及的管道尺寸也不得更改。"
+        },
+        {
+          "page": 27,
+          "source_size": 18.0,
+          "size": 16.0,
+          "text": "沿主干污水管线和支线需建造的检查井最低数量为九十一（91）座（1050mm -（27座）、1500mm（16座）、240"
+        },
+        {
+          "page": 27,
+          "source_size": 18.02,
+          "size": 16.0,
+          "text": "EPC建议将所有取水构筑物保留在处置站现有土地范围内。"
+        },
+        {
+          "page": 27,
+          "source_size": 18.0,
+          "size": 16.0,
+          "text": "用于MTBM顶管施工的污水管应采用带HDPE内衬的钢筋混凝土管，其抗压强度至少为6000 psi或以上。"
+        },
+        {
+          "page": 27,
+          "source_size": 18.01,
+          "size": 16.0,
+          "text": "业主在处置系统图纸（图号LW-TD-401至图号LW-TD-403）中提出的最终处置站位置。"
+        },
+        {
+          "page": 27,
+          "source_size": 18.0,
+          "size": 16.0,
+          "text": "承包商应在Gulshan e Ravi处置站安装干式坑垂直无堵塞万向轴泵（累计最终排放能力848立方英尺/秒）。"
+        },
+        {
+          "page": 28,
+          "source_size": 18.0,
+          "size": 16.0,
+          "text": "项目名称：Lahore Wastewater and Drainage Management Project (LWDM"
+        },
+        {
+          "page": 28,
+          "source_size": 18.0,
+          "size": 15.0,
+          "text": "Colony至Gulshan-e-Ravi Lahore的污水系统（采用非开挖技术）"
+        },
+        {
+          "page": 28,
+          "source_size": 18.0,
+          "size": 16.0,
+          "text": "项目编号：P000074"
+        },
+        {
+          "page": 28,
+          "source_size": 18.0,
+          "size": 16.0,
+          "text": "项目融资：亚洲基础设施投资银行（AIIB）"
+        },
+        {
+          "page": 28,
+          "source_size": 18.0,
+          "size": 16.0,
+          "text": "项目范围：(i)从Larech Colony和Gurumangat Road至Gulshan-e-Ravi铺设主干污水管"
+        },
+        {
+          "page": 28,
+          "source_size": 18.0,
+          "size": 15.0,
+          "text": "在Gulshan-e-Ravi建设最终处置站，处理能力为24立方米/秒（848立方英尺/秒）"
+        },
+        {
+          "page": 28,
+          "source_size": 18.0,
+          "size": 15.0,
+          "text": "包括配套工程"
+        },
+        {
+          "page": 28,
+          "source_size": 18.02,
+          "size": 16.0,
+          "text": "采购类型：EPC/交钥匙方式"
+        },
+        {
+          "page": 28,
+          "source_size": 18.0,
+          "size": 16.0,
+          "text": "采购方式：国际公开竞争性招标（IOCT）"
+        },
+        {
+          "page": 28,
+          "source_size": 18.0,
+          "size": 15.0,
+          "text": "单阶段–双信封招标程序"
+        },
+        {
+          "page": 28,
+          "source_size": 18.01,
+          "size": 15.0,
+          "text": "AIIB的《借款人采购指令》（PIR）（2024年7月26日，不时更新）及FIDIC合同格式"
+        },
+        {
+          "page": 29,
+          "source_size": 32.04,
+          "size": 25.0,
+          "text": "招标文件的组成部分"
+        },
+        {
+          "page": 29,
+          "source_size": 18.0,
+          "size": 16.0,
+          "text": "第1节 - 投标人须知（ITT）"
+        },
+        {
+          "page": 29,
+          "source_size": 18.0,
+          "size": 16.0,
+          "text": "第2节 - 投标数据表（TDS）"
+        },
+        {
+          "page": 29,
+          "source_size": 18.0,
+          "size": 16.0,
+          "text": "第3节 - 评审和资格标准"
+        },
+        {
+          "page": 29,
+          "source_size": 18.0,
+          "size": 16.0,
+          "text": "第4节 - 投标格式"
+        },
+        {
+          "page": 29,
+          "source_size": 18.0,
+          "size": 16.0,
+          "text": "第5节 - 合格国家"
+        },
+        {
+          "page": 29,
+          "source_size": 18.0,
+          "size": 16.0,
+          "text": "第6节 – 业主要求"
+        },
+        {
+          "page": 29,
+          "source_size": 18.02,
+          "size": 18.0,
+          "text": "第三部分–合同条件和合同格式"
+        },
+        {
+          "page": 29,
+          "source_size": 18.0,
+          "size": 16.0,
+          "text": "第7节 - 合同条件通用条款"
+        },
+        {
+          "page": 29,
+          "source_size": 18.0,
+          "size": 16.0,
+          "text": "第8节 - 合同条件专用条款"
+        },
+        {
+          "page": 29,
+          "source_size": 18.0,
+          "size": 16.0,
+          "text": "第9节 - 合同格式"
+        },
+        {
+          "page": 30,
+          "source_size": 32.04,
+          "size": 25.0,
+          "text": "第一节和第二节"
+        },
+        {
+          "page": 31,
+          "source_size": 32.04,
+          "size": 25.0,
+          "text": "第一节和第二节"
+        },
+        {
+          "page": 32,
+          "source_size": 32.04,
+          "size": 25.0,
+          "text": "第一节和第二节"
+        },
+        {
+          "page": 33,
+          "source_size": 32.04,
+          "size": 25.0,
+          "text": "第一节和第二节"
+        },
+        {
+          "page": 34,
+          "source_size": 32.04,
+          "size": 25.0,
+          "text": "第一节和第二节"
+        },
+        {
+          "page": 35,
+          "source_size": 32.04,
+          "size": 25.0,
+          "text": "第一节和第二节"
+        },
+        {
+          "page": 35,
+          "source_size": 18.02,
+          "size": 18.0,
+          "text": "投标书的评审和比较"
+        },
+        {
+          "page": 35,
+          "source_size": 18.0,
+          "size": 15.0,
+          "text": "此前未因实质上不响应而被拒绝的投标书（包括符合第3节“评审和资格标准”标题2 [资格]下所述的资格和合格性标准）仅应按以"
+        },
+        {
+          "page": 35,
+          "source_size": 15.96,
+          "size": 13.0,
+          "text": "技术上响应的投标书必须总体得分至少65分，且上述每个类别中达到最低要求分数。"
+        },
+        {
+          "page": 36,
+          "source_size": 32.06,
+          "size": 25.0,
+          "text": "第一节和第二节"
+        },
+        {
+          "page": 37,
+          "source_size": 32.06,
+          "size": 25.0,
+          "text": "第三节 - 评审和资格标准"
+        },
+        {
+          "page": 37,
+          "source_size": 24.0,
+          "size": 19.5,
+          "text": "资格标准"
+        },
+        {
+          "page": 37,
+          "source_size": 24.02,
+          "size": 19.5,
+          "text": "2.1合格性"
+        },
+        {
+          "page": 37,
+          "source_size": 24.0,
+          "size": 19.5,
+          "text": "2.1.1国籍"
+        },
+        {
+          "page": 37,
+          "source_size": 24.0,
+          "size": 19.5,
+          "text": "2.1.2利益冲突"
+        },
+        {
+          "page": 37,
+          "source_size": 24.02,
+          "size": 19.5,
+          "text": "2.1.3 AIIB合格性"
+        },
+        {
+          "page": 37,
+          "source_size": 24.0,
+          "size": 19.5,
+          "text": "2.1.4政府所有企业"
+        },
+        {
+          "page": 37,
+          "source_size": 24.0,
+          "size": 19.5,
+          "text": "2.1.5联合国合格性"
+        },
+        {
+          "page": 37,
+          "source_size": 24.0,
+          "size": 19.5,
+          "text": "2.1.6在巴基斯坦工程师委员会的注册"
+        },
+        {
+          "page": 37,
+          "source_size": 24.0,
+          "size": 19.5,
+          "text": "2.1.7在巴基斯坦税务机关的注册"
+        },
+        {
+          "page": 37,
+          "source_size": 24.0,
+          "size": 19.5,
+          "text": "2.1.8在原产国相关机构的注册"
+        },
+        {
+          "page": 37,
+          "source_size": 24.0,
+          "size": 19.5,
+          "text": "2.1.9在原产国税务机关的注册"
+        },
+        {
+          "page": 38,
+          "source_size": 32.06,
+          "size": 25.0,
+          "text": "第三节 - 评审和资格标准"
+        },
+        {
+          "page": 38,
+          "source_size": 24.0,
+          "size": 19.5,
+          "text": "资格标准"
+        },
+        {
+          "page": 38,
+          "source_size": 24.02,
+          "size": 19.5,
+          "text": "2.2历史合同不履约"
+        },
+        {
+          "page": 38,
+          "source_size": 24.0,
+          "size": 19.5,
+          "text": "2.2.1不履约合同的历史"
+        },
+        {
+          "page": 38,
+          "source_size": 24.0,
+          "size": 19.5,
+          "text": "2.2.2基于投标担保声明执行的暂停"
+        },
+        {
+          "page": 38,
+          "source_size": 24.02,
+          "size": 19.5,
+          "text": "2.2.3未决诉讼和仲裁"
+        },
+        {
+          "page": 38,
+          "source_size": 24.0,
+          "size": 19.5,
+          "text": "2.2.4 ESHS履约声明"
+        },
+        {
+          "page": 39,
+          "source_size": 32.06,
+          "size": 25.0,
+          "text": "第三节 - 评审和资格标准"
+        },
+        {
+          "page": 39,
+          "source_size": 24.0,
+          "size": 19.5,
+          "text": "2.3财务状况"
+        },
+        {
+          "page": 39,
+          "source_size": 24.0,
+          "size": 19.5,
+          "text": "2.3.1历史财务表现："
+        },
+        {
+          "page": 39,
+          "source_size": 24.0,
+          "size": 19.5,
+          "text": "2.3.2平均年施工营业额："
+        },
+        {
+          "page": 39,
+          "source_size": 24.02,
+          "size": 19.5,
+          "text": "AACT："
+        },
+        {
+          "page": 39,
+          "source_size": 24.02,
+          "size": 19.5,
+          "text": "90百万美元"
+        },
+        {
+          "page": 39,
+          "source_size": 24.0,
+          "size": 19.5,
+          "text": "2.3.3财务资源"
+        },
+        {
+          "page": 39,
+          "source_size": 24.0,
+          "size": 19.5,
+          "text": "财务资源：20百万美元"
+        },
+        {
+          "page": 40,
+          "source_size": 32.04,
+          "size": 25.0,
+          "text": "第三节 - 评审和资格标准"
+        },
+        {
+          "page": 40,
+          "source_size": 20.04,
+          "size": 16.0,
+          "text": "2.4投标人经验"
+        },
+        {
+          "page": 40,
+          "source_size": 20.04,
+          "size": 16.0,
+          "text": "2.4.1 A – 类似规模和性质的合同："
+        },
+        {
+          "page": 40,
+          "source_size": 20.04,
+          "size": 16.0,
+          "text": "2.4.1.i.（tunnel/sewer/stormwater管道施工及运维）"
+        },
+        {
+          "page": 40,
+          "source_size": 20.04,
+          "size": 16.0,
+          "text": "2.4.1.ii（MTBM的运营与维护）"
+        },
+        {
+          "page": 40,
+          "source_size": 20.04,
+          "size": 16.0,
+          "text": "2.4.1 B-类似规模和性质的合同（处置站施工）"
+        },
+        {
+          "page": 40,
+          "source_size": 20.04,
+          "size": 16.0,
+          "text": "2.4.2 A-关键活动经验"
+        },
+        {
+          "page": 40,
+          "source_size": 20.04,
+          "size": 16.0,
+          "text": "2.4.2.i.微隧道合同设计"
+        },
+        {
+          "page": 40,
+          "source_size": 20.04,
+          "size": 16.0,
+          "text": "2.4.2 B处置站合同设计"
+        },
+        {
+          "page": 40,
+          "source_size": 20.06,
+          "size": 16.0,
+          "text": "2.4.3一般施工经验"
+        },
+        {
+          "page": 40,
+          "source_size": 20.04,
+          "size": 16.0,
+          "text": "ESHS要求"
+        },
+        {
+          "page": 40,
+          "source_size": 20.04,
+          "size": 16.0,
+          "text": "2.5分包商和制造商"
+        },
+        {
+          "page": 40,
+          "source_size": 20.06,
+          "size": 16.0,
+          "text": "2.5.1分包商对MTBM运营和维护能力的评估标准"
+        },
+        {
+          "page": 41,
+          "source_size": 32.04,
+          "size": 25.0,
+          "text": "第六节 – 业主要求"
+        },
+        {
+          "page": 41,
+          "source_size": 24.0,
+          "size": 19.5,
+          "text": "EPC承包商的主要责任："
+        },
+        {
+          "page": 41,
+          "source_size": 24.0,
+          "size": 21.0,
+          "text": "承包商将负责："
+        },
+        {
+          "page": 41,
+          "source_size": 24.02,
+          "size": 19.5,
+          "text": "工程设计：所有项目组成部分的详细设计。"
+        },
+        {
+          "page": 41,
+          "source_size": 24.0,
+          "size": 19.5,
+          "text": "采购和供应：设备、机械和材料在各方面。"
+        },
+        {
+          "page": 41,
+          "source_size": 24.0,
+          "size": 19.5,
+          "text": "土建和机电基础设施工程：所有结构的施工、安装和调试"
+        },
+        {
+          "page": 41,
+          "source_size": 24.0,
+          "size": 21.0,
+          "text": "以及设备在各方面完成。"
+        },
+        {
+          "page": 41,
+          "source_size": 24.02,
+          "size": 19.5,
+          "text": "缺陷通知期（DNP）：所有工程一（1）年。"
+        },
+        {
+          "page": 41,
+          "source_size": 24.0,
+          "size": 21.0,
+          "text": "EPC承包商将执行以下工程，包括设计、采购、"
+        },
+        {
+          "page": 41,
+          "source_size": 24.0,
+          "size": 21.0,
+          "text": "施工和测试与调试在各方面完成。"
+        },
+        {
+          "page": 42,
+          "source_size": 32.04,
+          "size": 25.0,
+          "text": "第六节 – 业主要求"
+        },
+        {
+          "page": 42,
+          "source_size": 24.0,
+          "size": 19.5,
+          "text": "项目阶段："
+        },
+        {
+          "page": 43,
+          "source_size": 32.04,
+          "size": 25.0,
+          "text": "第六节 – 业主要求"
+        },
+        {
+          "page": 44,
+          "source_size": 36.02,
+          "size": 36.0,
+          "text": "第七节 – 合同文件"
+        },
+        {
+          "page": 44,
+          "source_size": 20.04,
+          "size": 16.0,
+          "text": "合同条件总则："
+        },
+        {
+          "page": 44,
+          "source_size": 20.04,
+          "size": 19.5,
+          "text": "合同条件为“通用条件”，其构成“EPC/交钥匙项目合同条件（“银皮书”）第二版2017，2022年重印并经修订”的一部分"
+        },
+        {
+          "page": 44,
+          "source_size": 20.04,
+          "size": 16.0,
+          "text": "合格国家："
+        },
+        {
+          "page": 44,
+          "source_size": 20.04,
+          "size": 19.5,
+          "text": "来自下列国家的公司、货物和服务被排除在投标程序之外"
+        },
+        {
+          "page": 44,
+          "source_size": 20.04,
+          "size": 20.0,
+          "text": "受到以下措施的国家：联合国安全理事会的禁运/排除决定/金融制裁"
+        },
+        {
+          "page": 44,
+          "source_size": 20.05,
+          "size": 19.5,
+          "text": "巴基斯坦政府对其施加任何此类限制的国家。有关此类限制的信息可在商务部网站获取："
+        },
+        {
+          "page": 44,
+          "source_size": 20.04,
+          "size": 20.0,
+          "text": "https://www.commerce.gov.pk/（进口政策令2022）"
+        },
+        {
+          "page": 45,
+          "source_size": 18.0,
+          "size": 16.0,
+          "text": "以下草案文件已在WASA网站（https://wasa.punjab.gov.pk/node/52）披露，其中包含根据E"
+        },
+        {
+          "page": 45,
+          "source_size": 18.0,
+          "size": 16.0,
+          "text": "环境和社会影响评估（ESIA），包括环境和社会管理计划"
+        },
+        {
+          "page": 45,
+          "source_size": 18.0,
+          "size": 16.0,
+          "text": "主干污水管线的生计恢复计划（LRP）"
+        },
+        {
+          "page": 45,
+          "source_size": 18.0,
+          "size": 16.0,
+          "text": "性别行动计划（GAP）"
+        },
+        {
+          "page": 45,
+          "source_size": 18.0,
+          "size": 16.0,
+          "text": "利益相关者参与计划（SEP）"
+        },
+        {
+          "page": 45,
+          "source_size": 18.0,
+          "size": 16.0,
+          "text": "Babu Sabo污水处理厂作为关联设施的《环境与社会尽职调查报告》（ESDDR）。"
+        },
+        {
+          "page": 46,
+          "source_size": 18.0,
+          "size": 16.0,
+          "text": "钢筋混凝土（RCC）管将在EPC承包商建立的制造单元预制。这些管将具有6000 PSI的强度，并需要建立制造车间，以及配"
+        },
+        {
+          "page": 46,
+          "source_size": 18.0,
+          "size": 16.0,
+          "text": "无需征地。"
+        },
+        {
+          "page": 46,
+          "source_size": 18.0,
+          "size": 16.0,
+          "text": "更新已披露的E&S文件（如需要）以及环境和社会管理计划，包括健康与安全计划，将被实施。"
+        },
+        {
+          "page": 46,
+          "source_size": 18.0,
+          "size": 16.0,
+          "text": "115个钻孔已在设计阶段由PMC作为岩土工程勘察报告的一部分完成。岩土勘察揭示了以下土壤地层：低液限黏土（CL-ML）、"
+        },
+        {
+          "page": 46,
+          "source_size": 18.0,
+          "size": 16.0,
+          "text": "整个项目预计在2.5年内完成，采用6台新型泥浆式微型隧道掘进机（MTBM）。"
+        },
+        {
+          "page": 47,
+          "source_size": 60.02,
+          "size": 60.0,
+          "text": "谢谢"
+        }
+      ]
+    },
+    "table_translation": {
+      "status": "patched",
+      "table_count": 8,
+      "skipped_table_count": 0,
+      "pages": {
+        "30": {
+          "font_size": 16.0,
+          "tables": 1
+        },
+        "31": {
+          "font_size": 18.0,
+          "tables": 1
+        },
+        "32": {
+          "font_size": 18.0,
+          "tables": 1
+        },
+        "33": {
+          "font_size": 18.0,
+          "tables": 1
+        },
+        "34": {
+          "font_size": 18.0,
+          "tables": 1
+        },
+        "35": {
+          "font_size": 18.0,
+          "tables": 1
+        },
+        "36": {
+          "font_size": 18.0,
+          "tables": 1
+        },
+        "42": {
+          "font_size": 24.0,
+          "tables": 1
+        }
+      }
+    },
+    "rotated_lines_left_untouched": 0,
+    "translation_warning_count": 3,
+    "translation": {
+      "units": 317,
+      "distinct_texts": 281,
+      "from_cache": 276,
+      "requests": 2,
+      "workers": 6
+    },
+    "translation_warnings": [
+      {
+        "unit_id": "ecffade701c56e7cc53b08ed9098f2232bd9d73a54be67c4083233fb6f321f12",
+        "object_id": "para:59",
+        "errors": [
+          "UNTRANSLATED_ENGLISH: 'Line' remains in Chinese output",
+          "UNTRANSLATED_ENGLISH: 'LARECHs' remains in Chinese output",
+          "UNTRANSLATED_ENGLISH: 'Colony' remains in Chinese output",
+          "UNTRANSLATED_ENGLISH: 'Qartaba' remains in Chinese output",
+          "UNTRANSLATED_ENGLISH: 'Chowk' remains in Chinese output",
+          "UNTRANSLATED_ENGLISH: 'Lahore' remains in Chinese output"
+        ]
+      },
+      {
+        "unit_id": "e53d5fedbd16c22718d4865b5846f84a5b3eaf78aaa31dae7b0bd5bc50765bbf",
+        "object_id": "para:60",
+        "errors": [
+          "UNTRANSLATED_ENGLISH: 'Line' remains in Chinese output",
+          "UNTRANSLATED_ENGLISH: 'Gurumangat' remains in Chinese output",
+          "UNTRANSLATED_ENGLISH: 'Qartaba' remains in Chinese output",
+          "UNTRANSLATED_ENGLISH: 'Chowk' remains in Chinese output",
+          "UNTRANSLATED_ENGLISH: 'Lahore' remains in Chinese output"
+        ]
+      },
+      {
+        "unit_id": "5050a197bed8bae6a70f893e2f501001247b06487c2568fbed951d71a244cc2d",
+        "object_id": "para:61",
+        "errors": [
+          "UNTRANSLATED_ENGLISH: 'Line' remains in Chinese output",
+          "UNTRANSLATED_ENGLISH: 'Qartaba' remains in Chinese output",
+          "UNTRANSLATED_ENGLISH: 'Chowk' remains in Chinese output",
+          "UNTRANSLATED_ENGLISH: 'Lahore' remains in Chinese output"
+        ]
+      }
+    ],
+    "cmap_repairs": {
+      "repaired_fonts": 17,
+      "repairs": [
+        {
+          "font": "F2",
+          "mapping": "U+2013->U+002D",
+          "control_count": 1
+        },
+        {
+          "font": "IPcfb1a71e",
+          "mapping": "U+2010->U+002D",
+          "control_count": 1
+        },
+        {
+          "font": "IPcfb1a71e",
+          "mapping": "U+2013->U+002D",
+          "control_count": 1
+        },
+        {
+          "font": "IPcd1b8ba5",
+          "mapping": "U+2012->U+002D",
+          "control_count": 1
+        },
+        {
+          "font": "IPcd1b8ba5",
+          "mapping": "U+2013->U+002D",
+          "control_count": 1
+        },
+        {
+          "font": "IPcd1b8ba5",
+          "mapping": "U+2015->U+002D",
+          "control_count": 1
+        },
+        {
+          "font": "IPcd1b8ba5",
+          "mapping": "U+00AD->U+002D",
+          "control_count": 1
+        },
+        {
+          "font": "IPcd1b8ba5",
+          "mapping": "U+00A0->U+0020",
+          "control_count": 1
+        },
+        {
+          "font": "IP71407665",
+          "mapping": "U+2012->U+002D",
+          "control_count": 1
+        },
+        {
+          "font": "IP71407665",
+          "mapping": "U+2013->U+002D",
+          "control_count": 1
+        },
+        {
+          "font": "IP71407665",
+          "mapping": "U+2015->U+002D",
+          "control_count": 1
+        },
+        {
+          "font": "IP71407665",
+          "mapping": "U+00AD->U+002D",
+          "control_count": 1
+        },
+        {
+          "font": "IP71407665",
+          "mapping": "U+00A0->U+0020",
+          "control_count": 1
+        },
+        {
+          "font": "F15",
+          "mapping": "U+2013->U+002D",
+          "control_count": 1
+        },
+        {
+          "font": "F16",
+          "mapping": "U+2013->U+002D",
+          "control_count": 1
+        },
+        {
+          "font": "pdfTablecfb1a71e49",
+          "mapping": "U+2010->U+002D",
+          "control_count": 1
+        },
+        {
+          "font": "pdfTablecfb1a71e49",
+          "mapping": "U+2013->U+002D",
+          "control_count": 1
+        }
+      ]
+    }
+  }
+}

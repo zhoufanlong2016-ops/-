@@ -1,0 +1,4 @@
+{"engine":"inplace","exit":0,"wall_s":912,"last":"{\"engine\": \"inplace\", \"source\": \"2. V2 - Part II - Employer_s Requirements.pdf\", \"import_s\": 0.08, \"process_s\": 911.58, \"total_s\": 911.66, \"peak_mb\": 475}"}
+{"engine":"mineru","exit":1,"wall_s":4229,"last":"\u001b[32m2026-10-02 14:08:32.539\u001b[0m | \u001b[1mINFO    \u001b[0m | \u001b[36mmineru.backend.analyze\u001b[0m:\u001b[36m_log_infer_performance\u001b[0m:\u001b[36m26\u001b[0m - \u001b[1mmodel_list infer finished, file_suffix=pdf, pages=777, cost=159.002004s, speed=4.887 page/s\u001b[0m"}
+{"engine":"babeldoc","exit":1,"wall_s":633,"last":""}
+DONE

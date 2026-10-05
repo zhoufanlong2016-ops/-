@@ -1,0 +1,23 @@
+{
+  "status": "FAILED",
+  "source_hash": "6681b44081c1ef90f9a982f3edfd7ab01bc24ea5e2849d344475070a7aa08999",
+  "classification": "B",
+  "provider": "openai",
+  "model": "gpt-5.6-luna",
+  "run": {
+    "engine": "mineru4",
+    "mineru_tier": "flash",
+    "mineru_ocr_mode": "txt",
+    "source_hash": "6681b44081c1ef90f9a982f3edfd7ab01bc24ea5e2849d344475070a7aa08999",
+    "hybrid_parse": {
+      "parser": "native",
+      "native_line_count": 188,
+      "semantic_block_count": 158,
+      "rotated_pages": [
+        1
+      ],
+      "table_pages": []
+    }
+  },
+  "error": "RuntimeError: MinerU result contains no translatable text blocks"
+}

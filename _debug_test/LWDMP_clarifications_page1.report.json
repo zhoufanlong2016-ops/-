@@ -1,0 +1,21 @@
+{
+  "status": "FAILED",
+  "source_hash": "d513d872f5a0f322eda6020e78d387eb3958fb6ac9db9cf117db099a5907c2f8",
+  "classification": "A",
+  "provider": "qwen",
+  "model": "qwen3.8-max",
+  "run": {
+    "engine": "mineru4",
+    "mineru_tier": "flash",
+    "mineru_ocr_mode": "txt",
+    "source_hash": "d513d872f5a0f322eda6020e78d387eb3958fb6ac9db9cf117db099a5907c2f8",
+    "hybrid_parse": {
+      "parser": "native",
+      "native_line_count": 15,
+      "semantic_block_count": 3,
+      "rotated_pages": [],
+      "table_pages": []
+    }
+  },
+  "error": "QwenChatError: 1150c8794d85c3ed24e88480f8fc3418b293d397b5509d5c44c94083b3bb06f5: [\"UNTRANSLATED_ENGLISH: 'th' remains in Chinese output\", \"DATE_ORDINAL_UNTRANSLATED: '17th' remains; translate the ordinal\", \"DATE_MONTH_UNTRANSLATED: 'December' remains in Chinese output\"]"
+}

@@ -1,0 +1,27 @@
+{
+  "error": "table translation gateway returned HTTP 502 (STRUCTURED_OUTPUT_MAPPING_INVALID)",
+  "error_type": "RuntimeError",
+  "run": {
+    "engine": "babeldoc.format.pdf.high_level.async_translate",
+    "gateway": "local",
+    "source_hash": "f9a5160a890af7c408e120c6d06e85768c58c200a5f94be75d915d742830daf5",
+    "timing_seconds": {
+      "total_until_failure": 26.765
+    },
+    "gateway_requests": 6,
+    "gateway_batch_sizes": [
+      20,
+      20,
+      20,
+      20,
+      20,
+      20
+    ],
+    "gateway_structured_requests": 6,
+    "gateway_fallback_requests": 0,
+    "gateway_upstream_results": 9,
+    "gateway_upstream_elapsed_ms_total": 42151,
+    "gateway_upstream_elapsed_ms_max": 7412,
+    "gateway_upstream_failures": 3
+  }
+}

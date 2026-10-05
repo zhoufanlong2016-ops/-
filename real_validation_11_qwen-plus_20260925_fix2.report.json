@@ -1,0 +1,158 @@
+{
+  "status": "FAILED",
+  "preflight": {
+    "source_hash": "ab0bc499bd067242c1eb95809fa5efe2aea1e80f749f70777db1911d61aba24d",
+    "page_count": 21,
+    "page_sizes": [
+      [
+        612.0,
+        792.0
+      ],
+      [
+        842.04,
+        595.32
+      ],
+      [
+        842.04,
+        595.32
+      ],
+      [
+        842.04,
+        595.32
+      ],
+      [
+        842.04,
+        595.32
+      ],
+      [
+        842.04,
+        595.32
+      ],
+      [
+        842.04,
+        595.32
+      ],
+      [
+        842.04,
+        595.32
+      ],
+      [
+        842.04,
+        595.32
+      ],
+      [
+        842.04,
+        595.32
+      ],
+      [
+        842.04,
+        595.32
+      ],
+      [
+        612.0,
+        792.0
+      ],
+      [
+        1191.0,
+        842.0
+      ],
+      [
+        1191.0,
+        842.0
+      ],
+      [
+        1191.0,
+        842.0
+      ],
+      [
+        612.0,
+        792.0
+      ],
+      [
+        1191.0,
+        842.0
+      ],
+      [
+        612.0,
+        792.0
+      ],
+      [
+        612.0,
+        792.0
+      ],
+      [
+        612.0,
+        792.0
+      ],
+      [
+        1043.26,
+        737.26
+      ]
+    ],
+    "classification": "B",
+    "reasons": [
+      "complex layout requires full visual review",
+      "table-like grid detected on page(s) 2, 3, 4, 5, 6, 7, 8, 9, 10, 13, 14, 15, 17, 19; table translation is experimental and requires separate visual acceptance"
+    ],
+    "table_pages": [
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      13,
+      14,
+      15,
+      17,
+      19
+    ],
+    "visual_review_required": true
+  },
+  "provider": "qwen",
+  "model": "qwen-plus",
+  "error": "\"TranslationSettings\" object has no field \"document_translator_skip_pages\"\nTraceback (most recent call last):\n  File \"D:\\01 绿色程序\\文档翻译器\\src\\document_translator\\pdf_worker.py\", line 347, in main\n    asyncio.run(_translate(payload))\n    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\Program Files\\Python\\Lib\\asyncio\\runners.py\", line 196, in run\n    return runner.run(main)\n           ~~~~~~~~~~^^^^^^\n  File \"D:\\Program Files\\Python\\Lib\\asyncio\\runners.py\", line 119, in run\n    return self._loop.run_until_complete(task)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"D:\\Program Files\\Python\\Lib\\asyncio\\base_events.py\", line 725, in run_until_complete\n    return future.result()\n           ~~~~~~~~~~~~~^^\n  File \"D:\\01 绿色程序\\文档翻译器\\src\\document_translator\\pdf_worker.py\", line 312, in _translate\n    settings.translation.document_translator_skip_pages = tuple(\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\01 绿色程序\\文档翻译器\\.venv\\Lib\\site-packages\\pydantic\\main.py\", line 997, in __setattr__\n    elif (setattr_handler := self._setattr_handler(name, value)) is not None:\n                             ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^\n  File \"D:\\01 绿色程序\\文档翻译器\\.venv\\Lib\\site-packages\\pydantic\\main.py\", line 1044, in _setattr_handler\n    raise ValueError(f'\"{cls.__name__}\" object has no field \"{name}\"')\nValueError: \"TranslationSettings\" object has no field \"document_translator_skip_pages\"\n",
+  "error_type": "RuntimeError",
+  "run": {
+    "engine": "babeldoc.format.pdf.high_level.async_translate",
+    "gateway": "local",
+    "source_hash": "ab0bc499bd067242c1eb95809fa5efe2aea1e80f749f70777db1911d61aba24d",
+    "timing_seconds": {
+      "table_translation": 206.32,
+      "total_until_failure": 213.68
+    },
+    "table_route": {
+      "status": "translated",
+      "table_count": 9,
+      "cell_count": 132,
+      "translated_cell_count": 117,
+      "gateway_batch_size": 117,
+      "gateway_batches": 10,
+      "gateway_attempts": 10
+    },
+    "gateway_requests": 10,
+    "gateway_batch_sizes": [
+      16,
+      14,
+      15,
+      14,
+      14,
+      2,
+      15,
+      1,
+      13,
+      13
+    ],
+    "gateway_structured_requests": 10,
+    "gateway_fallback_requests": 0,
+    "gateway_upstream_results": 10,
+    "gateway_upstream_elapsed_ms_total": 203435,
+    "gateway_upstream_elapsed_ms_max": 36330,
+    "gateway_upstream_failures": 0
+  },
+  "quarantine_dir": "D:\\01 绿色程序\\文档翻译器\\.pdf_quarantine\\real_validation_11_qwen-plus_20260925_fix2-f7c44283c1bb",
+  "quarantined_candidate": null
+}

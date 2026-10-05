@@ -1,0 +1,13 @@
+D:\01 绿色程序\文档翻译器\cad\CadBridge\obj\Debug\net8.0-windows\CadBridge.csproj.AssemblyReference.cache
+D:\01 绿色程序\文档翻译器\cad\CadBridge\obj\Debug\net8.0-windows\CadBridge.GeneratedMSBuildEditorConfig.editorconfig
+D:\01 绿色程序\文档翻译器\cad\CadBridge\obj\Debug\net8.0-windows\CadBridge.AssemblyInfoInputs.cache
+D:\01 绿色程序\文档翻译器\cad\CadBridge\obj\Debug\net8.0-windows\CadBridge.AssemblyInfo.cs
+D:\01 绿色程序\文档翻译器\cad\CadBridge\obj\Debug\net8.0-windows\CadBridge.csproj.CoreCompileInputs.cache
+D:\01 绿色程序\文档翻译器\cad\CadBridge\bin\Debug\net8.0-windows\CadBridge.deps.json
+D:\01 绿色程序\文档翻译器\cad\CadBridge\bin\Debug\net8.0-windows\CadBridge.dll
+D:\01 绿色程序\文档翻译器\cad\CadBridge\bin\Debug\net8.0-windows\CadBridge.pdb
+D:\01 绿色程序\文档翻译器\cad\CadBridge\obj\Debug\net8.0-windows\CadBridge.dll
+D:\01 绿色程序\文档翻译器\cad\CadBridge\obj\Debug\net8.0-windows\refint\CadBridge.dll
+D:\01 绿色程序\文档翻译器\cad\CadBridge\obj\Debug\net8.0-windows\CadBridge.pdb
+D:\01 绿色程序\文档翻译器\cad\CadBridge\obj\Debug\net8.0-windows\ref\CadBridge.dll
+D:\01 绿色程序\文档翻译器\cad\CadBridge\obj\Debug\net8.0-windows\CadBridge.sourcelink.json

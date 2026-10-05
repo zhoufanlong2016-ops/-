@@ -1,0 +1,3395 @@
+{
+  "run_name": "gpt-10-sample-20260904",
+  "endpoint": "https://api.openai.com/v1/responses",
+  "transport": "httpx.Client.post",
+  "api_key_environment_variable": "OPENAI_API_KEY",
+  "request_policy": "one request per model per record; no automatic retries",
+  "dataset": "benchmarks/engineering_translation_100.jsonl",
+  "selected_ids": [
+    "eng-zh-002",
+    "eng-zh-012",
+    "eng-zh-035",
+    "eng-zh-040",
+    "eng-zh-043",
+    "eng-en-012",
+    "eng-en-018",
+    "eng-en-035",
+    "eng-en-040",
+    "eng-en-043"
+  ],
+  "models": [
+    "gpt-4o-mini",
+    "gpt-5.4",
+    "gpt-5.6-luna",
+    "gpt-5.6-terra",
+    "gpt-5.6-sol"
+  ],
+  "pricing_basis": "OpenAI standard list text-token prices, USD per 1M tokens; not account billing ledger",
+  "results": [
+    {
+      "model": "gpt-4o-mini",
+      "id": "eng-zh-002",
+      "category": "road_bridge",
+      "source_language": "zh-CN",
+      "target_language": "en",
+      "source_text": "在K12+340处设置临时交通标志。",
+      "required_target_terms": [
+        {
+          "source": "临时交通标志",
+          "target": "temporary traffic signs"
+        }
+      ],
+      "protected_literals": [
+        "K12+340"
+      ],
+      "http_status": 200,
+      "elapsed_seconds": 5.9918,
+      "success": true,
+      "translation": "Set up temporary traffic signs at K12+340.",
+      "usage": {
+        "input_tokens": 76,
+        "output_tokens": 12,
+        "total_tokens": 88,
+        "cached_input_tokens": 0,
+        "reasoning_tokens": 0
+      },
+      "calculated_standard_list_cost_usd": 1.86e-05,
+      "language_direction": {
+        "pass": true,
+        "chinese_chars": 0,
+        "latin_chars": 29
+      },
+      "evaluated_target_terms": [
+        "temporary traffic signs"
+      ],
+      "term_checks": {
+        "temporary traffic signs": true
+      },
+      "strict_term_pass": true,
+      "literal_checks": {
+        "K12+340": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        }
+      },
+      "literals_pass": true,
+      "placeholder_checks": {},
+      "placeholders_pass": true,
+      "prompt_leak": false,
+      "term_semantic_review": {
+        "status": "pass",
+        "note": "工程术语语义与源文一致；严格字符串匹配若未通过，原因是可接受的同义或表达差异。"
+      }
+    },
+    {
+      "model": "gpt-4o-mini",
+      "id": "eng-zh-012",
+      "category": "mtbm",
+      "source_language": "zh-CN",
+      "target_language": "en",
+      "source_text": "顶进推力不得超过1200 kN。",
+      "required_target_terms": [
+        {
+          "source": "顶进推力",
+          "target": "jacking thrust"
+        }
+      ],
+      "protected_literals": [
+        "1200 kN"
+      ],
+      "http_status": 200,
+      "elapsed_seconds": 1.7429,
+      "success": true,
+      "translation": "The jacking thrust must not exceed 1200 kN.",
+      "usage": {
+        "input_tokens": 74,
+        "output_tokens": 14,
+        "total_tokens": 88,
+        "cached_input_tokens": 0,
+        "reasoning_tokens": 0
+      },
+      "calculated_standard_list_cost_usd": 1.95e-05,
+      "language_direction": {
+        "pass": true,
+        "chinese_chars": 0,
+        "latin_chars": 31
+      },
+      "evaluated_target_terms": [
+        "jacking thrust"
+      ],
+      "term_checks": {
+        "jacking thrust": true
+      },
+      "strict_term_pass": true,
+      "literal_checks": {
+        "1200 kN": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        }
+      },
+      "literals_pass": true,
+      "placeholder_checks": {},
+      "placeholders_pass": true,
+      "prompt_leak": false,
+      "term_semantic_review": {
+        "status": "pass",
+        "note": "工程术语语义与源文一致；严格字符串匹配若未通过，原因是可接受的同义或表达差异。"
+      }
+    },
+    {
+      "model": "gpt-4o-mini",
+      "id": "eng-zh-035",
+      "category": "construction_quality_safety",
+      "source_language": "zh-CN",
+      "target_language": "en",
+      "source_text": "质量计划应规定材料进场检验、过程见证点、不合格品隔离、纠正措施关闭和记录保存期限，并明确承包商、分包商与工程师的责任边界。",
+      "required_target_terms": [
+        {
+          "source": "见证点",
+          "target": "witness point"
+        },
+        {
+          "source": "不合格品",
+          "target": "nonconforming product"
+        },
+        {
+          "source": "纠正措施",
+          "target": "corrective action"
+        }
+      ],
+      "protected_literals": [],
+      "http_status": 200,
+      "elapsed_seconds": 4.3509,
+      "success": true,
+      "translation": "The quality plan should specify the inspection of materials upon arrival, process witness points, segregation of non-conforming products, closure of corrective actions, and record retention periods, as well as clearly define the responsibilities of the contractor, subcontractors, and the engineer.",
+      "usage": {
+        "input_tokens": 109,
+        "output_tokens": 52,
+        "total_tokens": 161,
+        "cached_input_tokens": 0,
+        "reasoning_tokens": 0
+      },
+      "calculated_standard_list_cost_usd": 4.755e-05,
+      "language_direction": {
+        "pass": true,
+        "chinese_chars": 0,
+        "latin_chars": 250
+      },
+      "evaluated_target_terms": [
+        "witness point",
+        "nonconforming product",
+        "corrective action"
+      ],
+      "term_checks": {
+        "witness point": true,
+        "nonconforming product": false,
+        "corrective action": true
+      },
+      "strict_term_pass": false,
+      "literal_checks": {},
+      "literals_pass": true,
+      "placeholder_checks": {},
+      "placeholders_pass": true,
+      "prompt_leak": false,
+      "term_semantic_review": {
+        "status": "pass",
+        "note": "工程术语语义与源文一致；严格字符串匹配若未通过，原因是可接受的同义或表达差异。"
+      }
+    },
+    {
+      "model": "gpt-4o-mini",
+      "id": "eng-zh-040",
+      "category": "contract_submittal_rfi",
+      "source_language": "zh-CN",
+      "target_language": "en",
+      "source_text": "任何进度或费用影响均应在合同通知期内提出，并附上受影响活动、数量计算、依据条款和可核查的 contemporaneous records；未按期通知不得视为自动获得工期或费用补偿⟦PH_0001⟧⟦PH_0002⟧。",
+      "required_target_terms": [
+        {
+          "source": "通知期",
+          "target": "notice period"
+        },
+        {
+          "source": "工期",
+          "target": "extension of time"
+        },
+        {
+          "source": "费用补偿",
+          "target": "cost compensation"
+        }
+      ],
+      "protected_literals": [
+        "⟦PH_0001⟧",
+        "⟦PH_0002⟧"
+      ],
+      "http_status": 200,
+      "elapsed_seconds": 2.134,
+      "success": true,
+      "translation": "Any impact on progress or costs must be raised within the contract notification period, accompanied by the affected activities, quantity calculations, basis clauses, and verifiable contemporaneous records; failure to notify in a timely manner shall not be deemed as automatically obtaining time or cost compensation ⟦PH_0001⟧⟦PH_0002⟧.",
+      "usage": {
+        "input_tokens": 135,
+        "output_tokens": 74,
+        "total_tokens": 209,
+        "cached_input_tokens": 0,
+        "reasoning_tokens": 0
+      },
+      "calculated_standard_list_cost_usd": 6.465e-05,
+      "language_direction": {
+        "pass": true,
+        "chinese_chars": 0,
+        "latin_chars": 270
+      },
+      "evaluated_target_terms": [
+        "notice period",
+        "extension of time",
+        "cost compensation"
+      ],
+      "term_checks": {
+        "notice period": false,
+        "extension of time": false,
+        "cost compensation": true
+      },
+      "strict_term_pass": false,
+      "literal_checks": {
+        "⟦PH_0001⟧": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        },
+        "⟦PH_0002⟧": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        }
+      },
+      "literals_pass": true,
+      "placeholder_checks": {
+        "⟦PH_0001⟧": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        },
+        "⟦PH_0002⟧": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        }
+      },
+      "placeholders_pass": true,
+      "prompt_leak": false,
+      "term_semantic_review": {
+        "status": "pass",
+        "note": "工程术语语义与源文一致；严格字符串匹配若未通过，原因是可接受的同义或表达差异。"
+      }
+    },
+    {
+      "model": "gpt-4o-mini",
+      "id": "eng-zh-043",
+      "category": "electrical_scada_ventilation",
+      "source_language": "zh-CN",
+      "target_language": "en",
+      "source_text": "风机额定功率为7.5 kW，防护等级为IP55。",
+      "required_target_terms": [
+        {
+          "source": "额定功率",
+          "target": "rated power"
+        },
+        {
+          "source": "防护等级",
+          "target": "ingress-protection rating"
+        }
+      ],
+      "protected_literals": [
+        "7.5 kW",
+        "IP55"
+      ],
+      "http_status": 200,
+      "elapsed_seconds": 1.1953,
+      "success": true,
+      "translation": "The rated power of the fan is 7.5 kW, and the protection rating is IP55.",
+      "usage": {
+        "input_tokens": 83,
+        "output_tokens": 23,
+        "total_tokens": 106,
+        "cached_input_tokens": 0,
+        "reasoning_tokens": 0
+      },
+      "calculated_standard_list_cost_usd": 2.625e-05,
+      "language_direction": {
+        "pass": true,
+        "chinese_chars": 0,
+        "latin_chars": 51
+      },
+      "evaluated_target_terms": [
+        "rated power",
+        "ingress-protection rating"
+      ],
+      "term_checks": {
+        "rated power": true,
+        "ingress-protection rating": false
+      },
+      "strict_term_pass": false,
+      "literal_checks": {
+        "7.5 kW": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        },
+        "IP55": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        }
+      },
+      "literals_pass": true,
+      "placeholder_checks": {},
+      "placeholders_pass": true,
+      "prompt_leak": false,
+      "term_semantic_review": {
+        "status": "partial",
+        "note": "“protection rating”未明确表达 ingress-protection，但 IP55 语境下含义基本可识别。"
+      }
+    },
+    {
+      "model": "gpt-4o-mini",
+      "id": "eng-en-012",
+      "category": "mtbm",
+      "source_language": "en",
+      "target_language": "zh-CN",
+      "source_text": "The jacking thrust shall not exceed 1200 kN.",
+      "required_target_terms": [
+        {
+          "source": "jacking thrust",
+          "target": "顶进推力"
+        }
+      ],
+      "protected_literals": [
+        "1200 kN"
+      ],
+      "http_status": 200,
+      "elapsed_seconds": 0.7922,
+      "success": true,
+      "translation": "顶升推力不得超过1200 kN。",
+      "usage": {
+        "input_tokens": 75,
+        "output_tokens": 12,
+        "total_tokens": 87,
+        "cached_input_tokens": 0,
+        "reasoning_tokens": 0
+      },
+      "calculated_standard_list_cost_usd": 1.845e-05,
+      "language_direction": {
+        "pass": null,
+        "chinese_chars": 8,
+        "latin_chars": 2
+      },
+      "evaluated_target_terms": [
+        "顶进推力"
+      ],
+      "term_checks": {
+        "顶进推力": false
+      },
+      "strict_term_pass": false,
+      "literal_checks": {
+        "1200 kN": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        }
+      },
+      "literals_pass": true,
+      "placeholder_checks": {},
+      "placeholders_pass": true,
+      "prompt_leak": false,
+      "term_semantic_review": {
+        "status": "fail",
+        "note": "“顶升推力”对应 lifting thrust，不是 jacking thrust（顶进推力）。"
+      }
+    },
+    {
+      "model": "gpt-4o-mini",
+      "id": "eng-en-018",
+      "category": "survey",
+      "source_language": "en",
+      "target_language": "zh-CN",
+      "source_text": "The design invert elevation at chainage K08+125 is 38.640 m.",
+      "required_target_terms": [
+        {
+          "source": "invert elevation",
+          "target": "管底高程"
+        }
+      ],
+      "protected_literals": [
+        "K08+125",
+        "38.640 m"
+      ],
+      "http_status": 200,
+      "elapsed_seconds": 0.9012,
+      "success": true,
+      "translation": "在链桩 K08+125 的设计底部高程为 38.640 米。",
+      "usage": {
+        "input_tokens": 80,
+        "output_tokens": 22,
+        "total_tokens": 102,
+        "cached_input_tokens": 0,
+        "reasoning_tokens": 0
+      },
+      "calculated_standard_list_cost_usd": 2.52e-05,
+      "language_direction": {
+        "pass": null,
+        "chinese_chars": 12,
+        "latin_chars": 1
+      },
+      "evaluated_target_terms": [
+        "管底高程"
+      ],
+      "term_checks": {
+        "管底高程": false
+      },
+      "strict_term_pass": false,
+      "literal_checks": {
+        "K08+125": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        },
+        "38.640 m": {
+          "expected_count": 1,
+          "actual_count": 0,
+          "preserved": false
+        }
+      },
+      "literals_pass": false,
+      "placeholder_checks": {},
+      "placeholders_pass": true,
+      "prompt_leak": false,
+      "term_semantic_review": {
+        "status": "fail",
+        "note": "“设计底部高程”未明确管道内底/管底，且将 38.640 m 改写为“38.640 米”。"
+      }
+    },
+    {
+      "model": "gpt-4o-mini",
+      "id": "eng-en-035",
+      "category": "construction_quality_safety",
+      "source_language": "en",
+      "target_language": "zh-CN",
+      "source_text": "The quality plan shall define incoming-material inspection, process witness points, nonconforming-product segregation, corrective-action closeout and record-retention periods, and shall clarify the responsibility boundaries of the Contractor, subcontractors and Engineer.",
+      "required_target_terms": [
+        {
+          "source": "witness point",
+          "target": "见证点"
+        },
+        {
+          "source": "nonconforming product",
+          "target": "不合格品"
+        },
+        {
+          "source": "corrective action",
+          "target": "纠正措施"
+        }
+      ],
+      "protected_literals": [],
+      "http_status": 200,
+      "elapsed_seconds": 1.1844,
+      "success": true,
+      "translation": "质量计划应定义进料检验、过程见证点、不合格产品隔离、纠正措施的关闭和记录保留期限，并应明确承包商、分包商和工程师的责任界限。",
+      "usage": {
+        "input_tokens": 106,
+        "output_tokens": 49,
+        "total_tokens": 155,
+        "cached_input_tokens": 0,
+        "reasoning_tokens": 0
+      },
+      "calculated_standard_list_cost_usd": 4.53e-05,
+      "language_direction": {
+        "pass": null,
+        "chinese_chars": 56,
+        "latin_chars": 0
+      },
+      "evaluated_target_terms": [
+        "见证点",
+        "不合格品",
+        "纠正措施"
+      ],
+      "term_checks": {
+        "见证点": true,
+        "不合格品": false,
+        "纠正措施": true
+      },
+      "strict_term_pass": false,
+      "literal_checks": {},
+      "literals_pass": true,
+      "placeholder_checks": {},
+      "placeholders_pass": true,
+      "prompt_leak": false,
+      "term_semantic_review": {
+        "status": "pass",
+        "note": "工程术语语义与源文一致；严格字符串匹配若未通过，原因是可接受的同义或表达差异。"
+      }
+    },
+    {
+      "model": "gpt-4o-mini",
+      "id": "eng-en-040",
+      "category": "contract_submittal_rfi",
+      "source_language": "en",
+      "target_language": "zh-CN",
+      "source_text": "Any time or cost impact shall be notified within the contractual notice period, with affected activities, quantity calculations, cited clauses and verifiable contemporaneous records; late notice shall not be deemed to grant an automatic extension of time or cost compensation⟦PH_0001⟧⟦PH_0002⟧.",
+      "required_target_terms": [
+        {
+          "source": "notice period",
+          "target": "通知期"
+        },
+        {
+          "source": "extension of time",
+          "target": "工期"
+        },
+        {
+          "source": "cost compensation",
+          "target": "费用补偿"
+        }
+      ],
+      "protected_literals": [
+        "⟦PH_0001⟧",
+        "⟦PH_0002⟧"
+      ],
+      "http_status": 200,
+      "elapsed_seconds": 1.4128,
+      "success": true,
+      "translation": "任何时间或成本影响应在合同通知期内通知，需包括受影响的活动、数量计算、引用的条款和可验证的同时记录；迟延通知不应被视为自动延长时间或成本补偿的授予⟦PH_0001⟧⟦PH_0002⟧。",
+      "usage": {
+        "input_tokens": 130,
+        "output_tokens": 75,
+        "total_tokens": 205,
+        "cached_input_tokens": 0,
+        "reasoning_tokens": 0
+      },
+      "calculated_standard_list_cost_usd": 6.45e-05,
+      "language_direction": {
+        "pass": null,
+        "chinese_chars": 69,
+        "latin_chars": 4
+      },
+      "evaluated_target_terms": [
+        "通知期",
+        "工期",
+        "费用补偿"
+      ],
+      "term_checks": {
+        "通知期": true,
+        "工期": false,
+        "费用补偿": false
+      },
+      "strict_term_pass": false,
+      "literal_checks": {
+        "⟦PH_0001⟧": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        },
+        "⟦PH_0002⟧": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        }
+      },
+      "literals_pass": true,
+      "placeholder_checks": {
+        "⟦PH_0001⟧": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        },
+        "⟦PH_0002⟧": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        }
+      },
+      "placeholders_pass": true,
+      "prompt_leak": false,
+      "term_semantic_review": {
+        "status": "pass",
+        "note": "工程术语语义与源文一致；严格字符串匹配若未通过，原因是可接受的同义或表达差异。"
+      }
+    },
+    {
+      "model": "gpt-4o-mini",
+      "id": "eng-en-043",
+      "category": "electrical_scada_ventilation",
+      "source_language": "en",
+      "target_language": "zh-CN",
+      "source_text": "The fan rated power is 7.5 kW and its ingress-protection rating is IP55.",
+      "required_target_terms": [
+        {
+          "source": "rated power",
+          "target": "额定功率"
+        },
+        {
+          "source": "ingress-protection rating",
+          "target": "防护等级"
+        }
+      ],
+      "protected_literals": [
+        "7.5 kW",
+        "IP55"
+      ],
+      "http_status": 200,
+      "elapsed_seconds": 2.0616,
+      "success": true,
+      "translation": "风扇额定功率为7.5 kW，防护等级为IP55。",
+      "usage": {
+        "input_tokens": 83,
+        "output_tokens": 22,
+        "total_tokens": 105,
+        "cached_input_tokens": 0,
+        "reasoning_tokens": 0
+      },
+      "calculated_standard_list_cost_usd": 2.565e-05,
+      "language_direction": {
+        "pass": null,
+        "chinese_chars": 12,
+        "latin_chars": 4
+      },
+      "evaluated_target_terms": [
+        "额定功率",
+        "防护等级"
+      ],
+      "term_checks": {
+        "额定功率": true,
+        "防护等级": true
+      },
+      "strict_term_pass": true,
+      "literal_checks": {
+        "7.5 kW": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        },
+        "IP55": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        }
+      },
+      "literals_pass": true,
+      "placeholder_checks": {},
+      "placeholders_pass": true,
+      "prompt_leak": false,
+      "term_semantic_review": {
+        "status": "pass",
+        "note": "工程术语语义与源文一致；严格字符串匹配若未通过，原因是可接受的同义或表达差异。"
+      }
+    },
+    {
+      "model": "gpt-5.4",
+      "id": "eng-zh-002",
+      "category": "road_bridge",
+      "source_language": "zh-CN",
+      "target_language": "en",
+      "source_text": "在K12+340处设置临时交通标志。",
+      "required_target_terms": [
+        {
+          "source": "临时交通标志",
+          "target": "temporary traffic signs"
+        }
+      ],
+      "protected_literals": [
+        "K12+340"
+      ],
+      "http_status": 200,
+      "elapsed_seconds": 1.2302,
+      "success": true,
+      "translation": "Install temporary traffic signs at K12+340.",
+      "usage": {
+        "input_tokens": 75,
+        "output_tokens": 14,
+        "total_tokens": 89,
+        "cached_input_tokens": 0,
+        "reasoning_tokens": 0
+      },
+      "calculated_standard_list_cost_usd": 0.0003975,
+      "language_direction": {
+        "pass": true,
+        "chinese_chars": 0,
+        "latin_chars": 31
+      },
+      "evaluated_target_terms": [
+        "temporary traffic signs"
+      ],
+      "term_checks": {
+        "temporary traffic signs": true
+      },
+      "strict_term_pass": true,
+      "literal_checks": {
+        "K12+340": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        }
+      },
+      "literals_pass": true,
+      "placeholder_checks": {},
+      "placeholders_pass": true,
+      "prompt_leak": false,
+      "term_semantic_review": {
+        "status": "pass",
+        "note": "工程术语语义与源文一致；严格字符串匹配若未通过，原因是可接受的同义或表达差异。"
+      }
+    },
+    {
+      "model": "gpt-5.4",
+      "id": "eng-zh-012",
+      "category": "mtbm",
+      "source_language": "zh-CN",
+      "target_language": "en",
+      "source_text": "顶进推力不得超过1200 kN。",
+      "required_target_terms": [
+        {
+          "source": "顶进推力",
+          "target": "jacking thrust"
+        }
+      ],
+      "protected_literals": [
+        "1200 kN"
+      ],
+      "http_status": 200,
+      "elapsed_seconds": 1.4846,
+      "success": true,
+      "translation": "The jacking thrust shall not exceed 1200 kN.",
+      "usage": {
+        "input_tokens": 73,
+        "output_tokens": 17,
+        "total_tokens": 90,
+        "cached_input_tokens": 0,
+        "reasoning_tokens": 0
+      },
+      "calculated_standard_list_cost_usd": 0.0004375,
+      "language_direction": {
+        "pass": true,
+        "chinese_chars": 0,
+        "latin_chars": 32
+      },
+      "evaluated_target_terms": [
+        "jacking thrust"
+      ],
+      "term_checks": {
+        "jacking thrust": true
+      },
+      "strict_term_pass": true,
+      "literal_checks": {
+        "1200 kN": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        }
+      },
+      "literals_pass": true,
+      "placeholder_checks": {},
+      "placeholders_pass": true,
+      "prompt_leak": false,
+      "term_semantic_review": {
+        "status": "pass",
+        "note": "工程术语语义与源文一致；严格字符串匹配若未通过，原因是可接受的同义或表达差异。"
+      }
+    },
+    {
+      "model": "gpt-5.4",
+      "id": "eng-zh-035",
+      "category": "construction_quality_safety",
+      "source_language": "zh-CN",
+      "target_language": "en",
+      "source_text": "质量计划应规定材料进场检验、过程见证点、不合格品隔离、纠正措施关闭和记录保存期限，并明确承包商、分包商与工程师的责任边界。",
+      "required_target_terms": [
+        {
+          "source": "见证点",
+          "target": "witness point"
+        },
+        {
+          "source": "不合格品",
+          "target": "nonconforming product"
+        },
+        {
+          "source": "纠正措施",
+          "target": "corrective action"
+        }
+      ],
+      "protected_literals": [],
+      "http_status": 200,
+      "elapsed_seconds": 1.663,
+      "success": true,
+      "translation": "The quality plan shall specify incoming material inspection, process witness points, segregation of nonconforming products, closure of corrective actions, and record retention periods, and shall define the boundaries of responsibilities among the Contractor, Subcontractors, and the Engineer.",
+      "usage": {
+        "input_tokens": 108,
+        "output_tokens": 53,
+        "total_tokens": 161,
+        "cached_input_tokens": 0,
+        "reasoning_tokens": 0
+      },
+      "calculated_standard_list_cost_usd": 0.001065,
+      "language_direction": {
+        "pass": true,
+        "chinese_chars": 0,
+        "latin_chars": 248
+      },
+      "evaluated_target_terms": [
+        "witness point",
+        "nonconforming product",
+        "corrective action"
+      ],
+      "term_checks": {
+        "witness point": true,
+        "nonconforming product": true,
+        "corrective action": true
+      },
+      "strict_term_pass": true,
+      "literal_checks": {},
+      "literals_pass": true,
+      "placeholder_checks": {},
+      "placeholders_pass": true,
+      "prompt_leak": false,
+      "term_semantic_review": {
+        "status": "pass",
+        "note": "工程术语语义与源文一致；严格字符串匹配若未通过，原因是可接受的同义或表达差异。"
+      }
+    },
+    {
+      "model": "gpt-5.4",
+      "id": "eng-zh-040",
+      "category": "contract_submittal_rfi",
+      "source_language": "zh-CN",
+      "target_language": "en",
+      "source_text": "任何进度或费用影响均应在合同通知期内提出，并附上受影响活动、数量计算、依据条款和可核查的 contemporaneous records；未按期通知不得视为自动获得工期或费用补偿⟦PH_0001⟧⟦PH_0002⟧。",
+      "required_target_terms": [
+        {
+          "source": "通知期",
+          "target": "notice period"
+        },
+        {
+          "source": "工期",
+          "target": "extension of time"
+        },
+        {
+          "source": "费用补偿",
+          "target": "cost compensation"
+        }
+      ],
+      "protected_literals": [
+        "⟦PH_0001⟧",
+        "⟦PH_0002⟧"
+      ],
+      "http_status": 200,
+      "elapsed_seconds": 1.9491,
+      "success": true,
+      "translation": "Any impact on progress or cost shall be raised within the contractual notice period, together with the affected activities, quantity calculations, clause basis, and verifiable contemporaneous records; failure to give notice within the prescribed period shall not be deemed to automatically entitle the party to an extension of time or cost compensation ⟦PH_0001⟧⟦PH_0002⟧.",
+      "usage": {
+        "input_tokens": 134,
+        "output_tokens": 85,
+        "total_tokens": 219,
+        "cached_input_tokens": 0,
+        "reasoning_tokens": 0
+      },
+      "calculated_standard_list_cost_usd": 0.00161,
+      "language_direction": {
+        "pass": true,
+        "chinese_chars": 0,
+        "latin_chars": 300
+      },
+      "evaluated_target_terms": [
+        "notice period",
+        "extension of time",
+        "cost compensation"
+      ],
+      "term_checks": {
+        "notice period": true,
+        "extension of time": true,
+        "cost compensation": true
+      },
+      "strict_term_pass": true,
+      "literal_checks": {
+        "⟦PH_0001⟧": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        },
+        "⟦PH_0002⟧": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        }
+      },
+      "literals_pass": true,
+      "placeholder_checks": {
+        "⟦PH_0001⟧": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        },
+        "⟦PH_0002⟧": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        }
+      },
+      "placeholders_pass": true,
+      "prompt_leak": false,
+      "term_semantic_review": {
+        "status": "pass",
+        "note": "工程术语语义与源文一致；严格字符串匹配若未通过，原因是可接受的同义或表达差异。"
+      }
+    },
+    {
+      "model": "gpt-5.4",
+      "id": "eng-zh-043",
+      "category": "electrical_scada_ventilation",
+      "source_language": "zh-CN",
+      "target_language": "en",
+      "source_text": "风机额定功率为7.5 kW，防护等级为IP55。",
+      "required_target_terms": [
+        {
+          "source": "额定功率",
+          "target": "rated power"
+        },
+        {
+          "source": "防护等级",
+          "target": "ingress-protection rating"
+        }
+      ],
+      "protected_literals": [
+        "7.5 kW",
+        "IP55"
+      ],
+      "http_status": 200,
+      "elapsed_seconds": 1.2179,
+      "success": true,
+      "translation": "The fan rated power is 7.5 kW, and the protection rating is IP55.",
+      "usage": {
+        "input_tokens": 82,
+        "output_tokens": 24,
+        "total_tokens": 106,
+        "cached_input_tokens": 0,
+        "reasoning_tokens": 0
+      },
+      "calculated_standard_list_cost_usd": 0.000565,
+      "language_direction": {
+        "pass": true,
+        "chinese_chars": 0,
+        "latin_chars": 46
+      },
+      "evaluated_target_terms": [
+        "rated power",
+        "ingress-protection rating"
+      ],
+      "term_checks": {
+        "rated power": true,
+        "ingress-protection rating": false
+      },
+      "strict_term_pass": false,
+      "literal_checks": {
+        "7.5 kW": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        },
+        "IP55": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        }
+      },
+      "literals_pass": true,
+      "placeholder_checks": {},
+      "placeholders_pass": true,
+      "prompt_leak": false,
+      "term_semantic_review": {
+        "status": "partial",
+        "note": "“protection rating”未明确表达 ingress-protection，IP55 的工程含义仍基本可识别。"
+      }
+    },
+    {
+      "model": "gpt-5.4",
+      "id": "eng-en-012",
+      "category": "mtbm",
+      "source_language": "en",
+      "target_language": "zh-CN",
+      "source_text": "The jacking thrust shall not exceed 1200 kN.",
+      "required_target_terms": [
+        {
+          "source": "jacking thrust",
+          "target": "顶进推力"
+        }
+      ],
+      "protected_literals": [
+        "1200 kN"
+      ],
+      "http_status": 200,
+      "elapsed_seconds": 1.3564,
+      "success": true,
+      "translation": "顶推力不得超过 1200 kN。",
+      "usage": {
+        "input_tokens": 74,
+        "output_tokens": 15,
+        "total_tokens": 89,
+        "cached_input_tokens": 0,
+        "reasoning_tokens": 0
+      },
+      "calculated_standard_list_cost_usd": 0.00041,
+      "language_direction": {
+        "pass": null,
+        "chinese_chars": 7,
+        "latin_chars": 2
+      },
+      "evaluated_target_terms": [
+        "顶进推力"
+      ],
+      "term_checks": {
+        "顶进推力": false
+      },
+      "strict_term_pass": false,
+      "literal_checks": {
+        "1200 kN": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        }
+      },
+      "literals_pass": true,
+      "placeholder_checks": {},
+      "placeholders_pass": true,
+      "prompt_leak": false,
+      "term_semantic_review": {
+        "status": "partial",
+        "note": "“顶推力”接近但不如“顶进推力”规范、明确。"
+      }
+    },
+    {
+      "model": "gpt-5.4",
+      "id": "eng-en-018",
+      "category": "survey",
+      "source_language": "en",
+      "target_language": "zh-CN",
+      "source_text": "The design invert elevation at chainage K08+125 is 38.640 m.",
+      "required_target_terms": [
+        {
+          "source": "invert elevation",
+          "target": "管底高程"
+        }
+      ],
+      "protected_literals": [
+        "K08+125",
+        "38.640 m"
+      ],
+      "http_status": 200,
+      "elapsed_seconds": 2.1043,
+      "success": true,
+      "translation": "桩号 K08+125 处的设计管底高程为 38.640 m。",
+      "usage": {
+        "input_tokens": 79,
+        "output_tokens": 26,
+        "total_tokens": 105,
+        "cached_input_tokens": 0,
+        "reasoning_tokens": 0
+      },
+      "calculated_standard_list_cost_usd": 0.0005875,
+      "language_direction": {
+        "pass": null,
+        "chinese_chars": 11,
+        "latin_chars": 2
+      },
+      "evaluated_target_terms": [
+        "管底高程"
+      ],
+      "term_checks": {
+        "管底高程": true
+      },
+      "strict_term_pass": true,
+      "literal_checks": {
+        "K08+125": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        },
+        "38.640 m": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        }
+      },
+      "literals_pass": true,
+      "placeholder_checks": {},
+      "placeholders_pass": true,
+      "prompt_leak": false,
+      "term_semantic_review": {
+        "status": "pass",
+        "note": "工程术语语义与源文一致；严格字符串匹配若未通过，原因是可接受的同义或表达差异。"
+      }
+    },
+    {
+      "model": "gpt-5.4",
+      "id": "eng-en-035",
+      "category": "construction_quality_safety",
+      "source_language": "en",
+      "target_language": "zh-CN",
+      "source_text": "The quality plan shall define incoming-material inspection, process witness points, nonconforming-product segregation, corrective-action closeout and record-retention periods, and shall clarify the responsibility boundaries of the Contractor, subcontractors and Engineer.",
+      "required_target_terms": [
+        {
+          "source": "witness point",
+          "target": "见证点"
+        },
+        {
+          "source": "nonconforming product",
+          "target": "不合格品"
+        },
+        {
+          "source": "corrective action",
+          "target": "纠正措施"
+        }
+      ],
+      "protected_literals": [],
+      "http_status": 200,
+      "elapsed_seconds": 1.4462,
+      "success": true,
+      "translation": "质量计划应规定进料检验、过程见证点、不合格品隔离、纠正措施关闭及记录保存期限，并应明确承包商、分包商和工程师的责任边界。",
+      "usage": {
+        "input_tokens": 105,
+        "output_tokens": 50,
+        "total_tokens": 155,
+        "cached_input_tokens": 0,
+        "reasoning_tokens": 0
+      },
+      "calculated_standard_list_cost_usd": 0.0010125,
+      "language_direction": {
+        "pass": null,
+        "chinese_chars": 54,
+        "latin_chars": 0
+      },
+      "evaluated_target_terms": [
+        "见证点",
+        "不合格品",
+        "纠正措施"
+      ],
+      "term_checks": {
+        "见证点": true,
+        "不合格品": true,
+        "纠正措施": true
+      },
+      "strict_term_pass": true,
+      "literal_checks": {},
+      "literals_pass": true,
+      "placeholder_checks": {},
+      "placeholders_pass": true,
+      "prompt_leak": false,
+      "term_semantic_review": {
+        "status": "pass",
+        "note": "工程术语语义与源文一致；严格字符串匹配若未通过，原因是可接受的同义或表达差异。"
+      }
+    },
+    {
+      "model": "gpt-5.4",
+      "id": "eng-en-040",
+      "category": "contract_submittal_rfi",
+      "source_language": "en",
+      "target_language": "zh-CN",
+      "source_text": "Any time or cost impact shall be notified within the contractual notice period, with affected activities, quantity calculations, cited clauses and verifiable contemporaneous records; late notice shall not be deemed to grant an automatic extension of time or cost compensation⟦PH_0001⟧⟦PH_0002⟧.",
+      "required_target_terms": [
+        {
+          "source": "notice period",
+          "target": "通知期"
+        },
+        {
+          "source": "extension of time",
+          "target": "工期"
+        },
+        {
+          "source": "cost compensation",
+          "target": "费用补偿"
+        }
+      ],
+      "protected_literals": [
+        "⟦PH_0001⟧",
+        "⟦PH_0002⟧"
+      ],
+      "http_status": 200,
+      "elapsed_seconds": 1.81,
+      "success": true,
+      "translation": "任何工期或费用影响均应在合同约定的通知期限内发出通知，并附受影响的活动、工程量计算、引用条款及可核实的同期记录；逾期通知不应被视为自动授予工期延长或费用补偿⟦PH_0001⟧⟦PH_0002⟧。",
+      "usage": {
+        "input_tokens": 129,
+        "output_tokens": 86,
+        "total_tokens": 215,
+        "cached_input_tokens": 0,
+        "reasoning_tokens": 0
+      },
+      "calculated_standard_list_cost_usd": 0.0016125,
+      "language_direction": {
+        "pass": null,
+        "chinese_chars": 74,
+        "latin_chars": 4
+      },
+      "evaluated_target_terms": [
+        "通知期",
+        "工期",
+        "费用补偿"
+      ],
+      "term_checks": {
+        "通知期": true,
+        "工期": true,
+        "费用补偿": true
+      },
+      "strict_term_pass": true,
+      "literal_checks": {
+        "⟦PH_0001⟧": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        },
+        "⟦PH_0002⟧": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        }
+      },
+      "literals_pass": true,
+      "placeholder_checks": {
+        "⟦PH_0001⟧": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        },
+        "⟦PH_0002⟧": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        }
+      },
+      "placeholders_pass": true,
+      "prompt_leak": false,
+      "term_semantic_review": {
+        "status": "pass",
+        "note": "工程术语语义与源文一致；严格字符串匹配若未通过，原因是可接受的同义或表达差异。"
+      }
+    },
+    {
+      "model": "gpt-5.4",
+      "id": "eng-en-043",
+      "category": "electrical_scada_ventilation",
+      "source_language": "en",
+      "target_language": "zh-CN",
+      "source_text": "The fan rated power is 7.5 kW and its ingress-protection rating is IP55.",
+      "required_target_terms": [
+        {
+          "source": "rated power",
+          "target": "额定功率"
+        },
+        {
+          "source": "ingress-protection rating",
+          "target": "防护等级"
+        }
+      ],
+      "protected_literals": [
+        "7.5 kW",
+        "IP55"
+      ],
+      "http_status": 200,
+      "elapsed_seconds": 1.1622,
+      "success": true,
+      "translation": "风机额定功率为 7.5 kW，其防护等级为 IP55。",
+      "usage": {
+        "input_tokens": 82,
+        "output_tokens": 25,
+        "total_tokens": 107,
+        "cached_input_tokens": 0,
+        "reasoning_tokens": 0
+      },
+      "calculated_standard_list_cost_usd": 0.00058,
+      "language_direction": {
+        "pass": null,
+        "chinese_chars": 13,
+        "latin_chars": 4
+      },
+      "evaluated_target_terms": [
+        "额定功率",
+        "防护等级"
+      ],
+      "term_checks": {
+        "额定功率": true,
+        "防护等级": true
+      },
+      "strict_term_pass": true,
+      "literal_checks": {
+        "7.5 kW": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        },
+        "IP55": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        }
+      },
+      "literals_pass": true,
+      "placeholder_checks": {},
+      "placeholders_pass": true,
+      "prompt_leak": false,
+      "term_semantic_review": {
+        "status": "pass",
+        "note": "工程术语语义与源文一致；严格字符串匹配若未通过，原因是可接受的同义或表达差异。"
+      }
+    },
+    {
+      "model": "gpt-5.6-luna",
+      "id": "eng-zh-002",
+      "category": "road_bridge",
+      "source_language": "zh-CN",
+      "target_language": "en",
+      "source_text": "在K12+340处设置临时交通标志。",
+      "required_target_terms": [
+        {
+          "source": "临时交通标志",
+          "target": "temporary traffic signs"
+        }
+      ],
+      "protected_literals": [
+        "K12+340"
+      ],
+      "http_status": 200,
+      "elapsed_seconds": 1.2612,
+      "success": true,
+      "translation": "Install temporary traffic signs at K12+340.",
+      "usage": {
+        "input_tokens": 75,
+        "output_tokens": 14,
+        "total_tokens": 89,
+        "cached_input_tokens": 0,
+        "reasoning_tokens": 0
+      },
+      "calculated_standard_list_cost_usd": 3.18e-05,
+      "language_direction": {
+        "pass": true,
+        "chinese_chars": 0,
+        "latin_chars": 31
+      },
+      "evaluated_target_terms": [
+        "temporary traffic signs"
+      ],
+      "term_checks": {
+        "temporary traffic signs": true
+      },
+      "strict_term_pass": true,
+      "literal_checks": {
+        "K12+340": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        }
+      },
+      "literals_pass": true,
+      "placeholder_checks": {},
+      "placeholders_pass": true,
+      "prompt_leak": false,
+      "term_semantic_review": {
+        "status": "pass",
+        "note": "工程术语语义与源文一致；严格字符串匹配若未通过，原因是可接受的同义或表达差异。"
+      }
+    },
+    {
+      "model": "gpt-5.6-luna",
+      "id": "eng-zh-012",
+      "category": "mtbm",
+      "source_language": "zh-CN",
+      "target_language": "en",
+      "source_text": "顶进推力不得超过1200 kN。",
+      "required_target_terms": [
+        {
+          "source": "顶进推力",
+          "target": "jacking thrust"
+        }
+      ],
+      "protected_literals": [
+        "1200 kN"
+      ],
+      "http_status": 200,
+      "elapsed_seconds": 1.6079,
+      "success": true,
+      "translation": "The jacking force shall not exceed 1200 kN.",
+      "usage": {
+        "input_tokens": 73,
+        "output_tokens": 17,
+        "total_tokens": 90,
+        "cached_input_tokens": 0,
+        "reasoning_tokens": 0
+      },
+      "calculated_standard_list_cost_usd": 3.5e-05,
+      "language_direction": {
+        "pass": true,
+        "chinese_chars": 0,
+        "latin_chars": 31
+      },
+      "evaluated_target_terms": [
+        "jacking thrust"
+      ],
+      "term_checks": {
+        "jacking thrust": false
+      },
+      "strict_term_pass": false,
+      "literal_checks": {
+        "1200 kN": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        }
+      },
+      "literals_pass": true,
+      "placeholder_checks": {},
+      "placeholders_pass": true,
+      "prompt_leak": false,
+      "term_semantic_review": {
+        "status": "partial",
+        "note": "“jacking force”可理解，但工程术语精确性低于“jacking thrust”。"
+      }
+    },
+    {
+      "model": "gpt-5.6-luna",
+      "id": "eng-zh-035",
+      "category": "construction_quality_safety",
+      "source_language": "zh-CN",
+      "target_language": "en",
+      "source_text": "质量计划应规定材料进场检验、过程见证点、不合格品隔离、纠正措施关闭和记录保存期限，并明确承包商、分包商与工程师的责任边界。",
+      "required_target_terms": [
+        {
+          "source": "见证点",
+          "target": "witness point"
+        },
+        {
+          "source": "不合格品",
+          "target": "nonconforming product"
+        },
+        {
+          "source": "纠正措施",
+          "target": "corrective action"
+        }
+      ],
+      "protected_literals": [],
+      "http_status": 200,
+      "elapsed_seconds": 1.9406,
+      "success": true,
+      "translation": "The quality plan shall specify incoming material inspections, process witness points, segregation of nonconforming products, closure of corrective actions, and record retention periods, and shall clearly define the boundaries of responsibility among the Contractor, subcontractors, and the Engineer.",
+      "usage": {
+        "input_tokens": 108,
+        "output_tokens": 53,
+        "total_tokens": 161,
+        "cached_input_tokens": 0,
+        "reasoning_tokens": 0
+      },
+      "calculated_standard_list_cost_usd": 8.52e-05,
+      "language_direction": {
+        "pass": true,
+        "chinese_chars": 0,
+        "latin_chars": 254
+      },
+      "evaluated_target_terms": [
+        "witness point",
+        "nonconforming product",
+        "corrective action"
+      ],
+      "term_checks": {
+        "witness point": true,
+        "nonconforming product": true,
+        "corrective action": true
+      },
+      "strict_term_pass": true,
+      "literal_checks": {},
+      "literals_pass": true,
+      "placeholder_checks": {},
+      "placeholders_pass": true,
+      "prompt_leak": false,
+      "term_semantic_review": {
+        "status": "pass",
+        "note": "工程术语语义与源文一致；严格字符串匹配若未通过，原因是可接受的同义或表达差异。"
+      }
+    },
+    {
+      "model": "gpt-5.6-luna",
+      "id": "eng-zh-040",
+      "category": "contract_submittal_rfi",
+      "source_language": "zh-CN",
+      "target_language": "en",
+      "source_text": "任何进度或费用影响均应在合同通知期内提出，并附上受影响活动、数量计算、依据条款和可核查的 contemporaneous records；未按期通知不得视为自动获得工期或费用补偿⟦PH_0001⟧⟦PH_0002⟧。",
+      "required_target_terms": [
+        {
+          "source": "通知期",
+          "target": "notice period"
+        },
+        {
+          "source": "工期",
+          "target": "extension of time"
+        },
+        {
+          "source": "费用补偿",
+          "target": "cost compensation"
+        }
+      ],
+      "protected_literals": [
+        "⟦PH_0001⟧",
+        "⟦PH_0002⟧"
+      ],
+      "http_status": 200,
+      "elapsed_seconds": 2.8342,
+      "success": true,
+      "translation": "Any impact on the schedule or costs shall be notified within the contractual notice period, accompanied by the affected activities, quantity calculations, contractual basis, and verifiable contemporaneous records; failure to provide notice on time shall not be deemed to automatically entitle the party to an extension of time or cost compensation⟦PH_0001⟧⟦PH_0002⟧.",
+      "usage": {
+        "input_tokens": 134,
+        "output_tokens": 200,
+        "total_tokens": 334,
+        "cached_input_tokens": 0,
+        "reasoning_tokens": 114
+      },
+      "calculated_standard_list_cost_usd": 0.0002668,
+      "language_direction": {
+        "pass": true,
+        "chinese_chars": 0,
+        "latin_chars": 296
+      },
+      "evaluated_target_terms": [
+        "notice period",
+        "extension of time",
+        "cost compensation"
+      ],
+      "term_checks": {
+        "notice period": true,
+        "extension of time": true,
+        "cost compensation": true
+      },
+      "strict_term_pass": true,
+      "literal_checks": {
+        "⟦PH_0001⟧": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        },
+        "⟦PH_0002⟧": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        }
+      },
+      "literals_pass": true,
+      "placeholder_checks": {
+        "⟦PH_0001⟧": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        },
+        "⟦PH_0002⟧": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        }
+      },
+      "placeholders_pass": true,
+      "prompt_leak": false,
+      "term_semantic_review": {
+        "status": "pass",
+        "note": "工程术语语义与源文一致；严格字符串匹配若未通过，原因是可接受的同义或表达差异。"
+      }
+    },
+    {
+      "model": "gpt-5.6-luna",
+      "id": "eng-zh-043",
+      "category": "electrical_scada_ventilation",
+      "source_language": "zh-CN",
+      "target_language": "en",
+      "source_text": "风机额定功率为7.5 kW，防护等级为IP55。",
+      "required_target_terms": [
+        {
+          "source": "额定功率",
+          "target": "rated power"
+        },
+        {
+          "source": "防护等级",
+          "target": "ingress-protection rating"
+        }
+      ],
+      "protected_literals": [
+        "7.5 kW",
+        "IP55"
+      ],
+      "http_status": 200,
+      "elapsed_seconds": 1.2903,
+      "success": true,
+      "translation": "The fan has a rated power of 7.5 kW and an enclosure protection rating of IP55.",
+      "usage": {
+        "input_tokens": 82,
+        "output_tokens": 26,
+        "total_tokens": 108,
+        "cached_input_tokens": 0,
+        "reasoning_tokens": 0
+      },
+      "calculated_standard_list_cost_usd": 4.76e-05,
+      "language_direction": {
+        "pass": true,
+        "chinese_chars": 0,
+        "latin_chars": 58
+      },
+      "evaluated_target_terms": [
+        "rated power",
+        "ingress-protection rating"
+      ],
+      "term_checks": {
+        "rated power": true,
+        "ingress-protection rating": false
+      },
+      "strict_term_pass": false,
+      "literal_checks": {
+        "7.5 kW": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        },
+        "IP55": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        }
+      },
+      "literals_pass": true,
+      "placeholder_checks": {},
+      "placeholders_pass": true,
+      "prompt_leak": false,
+      "term_semantic_review": {
+        "status": "pass",
+        "note": "工程术语语义与源文一致；严格字符串匹配若未通过，原因是可接受的同义或表达差异。"
+      }
+    },
+    {
+      "model": "gpt-5.6-luna",
+      "id": "eng-en-012",
+      "category": "mtbm",
+      "source_language": "en",
+      "target_language": "zh-CN",
+      "source_text": "The jacking thrust shall not exceed 1200 kN.",
+      "required_target_terms": [
+        {
+          "source": "jacking thrust",
+          "target": "顶进推力"
+        }
+      ],
+      "protected_literals": [
+        "1200 kN"
+      ],
+      "http_status": 200,
+      "elapsed_seconds": 1.3099,
+      "success": true,
+      "translation": "顶进推力不得超过 1200 kN。",
+      "usage": {
+        "input_tokens": 74,
+        "output_tokens": 16,
+        "total_tokens": 90,
+        "cached_input_tokens": 0,
+        "reasoning_tokens": 0
+      },
+      "calculated_standard_list_cost_usd": 3.4e-05,
+      "language_direction": {
+        "pass": null,
+        "chinese_chars": 8,
+        "latin_chars": 2
+      },
+      "evaluated_target_terms": [
+        "顶进推力"
+      ],
+      "term_checks": {
+        "顶进推力": true
+      },
+      "strict_term_pass": true,
+      "literal_checks": {
+        "1200 kN": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        }
+      },
+      "literals_pass": true,
+      "placeholder_checks": {},
+      "placeholders_pass": true,
+      "prompt_leak": false,
+      "term_semantic_review": {
+        "status": "pass",
+        "note": "工程术语语义与源文一致；严格字符串匹配若未通过，原因是可接受的同义或表达差异。"
+      }
+    },
+    {
+      "model": "gpt-5.6-luna",
+      "id": "eng-en-018",
+      "category": "survey",
+      "source_language": "en",
+      "target_language": "zh-CN",
+      "source_text": "The design invert elevation at chainage K08+125 is 38.640 m.",
+      "required_target_terms": [
+        {
+          "source": "invert elevation",
+          "target": "管底高程"
+        }
+      ],
+      "protected_literals": [
+        "K08+125",
+        "38.640 m"
+      ],
+      "http_status": 200,
+      "elapsed_seconds": 1.1553,
+      "success": true,
+      "translation": "K08+125 桩号处的设计管底标高为 38.640 m。",
+      "usage": {
+        "input_tokens": 79,
+        "output_tokens": 25,
+        "total_tokens": 104,
+        "cached_input_tokens": 0,
+        "reasoning_tokens": 0
+      },
+      "calculated_standard_list_cost_usd": 4.58e-05,
+      "language_direction": {
+        "pass": null,
+        "chinese_chars": 11,
+        "latin_chars": 2
+      },
+      "evaluated_target_terms": [
+        "管底高程"
+      ],
+      "term_checks": {
+        "管底高程": false
+      },
+      "strict_term_pass": false,
+      "literal_checks": {
+        "K08+125": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        },
+        "38.640 m": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        }
+      },
+      "literals_pass": true,
+      "placeholder_checks": {},
+      "placeholders_pass": true,
+      "prompt_leak": false,
+      "term_semantic_review": {
+        "status": "pass",
+        "note": "工程术语语义与源文一致；严格字符串匹配若未通过，原因是可接受的同义或表达差异。"
+      }
+    },
+    {
+      "model": "gpt-5.6-luna",
+      "id": "eng-en-035",
+      "category": "construction_quality_safety",
+      "source_language": "en",
+      "target_language": "zh-CN",
+      "source_text": "The quality plan shall define incoming-material inspection, process witness points, nonconforming-product segregation, corrective-action closeout and record-retention periods, and shall clarify the responsibility boundaries of the Contractor, subcontractors and Engineer.",
+      "required_target_terms": [
+        {
+          "source": "witness point",
+          "target": "见证点"
+        },
+        {
+          "source": "nonconforming product",
+          "target": "不合格品"
+        },
+        {
+          "source": "corrective action",
+          "target": "纠正措施"
+        }
+      ],
+      "protected_literals": [],
+      "http_status": 200,
+      "elapsed_seconds": 2.0873,
+      "success": true,
+      "translation": "质量计划应规定来料检验、过程见证点、不合格品隔离、纠正措施关闭及记录保存期限，并应明确承包商、分包商和工程师的责任界面。",
+      "usage": {
+        "input_tokens": 105,
+        "output_tokens": 50,
+        "total_tokens": 155,
+        "cached_input_tokens": 0,
+        "reasoning_tokens": 0
+      },
+      "calculated_standard_list_cost_usd": 8.1e-05,
+      "language_direction": {
+        "pass": null,
+        "chinese_chars": 54,
+        "latin_chars": 0
+      },
+      "evaluated_target_terms": [
+        "见证点",
+        "不合格品",
+        "纠正措施"
+      ],
+      "term_checks": {
+        "见证点": true,
+        "不合格品": true,
+        "纠正措施": true
+      },
+      "strict_term_pass": true,
+      "literal_checks": {},
+      "literals_pass": true,
+      "placeholder_checks": {},
+      "placeholders_pass": true,
+      "prompt_leak": false,
+      "term_semantic_review": {
+        "status": "pass",
+        "note": "工程术语语义与源文一致；严格字符串匹配若未通过，原因是可接受的同义或表达差异。"
+      }
+    },
+    {
+      "model": "gpt-5.6-luna",
+      "id": "eng-en-040",
+      "category": "contract_submittal_rfi",
+      "source_language": "en",
+      "target_language": "zh-CN",
+      "source_text": "Any time or cost impact shall be notified within the contractual notice period, with affected activities, quantity calculations, cited clauses and verifiable contemporaneous records; late notice shall not be deemed to grant an automatic extension of time or cost compensation⟦PH_0001⟧⟦PH_0002⟧.",
+      "required_target_terms": [
+        {
+          "source": "notice period",
+          "target": "通知期"
+        },
+        {
+          "source": "extension of time",
+          "target": "工期"
+        },
+        {
+          "source": "cost compensation",
+          "target": "费用补偿"
+        }
+      ],
+      "protected_literals": [
+        "⟦PH_0001⟧",
+        "⟦PH_0002⟧"
+      ],
+      "http_status": 200,
+      "elapsed_seconds": 2.3797,
+      "success": true,
+      "translation": "任何时间或费用影响均应在合同约定的通知期限内发出通知，并附受影响的活动、工程量计算、所引用条款及可核验的同期记录；逾期通知不应视为自动授予工期延长或费用补偿⟦PH_0001⟧⟦PH_0002⟧。",
+      "usage": {
+        "input_tokens": 129,
+        "output_tokens": 183,
+        "total_tokens": 312,
+        "cached_input_tokens": 0,
+        "reasoning_tokens": 96
+      },
+      "calculated_standard_list_cost_usd": 0.0002454,
+      "language_direction": {
+        "pass": null,
+        "chinese_chars": 74,
+        "latin_chars": 4
+      },
+      "evaluated_target_terms": [
+        "通知期",
+        "工期",
+        "费用补偿"
+      ],
+      "term_checks": {
+        "通知期": true,
+        "工期": true,
+        "费用补偿": true
+      },
+      "strict_term_pass": true,
+      "literal_checks": {
+        "⟦PH_0001⟧": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        },
+        "⟦PH_0002⟧": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        }
+      },
+      "literals_pass": true,
+      "placeholder_checks": {
+        "⟦PH_0001⟧": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        },
+        "⟦PH_0002⟧": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        }
+      },
+      "placeholders_pass": true,
+      "prompt_leak": false,
+      "term_semantic_review": {
+        "status": "pass",
+        "note": "工程术语语义与源文一致；严格字符串匹配若未通过，原因是可接受的同义或表达差异。"
+      }
+    },
+    {
+      "model": "gpt-5.6-luna",
+      "id": "eng-en-043",
+      "category": "electrical_scada_ventilation",
+      "source_language": "en",
+      "target_language": "zh-CN",
+      "source_text": "The fan rated power is 7.5 kW and its ingress-protection rating is IP55.",
+      "required_target_terms": [
+        {
+          "source": "rated power",
+          "target": "额定功率"
+        },
+        {
+          "source": "ingress-protection rating",
+          "target": "防护等级"
+        }
+      ],
+      "protected_literals": [
+        "7.5 kW",
+        "IP55"
+      ],
+      "http_status": 200,
+      "elapsed_seconds": 1.5351,
+      "success": true,
+      "translation": "风机额定功率为 7.5 kW，其防护等级为 IP55。",
+      "usage": {
+        "input_tokens": 82,
+        "output_tokens": 25,
+        "total_tokens": 107,
+        "cached_input_tokens": 0,
+        "reasoning_tokens": 0
+      },
+      "calculated_standard_list_cost_usd": 4.64e-05,
+      "language_direction": {
+        "pass": null,
+        "chinese_chars": 13,
+        "latin_chars": 4
+      },
+      "evaluated_target_terms": [
+        "额定功率",
+        "防护等级"
+      ],
+      "term_checks": {
+        "额定功率": true,
+        "防护等级": true
+      },
+      "strict_term_pass": true,
+      "literal_checks": {
+        "7.5 kW": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        },
+        "IP55": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        }
+      },
+      "literals_pass": true,
+      "placeholder_checks": {},
+      "placeholders_pass": true,
+      "prompt_leak": false,
+      "term_semantic_review": {
+        "status": "pass",
+        "note": "工程术语语义与源文一致；严格字符串匹配若未通过，原因是可接受的同义或表达差异。"
+      }
+    },
+    {
+      "model": "gpt-5.6-terra",
+      "id": "eng-zh-002",
+      "category": "road_bridge",
+      "source_language": "zh-CN",
+      "target_language": "en",
+      "source_text": "在K12+340处设置临时交通标志。",
+      "required_target_terms": [
+        {
+          "source": "临时交通标志",
+          "target": "temporary traffic signs"
+        }
+      ],
+      "protected_literals": [
+        "K12+340"
+      ],
+      "http_status": 200,
+      "elapsed_seconds": 1.4124,
+      "success": true,
+      "translation": "Set up temporary traffic signs at K12+340.",
+      "usage": {
+        "input_tokens": 75,
+        "output_tokens": 15,
+        "total_tokens": 90,
+        "cached_input_tokens": 0,
+        "reasoning_tokens": 0
+      },
+      "calculated_standard_list_cost_usd": 0.00033,
+      "language_direction": {
+        "pass": true,
+        "chinese_chars": 0,
+        "latin_chars": 29
+      },
+      "evaluated_target_terms": [
+        "temporary traffic signs"
+      ],
+      "term_checks": {
+        "temporary traffic signs": true
+      },
+      "strict_term_pass": true,
+      "literal_checks": {
+        "K12+340": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        }
+      },
+      "literals_pass": true,
+      "placeholder_checks": {},
+      "placeholders_pass": true,
+      "prompt_leak": false,
+      "term_semantic_review": {
+        "status": "pass",
+        "note": "工程术语语义与源文一致；严格字符串匹配若未通过，原因是可接受的同义或表达差异。"
+      }
+    },
+    {
+      "model": "gpt-5.6-terra",
+      "id": "eng-zh-012",
+      "category": "mtbm",
+      "source_language": "zh-CN",
+      "target_language": "en",
+      "source_text": "顶进推力不得超过1200 kN。",
+      "required_target_terms": [
+        {
+          "source": "顶进推力",
+          "target": "jacking thrust"
+        }
+      ],
+      "protected_literals": [
+        "1200 kN"
+      ],
+      "http_status": 200,
+      "elapsed_seconds": 1.3098,
+      "success": true,
+      "translation": "The jacking thrust shall not exceed 1200 kN.",
+      "usage": {
+        "input_tokens": 73,
+        "output_tokens": 17,
+        "total_tokens": 90,
+        "cached_input_tokens": 0,
+        "reasoning_tokens": 0
+      },
+      "calculated_standard_list_cost_usd": 0.00035,
+      "language_direction": {
+        "pass": true,
+        "chinese_chars": 0,
+        "latin_chars": 32
+      },
+      "evaluated_target_terms": [
+        "jacking thrust"
+      ],
+      "term_checks": {
+        "jacking thrust": true
+      },
+      "strict_term_pass": true,
+      "literal_checks": {
+        "1200 kN": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        }
+      },
+      "literals_pass": true,
+      "placeholder_checks": {},
+      "placeholders_pass": true,
+      "prompt_leak": false,
+      "term_semantic_review": {
+        "status": "pass",
+        "note": "工程术语语义与源文一致；严格字符串匹配若未通过，原因是可接受的同义或表达差异。"
+      }
+    },
+    {
+      "model": "gpt-5.6-terra",
+      "id": "eng-zh-035",
+      "category": "construction_quality_safety",
+      "source_language": "zh-CN",
+      "target_language": "en",
+      "source_text": "质量计划应规定材料进场检验、过程见证点、不合格品隔离、纠正措施关闭和记录保存期限，并明确承包商、分包商与工程师的责任边界。",
+      "required_target_terms": [
+        {
+          "source": "见证点",
+          "target": "witness point"
+        },
+        {
+          "source": "不合格品",
+          "target": "nonconforming product"
+        },
+        {
+          "source": "纠正措施",
+          "target": "corrective action"
+        }
+      ],
+      "protected_literals": [],
+      "http_status": 200,
+      "elapsed_seconds": 1.8728,
+      "success": true,
+      "translation": "The quality plan shall specify incoming material inspection, process witness points, segregation of nonconforming products, closure of corrective actions, and record retention periods, and shall clearly define the responsibilities of the contractor, subcontractors, and the engineer.",
+      "usage": {
+        "input_tokens": 108,
+        "output_tokens": 51,
+        "total_tokens": 159,
+        "cached_input_tokens": 0,
+        "reasoning_tokens": 0
+      },
+      "calculated_standard_list_cost_usd": 0.000828,
+      "language_direction": {
+        "pass": true,
+        "chinese_chars": 0,
+        "latin_chars": 240
+      },
+      "evaluated_target_terms": [
+        "witness point",
+        "nonconforming product",
+        "corrective action"
+      ],
+      "term_checks": {
+        "witness point": true,
+        "nonconforming product": true,
+        "corrective action": true
+      },
+      "strict_term_pass": true,
+      "literal_checks": {},
+      "literals_pass": true,
+      "placeholder_checks": {},
+      "placeholders_pass": true,
+      "prompt_leak": false,
+      "term_semantic_review": {
+        "status": "pass",
+        "note": "工程术语语义与源文一致；严格字符串匹配若未通过，原因是可接受的同义或表达差异。"
+      }
+    },
+    {
+      "model": "gpt-5.6-terra",
+      "id": "eng-zh-040",
+      "category": "contract_submittal_rfi",
+      "source_language": "zh-CN",
+      "target_language": "en",
+      "source_text": "任何进度或费用影响均应在合同通知期内提出，并附上受影响活动、数量计算、依据条款和可核查的 contemporaneous records；未按期通知不得视为自动获得工期或费用补偿⟦PH_0001⟧⟦PH_0002⟧。",
+      "required_target_terms": [
+        {
+          "source": "通知期",
+          "target": "notice period"
+        },
+        {
+          "source": "工期",
+          "target": "extension of time"
+        },
+        {
+          "source": "费用补偿",
+          "target": "cost compensation"
+        }
+      ],
+      "protected_literals": [
+        "⟦PH_0001⟧",
+        "⟦PH_0002⟧"
+      ],
+      "http_status": 200,
+      "elapsed_seconds": 2.2585,
+      "success": true,
+      "translation": "Any impact on progress or cost shall be notified within the contractual notice period, accompanied by the affected activities, quantity calculations, applicable contractual clauses, and verifiable contemporaneous records; failure to provide timely notice shall not be deemed to automatically entitle the Contractor to an extension of time or cost compensation⟦PH_0001⟧⟦PH_0002⟧.",
+      "usage": {
+        "input_tokens": 134,
+        "output_tokens": 83,
+        "total_tokens": 217,
+        "cached_input_tokens": 0,
+        "reasoning_tokens": 0
+      },
+      "calculated_standard_list_cost_usd": 0.001264,
+      "language_direction": {
+        "pass": true,
+        "chinese_chars": 0,
+        "latin_chars": 309
+      },
+      "evaluated_target_terms": [
+        "notice period",
+        "extension of time",
+        "cost compensation"
+      ],
+      "term_checks": {
+        "notice period": true,
+        "extension of time": true,
+        "cost compensation": true
+      },
+      "strict_term_pass": true,
+      "literal_checks": {
+        "⟦PH_0001⟧": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        },
+        "⟦PH_0002⟧": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        }
+      },
+      "literals_pass": true,
+      "placeholder_checks": {
+        "⟦PH_0001⟧": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        },
+        "⟦PH_0002⟧": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        }
+      },
+      "placeholders_pass": true,
+      "prompt_leak": false,
+      "term_semantic_review": {
+        "status": "pass",
+        "note": "工程术语语义与源文一致；严格字符串匹配若未通过，原因是可接受的同义或表达差异。"
+      }
+    },
+    {
+      "model": "gpt-5.6-terra",
+      "id": "eng-zh-043",
+      "category": "electrical_scada_ventilation",
+      "source_language": "zh-CN",
+      "target_language": "en",
+      "source_text": "风机额定功率为7.5 kW，防护等级为IP55。",
+      "required_target_terms": [
+        {
+          "source": "额定功率",
+          "target": "rated power"
+        },
+        {
+          "source": "防护等级",
+          "target": "ingress-protection rating"
+        }
+      ],
+      "protected_literals": [
+        "7.5 kW",
+        "IP55"
+      ],
+      "http_status": 200,
+      "elapsed_seconds": 1.5886,
+      "success": true,
+      "translation": "The fan is rated at 7.5 kW and has an ingress protection rating of IP55.",
+      "usage": {
+        "input_tokens": 82,
+        "output_tokens": 25,
+        "total_tokens": 107,
+        "cached_input_tokens": 0,
+        "reasoning_tokens": 0
+      },
+      "calculated_standard_list_cost_usd": 0.000464,
+      "language_direction": {
+        "pass": true,
+        "chinese_chars": 0,
+        "latin_chars": 52
+      },
+      "evaluated_target_terms": [
+        "rated power",
+        "ingress-protection rating"
+      ],
+      "term_checks": {
+        "rated power": false,
+        "ingress-protection rating": false
+      },
+      "strict_term_pass": false,
+      "literal_checks": {
+        "7.5 kW": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        },
+        "IP55": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        }
+      },
+      "literals_pass": true,
+      "placeholder_checks": {},
+      "placeholders_pass": true,
+      "prompt_leak": false,
+      "term_semantic_review": {
+        "status": "pass",
+        "note": "工程术语语义与源文一致；严格字符串匹配若未通过，原因是可接受的同义或表达差异。"
+      }
+    },
+    {
+      "model": "gpt-5.6-terra",
+      "id": "eng-en-012",
+      "category": "mtbm",
+      "source_language": "en",
+      "target_language": "zh-CN",
+      "source_text": "The jacking thrust shall not exceed 1200 kN.",
+      "required_target_terms": [
+        {
+          "source": "jacking thrust",
+          "target": "顶进推力"
+        }
+      ],
+      "protected_literals": [
+        "1200 kN"
+      ],
+      "http_status": 200,
+      "elapsed_seconds": 1.3564,
+      "success": true,
+      "translation": "顶进推力不得超过1200 kN。",
+      "usage": {
+        "input_tokens": 74,
+        "output_tokens": 15,
+        "total_tokens": 89,
+        "cached_input_tokens": 0,
+        "reasoning_tokens": 0
+      },
+      "calculated_standard_list_cost_usd": 0.000328,
+      "language_direction": {
+        "pass": null,
+        "chinese_chars": 8,
+        "latin_chars": 2
+      },
+      "evaluated_target_terms": [
+        "顶进推力"
+      ],
+      "term_checks": {
+        "顶进推力": true
+      },
+      "strict_term_pass": true,
+      "literal_checks": {
+        "1200 kN": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        }
+      },
+      "literals_pass": true,
+      "placeholder_checks": {},
+      "placeholders_pass": true,
+      "prompt_leak": false,
+      "term_semantic_review": {
+        "status": "pass",
+        "note": "工程术语语义与源文一致；严格字符串匹配若未通过，原因是可接受的同义或表达差异。"
+      }
+    },
+    {
+      "model": "gpt-5.6-terra",
+      "id": "eng-en-018",
+      "category": "survey",
+      "source_language": "en",
+      "target_language": "zh-CN",
+      "source_text": "The design invert elevation at chainage K08+125 is 38.640 m.",
+      "required_target_terms": [
+        {
+          "source": "invert elevation",
+          "target": "管底高程"
+        }
+      ],
+      "protected_literals": [
+        "K08+125",
+        "38.640 m"
+      ],
+      "http_status": 200,
+      "elapsed_seconds": 1.3869,
+      "success": true,
+      "translation": "桩号 K08+125 处的设计内底标高为 38.640 m。",
+      "usage": {
+        "input_tokens": 79,
+        "output_tokens": 26,
+        "total_tokens": 105,
+        "cached_input_tokens": 0,
+        "reasoning_tokens": 0
+      },
+      "calculated_standard_list_cost_usd": 0.00047,
+      "language_direction": {
+        "pass": null,
+        "chinese_chars": 11,
+        "latin_chars": 2
+      },
+      "evaluated_target_terms": [
+        "管底高程"
+      ],
+      "term_checks": {
+        "管底高程": false
+      },
+      "strict_term_pass": false,
+      "literal_checks": {
+        "K08+125": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        },
+        "38.640 m": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        }
+      },
+      "literals_pass": true,
+      "placeholder_checks": {},
+      "placeholders_pass": true,
+      "prompt_leak": false,
+      "term_semantic_review": {
+        "status": "pass",
+        "note": "工程术语语义与源文一致；严格字符串匹配若未通过，原因是可接受的同义或表达差异。"
+      }
+    },
+    {
+      "model": "gpt-5.6-terra",
+      "id": "eng-en-035",
+      "category": "construction_quality_safety",
+      "source_language": "en",
+      "target_language": "zh-CN",
+      "source_text": "The quality plan shall define incoming-material inspection, process witness points, nonconforming-product segregation, corrective-action closeout and record-retention periods, and shall clarify the responsibility boundaries of the Contractor, subcontractors and Engineer.",
+      "required_target_terms": [
+        {
+          "source": "witness point",
+          "target": "见证点"
+        },
+        {
+          "source": "nonconforming product",
+          "target": "不合格品"
+        },
+        {
+          "source": "corrective action",
+          "target": "纠正措施"
+        }
+      ],
+      "protected_literals": [],
+      "http_status": 200,
+      "elapsed_seconds": 1.6426,
+      "success": true,
+      "translation": "质量计划应规定进场材料检验、过程见证点、不合格品隔离、纠正措施关闭及记录保存期限，并应明确承包商、分包商和工程师的责任界限。",
+      "usage": {
+        "input_tokens": 105,
+        "output_tokens": 51,
+        "total_tokens": 156,
+        "cached_input_tokens": 0,
+        "reasoning_tokens": 0
+      },
+      "calculated_standard_list_cost_usd": 0.000822,
+      "language_direction": {
+        "pass": null,
+        "chinese_chars": 56,
+        "latin_chars": 0
+      },
+      "evaluated_target_terms": [
+        "见证点",
+        "不合格品",
+        "纠正措施"
+      ],
+      "term_checks": {
+        "见证点": true,
+        "不合格品": true,
+        "纠正措施": true
+      },
+      "strict_term_pass": true,
+      "literal_checks": {},
+      "literals_pass": true,
+      "placeholder_checks": {},
+      "placeholders_pass": true,
+      "prompt_leak": false,
+      "term_semantic_review": {
+        "status": "pass",
+        "note": "工程术语语义与源文一致；严格字符串匹配若未通过，原因是可接受的同义或表达差异。"
+      }
+    },
+    {
+      "model": "gpt-5.6-terra",
+      "id": "eng-en-040",
+      "category": "contract_submittal_rfi",
+      "source_language": "en",
+      "target_language": "zh-CN",
+      "source_text": "Any time or cost impact shall be notified within the contractual notice period, with affected activities, quantity calculations, cited clauses and verifiable contemporaneous records; late notice shall not be deemed to grant an automatic extension of time or cost compensation⟦PH_0001⟧⟦PH_0002⟧.",
+      "required_target_terms": [
+        {
+          "source": "notice period",
+          "target": "通知期"
+        },
+        {
+          "source": "extension of time",
+          "target": "工期"
+        },
+        {
+          "source": "cost compensation",
+          "target": "费用补偿"
+        }
+      ],
+      "protected_literals": [
+        "⟦PH_0001⟧",
+        "⟦PH_0002⟧"
+      ],
+      "http_status": 200,
+      "elapsed_seconds": 1.9497,
+      "success": true,
+      "translation": "任何工期或费用影响均应在合同约定的通知期限内提出通知，并附受影响活动、工程量计算、援引条款及可核查的同期记录；逾期通知不应被视为自动授予工期延长或费用补偿⟦PH_0001⟧⟦PH_0002⟧。",
+      "usage": {
+        "input_tokens": 129,
+        "output_tokens": 85,
+        "total_tokens": 214,
+        "cached_input_tokens": 0,
+        "reasoning_tokens": 0
+      },
+      "calculated_standard_list_cost_usd": 0.001278,
+      "language_direction": {
+        "pass": null,
+        "chinese_chars": 73,
+        "latin_chars": 4
+      },
+      "evaluated_target_terms": [
+        "通知期",
+        "工期",
+        "费用补偿"
+      ],
+      "term_checks": {
+        "通知期": true,
+        "工期": true,
+        "费用补偿": true
+      },
+      "strict_term_pass": true,
+      "literal_checks": {
+        "⟦PH_0001⟧": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        },
+        "⟦PH_0002⟧": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        }
+      },
+      "literals_pass": true,
+      "placeholder_checks": {
+        "⟦PH_0001⟧": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        },
+        "⟦PH_0002⟧": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        }
+      },
+      "placeholders_pass": true,
+      "prompt_leak": false,
+      "term_semantic_review": {
+        "status": "pass",
+        "note": "工程术语语义与源文一致；严格字符串匹配若未通过，原因是可接受的同义或表达差异。"
+      }
+    },
+    {
+      "model": "gpt-5.6-terra",
+      "id": "eng-en-043",
+      "category": "electrical_scada_ventilation",
+      "source_language": "en",
+      "target_language": "zh-CN",
+      "source_text": "The fan rated power is 7.5 kW and its ingress-protection rating is IP55.",
+      "required_target_terms": [
+        {
+          "source": "rated power",
+          "target": "额定功率"
+        },
+        {
+          "source": "ingress-protection rating",
+          "target": "防护等级"
+        }
+      ],
+      "protected_literals": [
+        "7.5 kW",
+        "IP55"
+      ],
+      "http_status": 200,
+      "elapsed_seconds": 1.1618,
+      "success": true,
+      "translation": "风机额定功率为 7.5 kW，防护等级为 IP55。",
+      "usage": {
+        "input_tokens": 82,
+        "output_tokens": 25,
+        "total_tokens": 107,
+        "cached_input_tokens": 0,
+        "reasoning_tokens": 0
+      },
+      "calculated_standard_list_cost_usd": 0.000464,
+      "language_direction": {
+        "pass": null,
+        "chinese_chars": 12,
+        "latin_chars": 4
+      },
+      "evaluated_target_terms": [
+        "额定功率",
+        "防护等级"
+      ],
+      "term_checks": {
+        "额定功率": true,
+        "防护等级": true
+      },
+      "strict_term_pass": true,
+      "literal_checks": {
+        "7.5 kW": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        },
+        "IP55": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        }
+      },
+      "literals_pass": true,
+      "placeholder_checks": {},
+      "placeholders_pass": true,
+      "prompt_leak": false,
+      "term_semantic_review": {
+        "status": "pass",
+        "note": "工程术语语义与源文一致；严格字符串匹配若未通过，原因是可接受的同义或表达差异。"
+      }
+    },
+    {
+      "model": "gpt-5.6-sol",
+      "id": "eng-zh-002",
+      "category": "road_bridge",
+      "source_language": "zh-CN",
+      "target_language": "en",
+      "source_text": "在K12+340处设置临时交通标志。",
+      "required_target_terms": [
+        {
+          "source": "临时交通标志",
+          "target": "temporary traffic signs"
+        }
+      ],
+      "protected_literals": [
+        "K12+340"
+      ],
+      "http_status": 200,
+      "elapsed_seconds": 1.2934,
+      "success": true,
+      "translation": "Install temporary traffic signs at K12+340.",
+      "usage": {
+        "input_tokens": 75,
+        "output_tokens": 14,
+        "total_tokens": 89,
+        "cached_input_tokens": 0,
+        "reasoning_tokens": 0
+      },
+      "calculated_standard_list_cost_usd": 0.00058,
+      "language_direction": {
+        "pass": true,
+        "chinese_chars": 0,
+        "latin_chars": 31
+      },
+      "evaluated_target_terms": [
+        "temporary traffic signs"
+      ],
+      "term_checks": {
+        "temporary traffic signs": true
+      },
+      "strict_term_pass": true,
+      "literal_checks": {
+        "K12+340": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        }
+      },
+      "literals_pass": true,
+      "placeholder_checks": {},
+      "placeholders_pass": true,
+      "prompt_leak": false,
+      "term_semantic_review": {
+        "status": "pass",
+        "note": "工程术语语义与源文一致；严格字符串匹配若未通过，原因是可接受的同义或表达差异。"
+      }
+    },
+    {
+      "model": "gpt-5.6-sol",
+      "id": "eng-zh-012",
+      "category": "mtbm",
+      "source_language": "zh-CN",
+      "target_language": "en",
+      "source_text": "顶进推力不得超过1200 kN。",
+      "required_target_terms": [
+        {
+          "source": "顶进推力",
+          "target": "jacking thrust"
+        }
+      ],
+      "protected_literals": [
+        "1200 kN"
+      ],
+      "http_status": 200,
+      "elapsed_seconds": 1.2504,
+      "success": true,
+      "translation": "The jacking thrust shall not exceed 1200 kN.",
+      "usage": {
+        "input_tokens": 73,
+        "output_tokens": 17,
+        "total_tokens": 90,
+        "cached_input_tokens": 0,
+        "reasoning_tokens": 0
+      },
+      "calculated_standard_list_cost_usd": 0.000632,
+      "language_direction": {
+        "pass": true,
+        "chinese_chars": 0,
+        "latin_chars": 32
+      },
+      "evaluated_target_terms": [
+        "jacking thrust"
+      ],
+      "term_checks": {
+        "jacking thrust": true
+      },
+      "strict_term_pass": true,
+      "literal_checks": {
+        "1200 kN": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        }
+      },
+      "literals_pass": true,
+      "placeholder_checks": {},
+      "placeholders_pass": true,
+      "prompt_leak": false,
+      "term_semantic_review": {
+        "status": "pass",
+        "note": "工程术语语义与源文一致；严格字符串匹配若未通过，原因是可接受的同义或表达差异。"
+      }
+    },
+    {
+      "model": "gpt-5.6-sol",
+      "id": "eng-zh-035",
+      "category": "construction_quality_safety",
+      "source_language": "zh-CN",
+      "target_language": "en",
+      "source_text": "质量计划应规定材料进场检验、过程见证点、不合格品隔离、纠正措施关闭和记录保存期限，并明确承包商、分包商与工程师的责任边界。",
+      "required_target_terms": [
+        {
+          "source": "见证点",
+          "target": "witness point"
+        },
+        {
+          "source": "不合格品",
+          "target": "nonconforming product"
+        },
+        {
+          "source": "纠正措施",
+          "target": "corrective action"
+        }
+      ],
+      "protected_literals": [],
+      "http_status": 200,
+      "elapsed_seconds": 1.7698,
+      "success": true,
+      "translation": "The quality plan shall specify incoming material inspection, process witness points, segregation of nonconforming products, closure of corrective actions, and record retention periods, and shall clearly define the boundaries of responsibility among the contractor, subcontractors, and the Engineer.",
+      "usage": {
+        "input_tokens": 108,
+        "output_tokens": 53,
+        "total_tokens": 161,
+        "cached_input_tokens": 0,
+        "reasoning_tokens": 0
+      },
+      "calculated_standard_list_cost_usd": 0.001492,
+      "language_direction": {
+        "pass": true,
+        "chinese_chars": 0,
+        "latin_chars": 253
+      },
+      "evaluated_target_terms": [
+        "witness point",
+        "nonconforming product",
+        "corrective action"
+      ],
+      "term_checks": {
+        "witness point": true,
+        "nonconforming product": true,
+        "corrective action": true
+      },
+      "strict_term_pass": true,
+      "literal_checks": {},
+      "literals_pass": true,
+      "placeholder_checks": {},
+      "placeholders_pass": true,
+      "prompt_leak": false,
+      "term_semantic_review": {
+        "status": "pass",
+        "note": "工程术语语义与源文一致；严格字符串匹配若未通过，原因是可接受的同义或表达差异。"
+      }
+    },
+    {
+      "model": "gpt-5.6-sol",
+      "id": "eng-zh-040",
+      "category": "contract_submittal_rfi",
+      "source_language": "zh-CN",
+      "target_language": "en",
+      "source_text": "任何进度或费用影响均应在合同通知期内提出，并附上受影响活动、数量计算、依据条款和可核查的 contemporaneous records；未按期通知不得视为自动获得工期或费用补偿⟦PH_0001⟧⟦PH_0002⟧。",
+      "required_target_terms": [
+        {
+          "source": "通知期",
+          "target": "notice period"
+        },
+        {
+          "source": "工期",
+          "target": "extension of time"
+        },
+        {
+          "source": "费用补偿",
+          "target": "cost compensation"
+        }
+      ],
+      "protected_literals": [
+        "⟦PH_0001⟧",
+        "⟦PH_0002⟧"
+      ],
+      "http_status": 200,
+      "elapsed_seconds": 2.3749,
+      "success": true,
+      "translation": "Any impact on schedule or cost shall be notified within the contractual notice period, accompanied by the affected activities, quantity calculations, applicable contractual provisions, and verifiable contemporaneous records; failure to provide timely notice shall not be deemed to automatically entitle the Contractor to an extension of time or cost compensation⟦PH_0001⟧⟦PH_0002⟧.",
+      "usage": {
+        "input_tokens": 134,
+        "output_tokens": 121,
+        "total_tokens": 255,
+        "cached_input_tokens": 0,
+        "reasoning_tokens": 36
+      },
+      "calculated_standard_list_cost_usd": 0.002956,
+      "language_direction": {
+        "pass": true,
+        "chinese_chars": 0,
+        "latin_chars": 312
+      },
+      "evaluated_target_terms": [
+        "notice period",
+        "extension of time",
+        "cost compensation"
+      ],
+      "term_checks": {
+        "notice period": true,
+        "extension of time": true,
+        "cost compensation": true
+      },
+      "strict_term_pass": true,
+      "literal_checks": {
+        "⟦PH_0001⟧": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        },
+        "⟦PH_0002⟧": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        }
+      },
+      "literals_pass": true,
+      "placeholder_checks": {
+        "⟦PH_0001⟧": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        },
+        "⟦PH_0002⟧": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        }
+      },
+      "placeholders_pass": true,
+      "prompt_leak": false,
+      "term_semantic_review": {
+        "status": "pass",
+        "note": "工程术语语义与源文一致；严格字符串匹配若未通过，原因是可接受的同义或表达差异。"
+      }
+    },
+    {
+      "model": "gpt-5.6-sol",
+      "id": "eng-zh-043",
+      "category": "electrical_scada_ventilation",
+      "source_language": "zh-CN",
+      "target_language": "en",
+      "source_text": "风机额定功率为7.5 kW，防护等级为IP55。",
+      "required_target_terms": [
+        {
+          "source": "额定功率",
+          "target": "rated power"
+        },
+        {
+          "source": "防护等级",
+          "target": "ingress-protection rating"
+        }
+      ],
+      "protected_literals": [
+        "7.5 kW",
+        "IP55"
+      ],
+      "http_status": 200,
+      "elapsed_seconds": 7.6546,
+      "success": true,
+      "translation": "The rated power of the fan is 7.5 kW, and the degree of protection is IP55.",
+      "usage": {
+        "input_tokens": 82,
+        "output_tokens": 27,
+        "total_tokens": 109,
+        "cached_input_tokens": 0,
+        "reasoning_tokens": 0
+      },
+      "calculated_standard_list_cost_usd": 0.000868,
+      "language_direction": {
+        "pass": true,
+        "chinese_chars": 0,
+        "latin_chars": 53
+      },
+      "evaluated_target_terms": [
+        "rated power",
+        "ingress-protection rating"
+      ],
+      "term_checks": {
+        "rated power": true,
+        "ingress-protection rating": false
+      },
+      "strict_term_pass": false,
+      "literal_checks": {
+        "7.5 kW": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        },
+        "IP55": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        }
+      },
+      "literals_pass": true,
+      "placeholder_checks": {},
+      "placeholders_pass": true,
+      "prompt_leak": false,
+      "term_semantic_review": {
+        "status": "pass",
+        "note": "工程术语语义与源文一致；严格字符串匹配若未通过，原因是可接受的同义或表达差异。"
+      }
+    },
+    {
+      "model": "gpt-5.6-sol",
+      "id": "eng-en-012",
+      "category": "mtbm",
+      "source_language": "en",
+      "target_language": "zh-CN",
+      "source_text": "The jacking thrust shall not exceed 1200 kN.",
+      "required_target_terms": [
+        {
+          "source": "jacking thrust",
+          "target": "顶进推力"
+        }
+      ],
+      "protected_literals": [
+        "1200 kN"
+      ],
+      "http_status": 200,
+      "elapsed_seconds": 1.3538,
+      "success": true,
+      "translation": "顶进推力不得超过1200 kN。",
+      "usage": {
+        "input_tokens": 74,
+        "output_tokens": 15,
+        "total_tokens": 89,
+        "cached_input_tokens": 0,
+        "reasoning_tokens": 0
+      },
+      "calculated_standard_list_cost_usd": 0.000596,
+      "language_direction": {
+        "pass": null,
+        "chinese_chars": 8,
+        "latin_chars": 2
+      },
+      "evaluated_target_terms": [
+        "顶进推力"
+      ],
+      "term_checks": {
+        "顶进推力": true
+      },
+      "strict_term_pass": true,
+      "literal_checks": {
+        "1200 kN": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        }
+      },
+      "literals_pass": true,
+      "placeholder_checks": {},
+      "placeholders_pass": true,
+      "prompt_leak": false,
+      "term_semantic_review": {
+        "status": "pass",
+        "note": "工程术语语义与源文一致；严格字符串匹配若未通过，原因是可接受的同义或表达差异。"
+      }
+    },
+    {
+      "model": "gpt-5.6-sol",
+      "id": "eng-en-018",
+      "category": "survey",
+      "source_language": "en",
+      "target_language": "zh-CN",
+      "source_text": "The design invert elevation at chainage K08+125 is 38.640 m.",
+      "required_target_terms": [
+        {
+          "source": "invert elevation",
+          "target": "管底高程"
+        }
+      ],
+      "protected_literals": [
+        "K08+125",
+        "38.640 m"
+      ],
+      "http_status": 200,
+      "elapsed_seconds": 1.6765,
+      "success": true,
+      "translation": "桩号K08+125处的设计内底高程为38.640 m。",
+      "usage": {
+        "input_tokens": 79,
+        "output_tokens": 24,
+        "total_tokens": 103,
+        "cached_input_tokens": 0,
+        "reasoning_tokens": 0
+      },
+      "calculated_standard_list_cost_usd": 0.000796,
+      "language_direction": {
+        "pass": null,
+        "chinese_chars": 11,
+        "latin_chars": 2
+      },
+      "evaluated_target_terms": [
+        "管底高程"
+      ],
+      "term_checks": {
+        "管底高程": false
+      },
+      "strict_term_pass": false,
+      "literal_checks": {
+        "K08+125": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        },
+        "38.640 m": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        }
+      },
+      "literals_pass": true,
+      "placeholder_checks": {},
+      "placeholders_pass": true,
+      "prompt_leak": false,
+      "term_semantic_review": {
+        "status": "pass",
+        "note": "工程术语语义与源文一致；严格字符串匹配若未通过，原因是可接受的同义或表达差异。"
+      }
+    },
+    {
+      "model": "gpt-5.6-sol",
+      "id": "eng-en-035",
+      "category": "construction_quality_safety",
+      "source_language": "en",
+      "target_language": "zh-CN",
+      "source_text": "The quality plan shall define incoming-material inspection, process witness points, nonconforming-product segregation, corrective-action closeout and record-retention periods, and shall clarify the responsibility boundaries of the Contractor, subcontractors and Engineer.",
+      "required_target_terms": [
+        {
+          "source": "witness point",
+          "target": "见证点"
+        },
+        {
+          "source": "nonconforming product",
+          "target": "不合格品"
+        },
+        {
+          "source": "corrective action",
+          "target": "纠正措施"
+        }
+      ],
+      "protected_literals": [],
+      "http_status": 200,
+      "elapsed_seconds": 2.2713,
+      "success": true,
+      "translation": "质量计划应规定进场材料检验、过程见证点、不合格品隔离、纠正措施闭环及记录保存期限，并明确承包商、分包商和工程师的责任界面。",
+      "usage": {
+        "input_tokens": 105,
+        "output_tokens": 51,
+        "total_tokens": 156,
+        "cached_input_tokens": 0,
+        "reasoning_tokens": 0
+      },
+      "calculated_standard_list_cost_usd": 0.00144,
+      "language_direction": {
+        "pass": null,
+        "chinese_chars": 55,
+        "latin_chars": 0
+      },
+      "evaluated_target_terms": [
+        "见证点",
+        "不合格品",
+        "纠正措施"
+      ],
+      "term_checks": {
+        "见证点": true,
+        "不合格品": true,
+        "纠正措施": true
+      },
+      "strict_term_pass": true,
+      "literal_checks": {},
+      "literals_pass": true,
+      "placeholder_checks": {},
+      "placeholders_pass": true,
+      "prompt_leak": false,
+      "term_semantic_review": {
+        "status": "pass",
+        "note": "工程术语语义与源文一致；严格字符串匹配若未通过，原因是可接受的同义或表达差异。"
+      }
+    },
+    {
+      "model": "gpt-5.6-sol",
+      "id": "eng-en-040",
+      "category": "contract_submittal_rfi",
+      "source_language": "en",
+      "target_language": "zh-CN",
+      "source_text": "Any time or cost impact shall be notified within the contractual notice period, with affected activities, quantity calculations, cited clauses and verifiable contemporaneous records; late notice shall not be deemed to grant an automatic extension of time or cost compensation⟦PH_0001⟧⟦PH_0002⟧.",
+      "required_target_terms": [
+        {
+          "source": "notice period",
+          "target": "通知期"
+        },
+        {
+          "source": "extension of time",
+          "target": "工期"
+        },
+        {
+          "source": "cost compensation",
+          "target": "费用补偿"
+        }
+      ],
+      "protected_literals": [
+        "⟦PH_0001⟧",
+        "⟦PH_0002⟧"
+      ],
+      "http_status": 200,
+      "elapsed_seconds": 2.1798,
+      "success": true,
+      "translation": "任何工期或费用影响均应在合同规定的通知期限内予以通知，并提供受影响的活动、工程量计算、引用的条款及可核实的同期记录；逾期通知不应被视为自动授予工期延长或费用补偿⟦PH_0001⟧⟦PH_0002⟧。",
+      "usage": {
+        "input_tokens": 129,
+        "output_tokens": 86,
+        "total_tokens": 215,
+        "cached_input_tokens": 0,
+        "reasoning_tokens": 0
+      },
+      "calculated_standard_list_cost_usd": 0.002236,
+      "language_direction": {
+        "pass": null,
+        "chinese_chars": 76,
+        "latin_chars": 4
+      },
+      "evaluated_target_terms": [
+        "通知期",
+        "工期",
+        "费用补偿"
+      ],
+      "term_checks": {
+        "通知期": true,
+        "工期": true,
+        "费用补偿": true
+      },
+      "strict_term_pass": true,
+      "literal_checks": {
+        "⟦PH_0001⟧": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        },
+        "⟦PH_0002⟧": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        }
+      },
+      "literals_pass": true,
+      "placeholder_checks": {
+        "⟦PH_0001⟧": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        },
+        "⟦PH_0002⟧": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        }
+      },
+      "placeholders_pass": true,
+      "prompt_leak": false,
+      "term_semantic_review": {
+        "status": "pass",
+        "note": "工程术语语义与源文一致；严格字符串匹配若未通过，原因是可接受的同义或表达差异。"
+      }
+    },
+    {
+      "model": "gpt-5.6-sol",
+      "id": "eng-en-043",
+      "category": "electrical_scada_ventilation",
+      "source_language": "en",
+      "target_language": "zh-CN",
+      "source_text": "The fan rated power is 7.5 kW and its ingress-protection rating is IP55.",
+      "required_target_terms": [
+        {
+          "source": "rated power",
+          "target": "额定功率"
+        },
+        {
+          "source": "ingress-protection rating",
+          "target": "防护等级"
+        }
+      ],
+      "protected_literals": [
+        "7.5 kW",
+        "IP55"
+      ],
+      "http_status": 200,
+      "elapsed_seconds": 1.4919,
+      "success": true,
+      "translation": "风机额定功率为7.5 kW，防护等级为IP55。",
+      "usage": {
+        "input_tokens": 82,
+        "output_tokens": 24,
+        "total_tokens": 106,
+        "cached_input_tokens": 0,
+        "reasoning_tokens": 0
+      },
+      "calculated_standard_list_cost_usd": 0.000808,
+      "language_direction": {
+        "pass": null,
+        "chinese_chars": 12,
+        "latin_chars": 4
+      },
+      "evaluated_target_terms": [
+        "额定功率",
+        "防护等级"
+      ],
+      "term_checks": {
+        "额定功率": true,
+        "防护等级": true
+      },
+      "strict_term_pass": true,
+      "literal_checks": {
+        "7.5 kW": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        },
+        "IP55": {
+          "expected_count": 1,
+          "actual_count": 1,
+          "preserved": true
+        }
+      },
+      "literals_pass": true,
+      "placeholder_checks": {},
+      "placeholders_pass": true,
+      "prompt_leak": false,
+      "term_semantic_review": {
+        "status": "pass",
+        "note": "工程术语语义与源文一致；严格字符串匹配若未通过，原因是可接受的同义或表达差异。"
+      }
+    }
+  ],
+  "summary": {
+    "gpt-4o-mini": {
+      "requests": 10,
+      "successes": 10,
+      "failures": 0,
+      "average_elapsed_seconds": 2.1767,
+      "average_input_tokens": 95.1,
+      "average_output_tokens": 35.5,
+      "total_calculated_standard_list_cost_usd": 0.00035565,
+      "direction_failures": 0,
+      "strict_term_failures": 7,
+      "literal_failures": 1,
+      "placeholder_failures": 0,
+      "prompt_leaks": 0,
+      "term_semantic_failures": 2,
+      "term_semantic_partials": 1
+    },
+    "gpt-5.4": {
+      "requests": 10,
+      "successes": 10,
+      "failures": 0,
+      "average_elapsed_seconds": 1.5424,
+      "average_input_tokens": 94.1,
+      "average_output_tokens": 39.5,
+      "total_calculated_standard_list_cost_usd": 0.0082775,
+      "direction_failures": 0,
+      "strict_term_failures": 2,
+      "literal_failures": 0,
+      "placeholder_failures": 0,
+      "prompt_leaks": 0,
+      "term_semantic_failures": 0,
+      "term_semantic_partials": 2
+    },
+    "gpt-5.6-luna": {
+      "requests": 10,
+      "successes": 10,
+      "failures": 0,
+      "average_elapsed_seconds": 1.7401,
+      "average_input_tokens": 94.1,
+      "average_output_tokens": 60.9,
+      "total_calculated_standard_list_cost_usd": 0.000919,
+      "direction_failures": 0,
+      "strict_term_failures": 3,
+      "literal_failures": 0,
+      "placeholder_failures": 0,
+      "prompt_leaks": 0,
+      "term_semantic_failures": 0,
+      "term_semantic_partials": 1
+    },
+    "gpt-5.6-terra": {
+      "requests": 10,
+      "successes": 10,
+      "failures": 0,
+      "average_elapsed_seconds": 1.5939,
+      "average_input_tokens": 94.1,
+      "average_output_tokens": 39.3,
+      "total_calculated_standard_list_cost_usd": 0.006598,
+      "direction_failures": 0,
+      "strict_term_failures": 2,
+      "literal_failures": 0,
+      "placeholder_failures": 0,
+      "prompt_leaks": 0,
+      "term_semantic_failures": 0,
+      "term_semantic_partials": 0
+    },
+    "gpt-5.6-sol": {
+      "requests": 10,
+      "successes": 10,
+      "failures": 0,
+      "average_elapsed_seconds": 2.3316,
+      "average_input_tokens": 94.1,
+      "average_output_tokens": 43.2,
+      "total_calculated_standard_list_cost_usd": 0.012404,
+      "direction_failures": 0,
+      "strict_term_failures": 2,
+      "literal_failures": 0,
+      "placeholder_failures": 0,
+      "prompt_leaks": 0,
+      "term_semantic_failures": 0,
+      "term_semantic_partials": 0
+    }
+  },
+  "total_calculated_standard_list_cost_usd": 0.02855415,
+  "postprocessing_note": "No API calls were repeated. The initial evaluator treated required_target_terms objects as strings and did not recognize the en language tag. This deterministic correction evaluates each term object using target, recognizes en/zh direction labels, and restores HTTP 200 where parsed output and usage were recorded.",
+  "manual_review_scope": "Independent engineering-language review of the 10 sampled source/translation pairs. Term semantic review distinguishes actual error from strict target-string mismatch; it does not use reference_translation."
+}

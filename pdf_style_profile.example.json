@@ -1,0 +1,17 @@
+{
+  "target_language": "en",
+  "chapter": {
+    "label": "Chapter",
+    "numbering": "arabic"
+  },
+  "article": {
+    "label": "Article",
+    "numbering": "arabic"
+  },
+  "separator": " ",
+  "document_reference": {
+    "open": "[",
+    "close": "]",
+    "marker": "No."
+  }
+}

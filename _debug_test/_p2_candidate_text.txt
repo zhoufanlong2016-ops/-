@@ -1,0 +1,57 @@
+拉合尔供水与污水处理项目（LWWMP）——从LARECH COLONY至
+GULSHAN-E-RAVI的拉合尔污水系统：投标人疑问的第三轮澄清
+Sr
+#
+Reference Section
+Description
+Employer's Response
+1. Volume 1, Part I, Section 4,
+Tender Forms Page
+4-46-4-62 Schedule No. 5:
+Electrical Works
+Electrical works in 23 Intermittent Pumping Stations Electrical works along sewer lines (15 Nos.
+Control System at Drop Structures) & 15 Nos. Control Points on Manholes along Lines and
+Laterals preferably at drop structures in accordance with ER Sub Clause4.1 & 5.15 Nos.
+(minimum) Control Points on Manholes along Lines and Laterals ULTIMATE DISPOSAL
+STATION AT GULSHAN E RAVI (ELECTRICAL WORKS FOR PUMPING STATION AND ALL
+BUILDINGS REFERRED IN EMPLOYER'S REQUIREMENTS The Tenderer notes that only the
+Single Line Diagram (SLD) for the Disposal Station has been provided. The Tenderer
+respectfully requests the Employer to provide the load list, SLDs, layout drawings, and any
+additional electrical drawings for other stations, if available.
+It is to clarify that EPC Contractor is responsible for detailed
+design of loads and SLDs for all the stations, however, the load
+requirement for all 23 intermittent pumping stations and typical
+SLDs for odor control system, ventilation system and screening
+system is attached as Annex-A for guidance only.
+2. Volume 2 Part II, Section 6,
+Employer's Requirements
+It is recommended that the panel rooms can be adjusted in the dry well chamber. Can this
+alternate arrangement be acceptable to the Employer.
+Kindly refer to response at Sr. No. 39 of the Clarifications
+and Minutes of Meeting of 1st Pre-Tender Meeting,
+wherein, the updated drawing # LW-TD-411 shall prevail,
+however, as an alternative arrangement, the panel rooms can be
+adjusted in the dry well chamber as per Annex-B.
+3. Clarifications and Minutes of
+Meeting of 1st Pre Tender
+Meeting LWDMP Item 72
+Volume-1, Part I, Price
+Schedules, Schedule No. 5:
+Electrical Works, Item No.
+5.6.
+It is to clarify that shifting of existing Generators and Control rooms at 23 lift stations at new
+location (within the existing premises) will require Medium Voltage Cables for restoring /
+reinstating the connection with the existing Pumping system. In accordance with the Employer's
+requirements for Medium Voltage (MV) cables to restore the connection with the existing
+pumping system, the Tenderer requests clarification on the following: 1) Please provide the load
+information, detailed load
+1) The EPC contractor is at liberty to visit the relevant site and
+estimate the relocation and reconstruction scope of work, as per
+its own design and layout. Further, refer to response of Item 72 of
+Clarifications and Minutes of Meeting of 1st Pre Tender Meeting
+LWDMP, it is to clarify that 23 pumping stations other than
+Gulshan e Ravi pumping station have LV loads and these
+pumping stations will require Low Voltage Cables for restoring /
+reinstating the connection with the existing Pumping system, if
+shifting involves.
+第1页，共10页

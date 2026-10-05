@@ -1,0 +1,2160 @@
+{
+  "status": "PENDING_VISUAL_REVIEW",
+  "preflight": {
+    "source_hash": "6681b44081c1ef90f9a982f3edfd7ab01bc24ea5e2849d344475070a7aa08999",
+    "page_count": 1,
+    "page_sizes": [
+      [
+        1043.26,
+        737.26
+      ]
+    ],
+    "text_characters": 2504,
+    "image_count": 23,
+    "rotated_text_spans": 74,
+    "classification": "B",
+    "reasons": [
+      "complex layout requires full visual review"
+    ],
+    "table_pages": [],
+    "visual_review_required": true
+  },
+  "validation": {
+    "candidate_hash": "c5607d8150f0484707230c141a994a1c1dfdfa14dd2ba8a7c175b46ff4db335d",
+    "embedded_font_references": 3,
+    "blank_pages": [],
+    "cjk_residue": 0,
+    "control_characters": [],
+    "unicode_dashes": [],
+    "candidate_warnings": [
+      "candidate changed immutable identifiers: J01-L3C, J01-L4B, R05-A",
+      "candidate below minimum font size ratio on page 1: 2.41915 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.41915 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 1.95836 pt < 50% of source 4.79985 pt",
+      "candidate below minimum font size ratio on page 1: 1.95836 pt < 50% of source 4.79985 pt",
+      "candidate below minimum font size ratio on page 1: 2.41915 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 1.95836 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 1.95836 pt < 50% of source 4.79985 pt",
+      "candidate below minimum font size ratio on page 1: 1.95836 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.41915 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 1.95836 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 1.95836 pt < 50% of source 4.79985 pt",
+      "candidate below minimum font size ratio on page 1: 2.41915 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 1.95836 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.41915 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 1.95836 pt < 50% of source 4.79985 pt",
+      "candidate below minimum font size ratio on page 1: 1.95836 pt < 50% of source 4.79985 pt",
+      "candidate below minimum font size ratio on page 1: 2.41915 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 1.95836 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 1.95836 pt < 50% of source 4.79985 pt",
+      "candidate below minimum font size ratio on page 1: 1.95836 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.41915 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 1.95836 pt < 50% of source 4.79985 pt",
+      "candidate below minimum font size ratio on page 1: 1.95836 pt < 50% of source 4.79985 pt",
+      "candidate below minimum font size ratio on page 1: 2.41915 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 1.95836 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.41915 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 1.95836 pt < 50% of source 4.79985 pt",
+      "candidate below minimum font size ratio on page 1: 1.95836 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.41915 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 1.95836 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 1.95836 pt < 50% of source 4.79985 pt",
+      "candidate below minimum font size ratio on page 1: 2.41915 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 1.95836 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.41915 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 1.95836 pt < 50% of source 4.79985 pt",
+      "candidate below minimum font size ratio on page 1: 1.95836 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.41915 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 1.95836 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 9 pt < 50% of source 85.4374 pt",
+      "candidate below minimum font size ratio on page 1: 9 pt < 50% of source 85.4374 pt",
+      "candidate below minimum font size ratio on page 1: 9 pt < 50% of source 85.4374 pt",
+      "candidate below minimum font size ratio on page 1: 9 pt < 50% of source 85.4374 pt",
+      "candidate below minimum font size ratio on page 1: 9 pt < 50% of source 85.4374 pt",
+      "candidate below minimum font size ratio on page 1: 9 pt < 50% of source 85.4374 pt",
+      "candidate below minimum font size ratio on page 1: 9 pt < 50% of source 85.4374 pt",
+      "candidate below minimum font size ratio on page 1: 4.42358 pt < 50% of source 9.83969 pt",
+      "candidate below minimum font size ratio on page 1: 2.15297 pt < 50% of source 4.79985 pt",
+      "candidate below minimum font size ratio on page 1: 2.65956 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.65956 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.65956 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.65956 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.65956 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.15297 pt < 50% of source 4.79985 pt",
+      "candidate below minimum font size ratio on page 1: 2.15297 pt < 50% of source 4.79985 pt",
+      "candidate below minimum font size ratio on page 1: 2.15297 pt < 50% of source 4.79985 pt",
+      "candidate below minimum font size ratio on page 1: 2.15297 pt < 50% of source 4.79985 pt",
+      "candidate below minimum font size ratio on page 1: 2.65956 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.65956 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.65956 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.65956 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.65956 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.15297 pt < 50% of source 4.79985 pt",
+      "candidate below minimum font size ratio on page 1: 2.15297 pt < 50% of source 4.79985 pt",
+      "candidate below minimum font size ratio on page 1: 2.15297 pt < 50% of source 4.79985 pt",
+      "candidate below minimum font size ratio on page 1: 2.15297 pt < 50% of source 4.79985 pt",
+      "candidate below minimum font size ratio on page 1: 2.65956 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.65956 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.65956 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.65956 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.65956 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.15297 pt < 50% of source 4.79985 pt",
+      "candidate below minimum font size ratio on page 1: 2.15297 pt < 50% of source 4.79985 pt",
+      "candidate below minimum font size ratio on page 1: 2.15297 pt < 50% of source 4.79985 pt",
+      "candidate below minimum font size ratio on page 1: 2.15297 pt < 50% of source 4.79985 pt",
+      "candidate below minimum font size ratio on page 1: 2.65956 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.65956 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.65956 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.65956 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.65956 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.15297 pt < 50% of source 4.79985 pt",
+      "candidate below minimum font size ratio on page 1: 2.15297 pt < 50% of source 4.79985 pt",
+      "candidate below minimum font size ratio on page 1: 2.15297 pt < 50% of source 4.79985 pt",
+      "candidate below minimum font size ratio on page 1: 2.15297 pt < 50% of source 4.79985 pt",
+      "candidate below minimum font size ratio on page 1: 2.65956 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.65956 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.65956 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.65956 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.65956 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.15297 pt < 50% of source 4.79985 pt",
+      "candidate below minimum font size ratio on page 1: 2.15297 pt < 50% of source 4.79985 pt",
+      "candidate below minimum font size ratio on page 1: 2.15297 pt < 50% of source 4.79985 pt",
+      "candidate below minimum font size ratio on page 1: 2.15297 pt < 50% of source 4.79985 pt",
+      "candidate below minimum font size ratio on page 1: 2.65956 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.65956 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.65956 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.65956 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.65956 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.15297 pt < 50% of source 4.79985 pt",
+      "candidate below minimum font size ratio on page 1: 2.15297 pt < 50% of source 4.79985 pt",
+      "candidate below minimum font size ratio on page 1: 2.15297 pt < 50% of source 4.79985 pt",
+      "candidate below minimum font size ratio on page 1: 2.15297 pt < 50% of source 4.79985 pt",
+      "candidate below minimum font size ratio on page 1: 2.65956 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.65956 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.65956 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.65956 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.65956 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.15297 pt < 50% of source 4.79985 pt",
+      "candidate below minimum font size ratio on page 1: 2.15297 pt < 50% of source 4.79985 pt",
+      "candidate below minimum font size ratio on page 1: 2.15297 pt < 50% of source 4.79985 pt",
+      "candidate below minimum font size ratio on page 1: 2.15297 pt < 50% of source 4.79985 pt",
+      "candidate below minimum font size ratio on page 1: 2.65956 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.65956 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.65956 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.65956 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.65956 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.15297 pt < 50% of source 4.79985 pt",
+      "candidate below minimum font size ratio on page 1: 2.15297 pt < 50% of source 4.79985 pt",
+      "candidate below minimum font size ratio on page 1: 2.15297 pt < 50% of source 4.79985 pt",
+      "candidate below minimum font size ratio on page 1: 2.15297 pt < 50% of source 4.79985 pt",
+      "candidate below minimum font size ratio on page 1: 2.65956 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.65956 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.65956 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.65956 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.65956 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.15297 pt < 50% of source 4.79985 pt",
+      "candidate below minimum font size ratio on page 1: 2.15297 pt < 50% of source 4.79985 pt",
+      "candidate below minimum font size ratio on page 1: 2.15297 pt < 50% of source 4.79985 pt",
+      "candidate below minimum font size ratio on page 1: 2.15297 pt < 50% of source 4.79985 pt",
+      "candidate below minimum font size ratio on page 1: 2.65956 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.65956 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.65956 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.65956 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.65956 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.15297 pt < 50% of source 4.79985 pt",
+      "candidate below minimum font size ratio on page 1: 2.15297 pt < 50% of source 4.79985 pt",
+      "candidate below minimum font size ratio on page 1: 2.15297 pt < 50% of source 4.79985 pt",
+      "candidate below minimum font size ratio on page 1: 2.15297 pt < 50% of source 4.79985 pt",
+      "candidate below minimum font size ratio on page 1: 2.65956 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.65956 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.65956 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.65956 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.65956 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.15297 pt < 50% of source 4.79985 pt",
+      "candidate below minimum font size ratio on page 1: 2.15297 pt < 50% of source 4.79985 pt",
+      "candidate below minimum font size ratio on page 1: 2.15297 pt < 50% of source 4.79985 pt",
+      "candidate below minimum font size ratio on page 1: 2.15297 pt < 50% of source 4.79985 pt",
+      "candidate below minimum font size ratio on page 1: 2.65956 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.65956 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.65956 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.65956 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.65956 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.15297 pt < 50% of source 4.79985 pt",
+      "candidate below minimum font size ratio on page 1: 2.15297 pt < 50% of source 4.79985 pt",
+      "candidate below minimum font size ratio on page 1: 2.15297 pt < 50% of source 4.79985 pt",
+      "candidate below minimum font size ratio on page 1: 2.15297 pt < 50% of source 4.79985 pt",
+      "candidate below minimum font size ratio on page 1: 2.65956 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.65956 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.65956 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.65956 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.65956 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.15297 pt < 50% of source 4.79985 pt",
+      "candidate below minimum font size ratio on page 1: 2.15297 pt < 50% of source 4.79985 pt",
+      "candidate below minimum font size ratio on page 1: 2.15297 pt < 50% of source 4.79985 pt",
+      "candidate below minimum font size ratio on page 1: 2.15297 pt < 50% of source 4.79985 pt",
+      "candidate below minimum font size ratio on page 1: 2.65956 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.65956 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.65956 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.65956 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.65956 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.15297 pt < 50% of source 4.79985 pt",
+      "candidate below minimum font size ratio on page 1: 2.15297 pt < 50% of source 4.79985 pt",
+      "candidate below minimum font size ratio on page 1: 2.15297 pt < 50% of source 4.79985 pt",
+      "candidate below minimum font size ratio on page 1: 2.15297 pt < 50% of source 4.79985 pt",
+      "candidate below minimum font size ratio on page 1: 2.65956 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.65956 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.65956 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.65956 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.65956 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.15297 pt < 50% of source 4.79985 pt",
+      "candidate below minimum font size ratio on page 1: 2.15297 pt < 50% of source 4.79985 pt",
+      "candidate below minimum font size ratio on page 1: 2.15297 pt < 50% of source 4.79985 pt",
+      "candidate below minimum font size ratio on page 1: 2.15297 pt < 50% of source 4.79985 pt",
+      "candidate below minimum font size ratio on page 1: 2.15297 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.15297 pt < 50% of source 6.95978 pt",
+      "candidate below minimum font size ratio on page 1: 2.15297 pt < 50% of source 6.95978 pt"
+    ],
+    "identifier_dash_mismatches": [],
+    "missing_identifiers": [
+      "J01-L3C",
+      "J01-L4B",
+      "R05-A"
+    ],
+    "mixed_document_references": [],
+    "preserved_mixed_document_references": [],
+    "minimum_font_size": 6.0,
+    "font_size_acceptance_policy": "candidate >= 0.5 * corresponding source",
+    "name_acceptance_policy": "Chinese rendering or original English spelling accepted; Chinese + English bilingual output is not required",
+    "name_warnings": [
+      "page 1: PROPER_NAME_MISSING: 'CANAL Rd.' expected 1, got 0; Chinese-only rendering is permitted; bilingual English retention is not required",
+      "page 1: PROPER_NAME_MISSING: 'FEROZEPUR Rd.' expected 1, got 0; Chinese-only rendering is permitted; bilingual English retention is not required",
+      "page 1: PROPER_NAME_MISSING: 'JAIL Rd.' expected 1, got 0; Chinese-only rendering is permitted; bilingual English retention is not required",
+      "page 1: PROPER_NAME_MISSING: 'MALL Rd.' expected 2, got 0; Chinese-only rendering is permitted; bilingual English retention is not required",
+      "page 1: PROPER_NAME_MISSING: 'RACE COURSE Rd.' expected 1, got 0; Chinese-only rendering is permitted; bilingual English retention is not required",
+      "page 1: PROPER_NAME_MISSING: 'LYTTON Rd.' expected 1, got 0; Chinese-only rendering is permitted; bilingual English retention is not required",
+      "page 1: PROPER_NAME_MISSING: 'MCLEOD Rd.' expected 1, got 0; Chinese-only rendering is permitted; bilingual English retention is not required",
+      "page 1: PROPER_NAME_MISSING: 'BUND ROAD' expected 1, got 0; Chinese-only rendering is permitted; bilingual English retention is not required",
+      "page 1: PROPER_NAME_MISSING: 'MULTAN Rd.' expected 2, got 0; Chinese-only rendering is permitted; bilingual English retention is not required",
+      "page 1: PROPER_NAME_MISSING: 'BAHAWALPUR Rd.' expected 1, got 0; Chinese-only rendering is permitted; bilingual English retention is not required",
+      "page 1: PROPER_NAME_MISSING: 'CHAUBURJI PARK Rd.' expected 1, got 0; Chinese-only rendering is permitted; bilingual English retention is not required",
+      "page 1: PROPER_NAME_MISSING: 'POONCH Rd.' expected 1, got 0; Chinese-only rendering is permitted; bilingual English retention is not required",
+      "page 1: PROPER_NAME_MISSING: 'COLLEGE Rd.' expected 1, got 0; Chinese-only rendering is permitted; bilingual English retention is not required",
+      "page 1: PROPER_NAME_MISSING: 'ZAFAR ALI Rd.' expected 1, got 0; Chinese-only rendering is permitted; bilingual English retention is not required",
+      "page 1: PROPER_NAME_MISSING: 'QUEENS Rd.' expected 1, got 0; Chinese-only rendering is permitted; bilingual English retention is not required",
+      "page 1: PROPER_NAME_MISSING: 'EGERTON Rd.' expected 1, got 0; Chinese-only rendering is permitted; bilingual English retention is not required",
+      "page 1: PROPER_NAME_MISSING: 'ABBOTT Rd.' expected 1, got 0; Chinese-only rendering is permitted; bilingual English retention is not required",
+      "page 1: PROPER_NAME_MISSING: 'DURAND Rd.' expected 1, got 0; Chinese-only rendering is permitted; bilingual English retention is not required",
+      "page 1: PROPER_NAME_MISSING: 'ALLAMA IQBAL Rd.' expected 2, got 0; Chinese-only rendering is permitted; bilingual English retention is not required",
+      "page 1: PROPER_NAME_MISSING: 'INFANTRY Rd.' expected 1, got 0; Chinese-only rendering is permitted; bilingual English retention is not required",
+      "page 1: PROPER_NAME_MISSING: 'RIAZ MANSOOR Rd.' expected 1, got 0; Chinese-only rendering is permitted; bilingual English retention is not required",
+      "page 1: PROPER_NAME_MISSING: 'BLVD GULBERG Rd.' expected 1, got 0; Chinese-only rendering is permitted; bilingual English retention is not required",
+      "page 1: PROPER_NAME_MISSING: 'MM ALAM Rd.' expected 1, got 0; Chinese-only rendering is permitted; bilingual English retention is not required",
+      "page 1: PROPER_NAME_MISSING: 'HALI Rd.' expected 1, got 0; Chinese-only rendering is permitted; bilingual English retention is not required",
+      "page 1: PROPER_NAME_MISSING: 'GURMANI Rd.' expected 1, got 0; Chinese-only rendering is permitted; bilingual English retention is not required",
+      "page 1: PROPER_NAME_MISSING: 'SHOKAT ALI Rd.' expected 1, got 0; Chinese-only rendering is permitted; bilingual English retention is not required",
+      "page 1: PROPER_NAME_MISSING: 'ZANJANI Rd.' expected 1, got 0; Chinese-only rendering is permitted; bilingual English retention is not required",
+      "page 1: PROPER_NAME_MISSING: 'ZARAR SHAHEED Rd.' expected 1, got 0; Chinese-only rendering is permitted; bilingual English retention is not required",
+      "page 1: PROPER_NAME_MISSING: 'ALI Rd.' expected 4, got 0; Chinese-only rendering is permitted; bilingual English retention is not required",
+      "page 1: PROPER_NAME_MISSING: 'JAMAL Rd.' expected 1, got 0; Chinese-only rendering is permitted; bilingual English retention is not required",
+      "page 1: PROPER_NAME_MISSING: 'ACADEMEY Rd.' expected 1, got 0; Chinese-only rendering is permitted; bilingual English retention is not required",
+      "page 1: PROPER_NAME_MISSING: 'RAVI Rd.' expected 1, got 0; Chinese-only rendering is permitted; bilingual English retention is not required",
+      "page 1: PROPER_NAME_MISSING: 'SAMNABAD Rd.' expected 1, got 0; Chinese-only rendering is permitted; bilingual English retention is not required",
+      "page 1: PROPER_NAME_MISSING: 'ANG Rd.' expected 1, got 0; Chinese-only rendering is permitted; bilingual English retention is not required",
+      "page 1: PROPER_NAME_MISSING: 'MUGHALPURA Rd.' expected 1, got 0; Chinese-only rendering is permitted; bilingual English retention is not required",
+      "page 1: PROPER_NAME_MISSING: 'DAVIS Rd.' expected 1, got 0; Chinese-only rendering is permitted; bilingual English retention is not required",
+      "page 1: PROPER_NAME_MISSING: 'SYED ASHIQ HUSSAIN Rd.' expected 1, got 0; Chinese-only rendering is permitted; bilingual English retention is not required",
+      "page 1: PROPER_NAME_MISSING: 'HAMED ALI Rd.' expected 1, got 0; Chinese-only rendering is permitted; bilingual English retention is not required",
+      "page 1: PROPER_NAME_MISSING: 'BEIGUM Rd.' expected 1, got 0; Chinese-only rendering is permitted; bilingual English retention is not required",
+      "page 1: PROPER_NAME_MISSING: 'LOS Rd.' expected 1, got 0; Chinese-only rendering is permitted; bilingual English retention is not required",
+      "page 1: PROPER_NAME_MISSING: 'SHAREEF COLONY' expected 1, got 0; Chinese-only rendering is permitted; bilingual English retention is not required",
+      "page 1: PROPER_NAME_MISSING: 'RING ROAD' expected 1, got 0; Chinese-only rendering is permitted; bilingual English retention is not required",
+      "page 1: PROPER_NAME_MISSING: 'RIVER RAVI' expected 1, got 0; Chinese-only rendering is permitted; bilingual English retention is not required",
+      "page 1: PROPER_NAME_MISSING: 'RAVI' expected 4, got 1; Chinese-only rendering is permitted; bilingual English retention is not required",
+      "page 1: PROPER_NAME_MISSING: 'POINT' expected 1, got 0; Chinese-only rendering is permitted; bilingual English retention is not required",
+      "page 1: PROPER_NAME_MISSING: 'PIA PLANETARIUM' expected 1, got 0; Chinese-only rendering is permitted; bilingual English retention is not required",
+      "page 1: PROPER_NAME_MISSING: 'PARK' expected 3, got 0; Chinese-only rendering is permitted; bilingual English retention is not required",
+      "page 1: PROPER_NAME_MISSING: 'SHADMAN' expected 1, got 0; Chinese-only rendering is permitted; bilingual English retention is not required",
+      "page 1: PROPER_NAME_MISSING: 'ZAFAR ALI ROAD' expected 1, got 0; Chinese-only rendering is permitted; bilingual English retention is not required",
+      "page 1: PROPER_NAME_MISSING: 'G BLOCK' expected 1, got 0; Chinese-only rendering is permitted; bilingual English retention is not required",
+      "page 1: PROPER_NAME_MISSING: 'GURUMANGAT' expected 1, got 0; Chinese-only rendering is permitted; bilingual English retention is not required",
+      "page 1: PROPER_NAME_MISSING: 'INFANTRY ROAD' expected 1, got 0; Chinese-only rendering is permitted; bilingual English retention is not required",
+      "page 1: PROPER_NAME_MISSING: 'MARKET' expected 1, got 0; Chinese-only rendering is permitted; bilingual English retention is not required",
+      "page 1: PROPER_NAME_MISSING: 'MOHALLAH' expected 1, got 0; Chinese-only rendering is permitted; bilingual English retention is not required",
+      "page 1: PROPER_NAME_MISSING: 'NAGAR' expected 1, got 0; Chinese-only rendering is permitted; bilingual English retention is not required",
+      "page 1: PROPER_NAME_MISSING: 'JANKI DEVI' expected 1, got 0; Chinese-only rendering is permitted; bilingual English retention is not required",
+      "page 1: PROPER_NAME_MISSING: 'LAKSHAMI' expected 1, got 0; Chinese-only rendering is permitted; bilingual English retention is not required",
+      "page 1: PROPER_NAME_MISSING: 'ICHRA MORE' expected 1, got 0; Chinese-only rendering is permitted; bilingual English retention is not required",
+      "page 1: PROPER_NAME_MISSING: 'JORRAY PUL' expected 1, got 0; Chinese-only rendering is permitted; bilingual English retention is not required",
+      "page 1: PROPER_NAME_MISSING: 'PHATAK' expected 1, got 0; Chinese-only rendering is permitted; bilingual English retention is not required",
+      "page 1: PROPER_NAME_MISSING: 'TRUST' expected 1, got 0; Chinese-only rendering is permitted; bilingual English retention is not required",
+      "page 1: PROPER_NAME_MISSING: 'HARBANSPURA' expected 1, got 0; Chinese-only rendering is permitted; bilingual English retention is not required"
+    ],
+    "font_size_ratio_checks": [
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.419147491455078,
+        "ratio": 0.34758940065130023,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.419147491455078,
+        "ratio": 0.34758940065130023,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 1.958357572555542,
+        "ratio": 0.40800391217378473,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.419147491455078,
+        "ratio": 0.5040048122320501,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 1.958357572555542,
+        "ratio": 0.40800391217378473,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.419147491455078,
+        "ratio": 0.34758940065130023,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 1.958357572555542,
+        "ratio": 0.28138190718420536,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.419147491455078,
+        "ratio": 0.5040048122320501,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 1.958357572555542,
+        "ratio": 0.40800391217378473,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.419147491455078,
+        "ratio": 0.5040048122320501,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 1.958357572555542,
+        "ratio": 0.28138190718420536,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.419147491455078,
+        "ratio": 0.34758940065130023,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 1.958357572555542,
+        "ratio": 0.28138190718420536,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.419147491455078,
+        "ratio": 0.5040048122320501,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 1.958357572555542,
+        "ratio": 0.40800391217378473,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.419147491455078,
+        "ratio": 0.34758940065130023,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 1.958357572555542,
+        "ratio": 0.28138190718420536,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.419147491455078,
+        "ratio": 0.34758940065130023,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 1.958357572555542,
+        "ratio": 0.40800391217378473,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.419147491455078,
+        "ratio": 0.5040048122320501,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 1.958357572555542,
+        "ratio": 0.40800391217378473,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.419147491455078,
+        "ratio": 0.34758940065130023,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 1.958357572555542,
+        "ratio": 0.28138190718420536,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.419147491455078,
+        "ratio": 0.5040048122320501,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 1.958357572555542,
+        "ratio": 0.40800391217378473,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.419147491455078,
+        "ratio": 0.5040048122320501,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 1.958357572555542,
+        "ratio": 0.28138190718420536,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.419147491455078,
+        "ratio": 0.34758940065130023,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 1.958357572555542,
+        "ratio": 0.40800391217378473,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.419147491455078,
+        "ratio": 0.5040048122320501,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 1.958357572555542,
+        "ratio": 0.40800391217378473,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.419147491455078,
+        "ratio": 0.34758940065130023,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 1.958357572555542,
+        "ratio": 0.28138190718420536,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.419147491455078,
+        "ratio": 0.34758940065130023,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 1.958357572555542,
+        "ratio": 0.40800391217378473,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.419147491455078,
+        "ratio": 0.5040048122320501,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 1.958357572555542,
+        "ratio": 0.28138190718420536,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.419147491455078,
+        "ratio": 0.34758940065130023,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 1.958357572555542,
+        "ratio": 0.28138190718420536,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.419147491455078,
+        "ratio": 0.5040048122320501,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 1.958357572555542,
+        "ratio": 0.40800391217378473,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.419147491455078,
+        "ratio": 0.5040048122320501,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.419147491455078,
+        "ratio": 0.34758940065130023,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 1.958357572555542,
+        "ratio": 0.28138190718420536,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.419147491455078,
+        "ratio": 0.34758940065130023,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 1.958357572555542,
+        "ratio": 0.40800391217378473,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.419147491455078,
+        "ratio": 0.5040048122320501,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 1.958357572555542,
+        "ratio": 0.28138190718420536,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.419147491455078,
+        "ratio": 0.34758940065130023,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 1.958357572555542,
+        "ratio": 0.28138190718420536,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 9.0,
+        "ratio": 1.2931433973792468,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 85.43737030029297,
+        "candidate_font_size": 9.0,
+        "ratio": 0.10534032084984642,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 85.43737030029297,
+        "candidate_font_size": 9.0,
+        "ratio": 0.10534032084984642,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 85.43737030029297,
+        "candidate_font_size": 9.0,
+        "ratio": 0.10534032084984642,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 85.43737030029297,
+        "candidate_font_size": 9.0,
+        "ratio": 0.10534032084984642,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 85.43737030029297,
+        "candidate_font_size": 9.0,
+        "ratio": 0.10534032084984642,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 85.43737030029297,
+        "candidate_font_size": 9.0,
+        "ratio": 0.10534032084984642,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 85.43737030029297,
+        "candidate_font_size": 9.0,
+        "ratio": 0.10534032084984642,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 11.99963092803955,
+        "candidate_font_size": 9.0,
+        "ratio": 0.7500230677069984,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 11.99963092803955,
+        "candidate_font_size": 9.0,
+        "ratio": 0.7500230677069984,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 11.99963092803955,
+        "candidate_font_size": 9.0,
+        "ratio": 0.7500230677069984,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 5.999815464019775,
+        "candidate_font_size": 9.0,
+        "ratio": 1.500046135413997,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 11.99963092803955,
+        "candidate_font_size": 9.0,
+        "ratio": 0.7500230677069984,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 9.839699745178223,
+        "candidate_font_size": 9.0,
+        "ratio": 0.9146620560663242,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 9.839699745178223,
+        "candidate_font_size": 9.0,
+        "ratio": 0.9146620560663242,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 9.839699745178223,
+        "candidate_font_size": 9.0,
+        "ratio": 0.9146620560663242,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 9.839699745178223,
+        "candidate_font_size": 9.0,
+        "ratio": 0.9146620560663242,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 9.839699745178223,
+        "candidate_font_size": 9.0,
+        "ratio": 0.9146620560663242,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 9.839699745178223,
+        "candidate_font_size": 9.0,
+        "ratio": 0.9146620560663242,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 9.839699745178223,
+        "candidate_font_size": 9.0,
+        "ratio": 0.9146620560663242,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 9.83969497680664,
+        "candidate_font_size": 9.0,
+        "ratio": 0.9146624993167061,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 9.83969497680664,
+        "candidate_font_size": 4.423581123352051,
+        "ratio": 0.449564862912821,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 9.83969497680664,
+        "candidate_font_size": 6.885000228881836,
+        "ratio": 0.6997168352383504,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 9.83969497680664,
+        "candidate_font_size": 6.885000228881836,
+        "ratio": 0.6997168352383504,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 9.83969497680664,
+        "candidate_font_size": 6.885000228881836,
+        "ratio": 0.6997168352383504,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 9.83969497680664,
+        "candidate_font_size": 6.885000228881836,
+        "ratio": 0.6997168352383504,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 9.83969497680664,
+        "candidate_font_size": 6.885000228881836,
+        "ratio": 0.6997168352383504,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 9.83969497680664,
+        "candidate_font_size": 6.885000228881836,
+        "ratio": 0.6997168352383504,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 9.83969497680664,
+        "candidate_font_size": 6.885000228881836,
+        "ratio": 0.6997168352383504,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 9.83969497680664,
+        "candidate_font_size": 6.885000228881836,
+        "ratio": 0.6997168352383504,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.5540914155204418,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.5540914155204418,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.5540914155204418,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.5540914155204418,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.5540914155204418,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.5540914155204418,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.1529736518859863,
+        "ratio": 0.4485501958818857,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.5540914155204418,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.5540914155204418,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.3821318732530418,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.3821318732530418,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.3821318732530418,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.3821318732530418,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.3821318732530418,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.1529736518859863,
+        "ratio": 0.4485501958818857,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.1529736518859863,
+        "ratio": 0.4485501958818857,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.1529736518859863,
+        "ratio": 0.4485501958818857,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.1529736518859863,
+        "ratio": 0.4485501958818857,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.5540914155204418,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.5540914155204418,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.3821318732530418,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.3821318732530418,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.3821318732530418,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.3821318732530418,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.3821318732530418,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.1529736518859863,
+        "ratio": 0.4485501958818857,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.1529736518859863,
+        "ratio": 0.4485501958818857,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.1529736518859863,
+        "ratio": 0.4485501958818857,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.1529736518859863,
+        "ratio": 0.4485501958818857,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.5540914155204418,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.5540914155204418,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.3821318732530418,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.3821318732530418,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.3821318732530418,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.3821318732530418,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.3821318732530418,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.1529736518859863,
+        "ratio": 0.4485501958818857,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.1529736518859863,
+        "ratio": 0.4485501958818857,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.1529736518859863,
+        "ratio": 0.4485501958818857,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.1529736518859863,
+        "ratio": 0.4485501958818857,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.5540914155204418,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.5540914155204418,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.3821318732530418,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.3821318732530418,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.3821318732530418,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.3821318732530418,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.3821318732530418,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.1529736518859863,
+        "ratio": 0.4485501958818857,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.1529736518859863,
+        "ratio": 0.4485501958818857,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.1529736518859863,
+        "ratio": 0.4485501958818857,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.1529736518859863,
+        "ratio": 0.4485501958818857,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.5540914155204418,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.5540914155204418,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.3821318732530418,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.3821318732530418,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.3821318732530418,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.3821318732530418,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.3821318732530418,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.1529736518859863,
+        "ratio": 0.4485501958818857,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.1529736518859863,
+        "ratio": 0.4485501958818857,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.1529736518859863,
+        "ratio": 0.4485501958818857,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.1529736518859863,
+        "ratio": 0.4485501958818857,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.5540914155204418,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.5540914155204418,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.3821318732530418,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.3821318732530418,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.3821318732530418,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.3821318732530418,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.3821318732530418,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.1529736518859863,
+        "ratio": 0.4485501958818857,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.1529736518859863,
+        "ratio": 0.4485501958818857,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.1529736518859863,
+        "ratio": 0.4485501958818857,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.1529736518859863,
+        "ratio": 0.4485501958818857,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.5540914155204418,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.5540914155204418,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.3821318732530418,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.3821318732530418,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.3821318732530418,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.3821318732530418,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.3821318732530418,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.1529736518859863,
+        "ratio": 0.4485501958818857,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.1529736518859863,
+        "ratio": 0.4485501958818857,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.1529736518859863,
+        "ratio": 0.4485501958818857,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.1529736518859863,
+        "ratio": 0.4485501958818857,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.5540914155204418,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.5540914155204418,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.3821318732530418,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.3821318732530418,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.3821318732530418,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.3821318732530418,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.3821318732530418,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.1529736518859863,
+        "ratio": 0.4485501958818857,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.1529736518859863,
+        "ratio": 0.4485501958818857,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.1529736518859863,
+        "ratio": 0.4485501958818857,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.1529736518859863,
+        "ratio": 0.4485501958818857,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.5540914155204418,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.5540914155204418,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.3821318732530418,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.3821318732530418,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.3821318732530418,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.3821318732530418,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.3821318732530418,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.1529736518859863,
+        "ratio": 0.4485501958818857,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.1529736518859863,
+        "ratio": 0.4485501958818857,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.1529736518859863,
+        "ratio": 0.4485501958818857,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.1529736518859863,
+        "ratio": 0.4485501958818857,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.5540914155204418,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.5540914155204418,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.3821318732530418,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.3821318732530418,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.3821318732530418,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.3821318732530418,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.3821318732530418,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.1529736518859863,
+        "ratio": 0.4485501958818857,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.1529736518859863,
+        "ratio": 0.4485501958818857,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.1529736518859863,
+        "ratio": 0.4485501958818857,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.1529736518859863,
+        "ratio": 0.4485501958818857,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.5540914155204418,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.5540914155204418,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.3821318732530418,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.3821318732530418,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.3821318732530418,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.3821318732530418,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.3821318732530418,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.1529736518859863,
+        "ratio": 0.4485501958818857,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.1529736518859863,
+        "ratio": 0.4485501958818857,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.1529736518859863,
+        "ratio": 0.4485501958818857,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.1529736518859863,
+        "ratio": 0.4485501958818857,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.5540914155204418,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.5540914155204418,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.3821318732530418,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.3821318732530418,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.3821318732530418,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.3821318732530418,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.3821318732530418,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.1529736518859863,
+        "ratio": 0.4485501958818857,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.1529736518859863,
+        "ratio": 0.4485501958818857,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.1529736518859863,
+        "ratio": 0.4485501958818857,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.1529736518859863,
+        "ratio": 0.4485501958818857,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.5540914155204418,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.5540914155204418,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.3821318732530418,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.3821318732530418,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.3821318732530418,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.3821318732530418,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.3821318732530418,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.1529736518859863,
+        "ratio": 0.4485501958818857,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.1529736518859863,
+        "ratio": 0.4485501958818857,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.1529736518859863,
+        "ratio": 0.4485501958818857,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.1529736518859863,
+        "ratio": 0.4485501958818857,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.5540914155204418,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.5540914155204418,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.3821318732530418,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.3821318732530418,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.3821318732530418,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.3821318732530418,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.3821318732530418,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.1529736518859863,
+        "ratio": 0.4485501958818857,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.1529736518859863,
+        "ratio": 0.4485501958818857,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.1529736518859863,
+        "ratio": 0.4485501958818857,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.1529736518859863,
+        "ratio": 0.4485501958818857,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.5540914155204418,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.5540914155204418,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.3821318732530418,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.3821318732530418,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.3821318732530418,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.3821318732530418,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.3821318732530418,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.1529736518859863,
+        "ratio": 0.4485501958818857,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.1529736518859863,
+        "ratio": 0.4485501958818857,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.1529736518859863,
+        "ratio": 0.4485501958818857,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.1529736518859863,
+        "ratio": 0.4485501958818857,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.5540914155204418,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 2.659555673599243,
+        "ratio": 0.5540914155204418,
+        "below_minimum": false
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.1529736518859863,
+        "ratio": 0.30934485140753865,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.1529736518859863,
+        "ratio": 0.30934485140753865,
+        "below_minimum": true
+      },
+      {
+        "page": 1,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 2.1529736518859863,
+        "ratio": 0.30934485140753865,
+        "below_minimum": true
+      }
+    ],
+    "minimum_observed_font_size": 1.958357572555542,
+    "visual_review_required": true,
+    "layout_contract": {
+      "status": "passed",
+      "contract_count": 0,
+      "failures": [],
+      "observed": []
+    }
+  },
+  "provider": "openai",
+  "model": "gpt-5.6-luna",
+  "run": {
+    "engine": "mineru4",
+    "mineru_tier": "flash",
+    "mineru_ocr_mode": "txt",
+    "source_hash": "6681b44081c1ef90f9a982f3edfd7ab01bc24ea5e2849d344475070a7aa08999",
+    "hybrid_parse": {
+      "parser": "native",
+      "native_line_count": 188,
+      "semantic_block_count": 158,
+      "rotated_pages": [
+        1
+      ],
+      "table_pages": []
+    },
+    "layout_restore": {
+      "status": "restored",
+      "contract_count": 0,
+      "operation_count": 0,
+      "roles": {},
+      "profile": {
+        "target_language": "zh-CN",
+        "chapter_label": "",
+        "article_label": "",
+        "chapter_numbering": "source",
+        "article_numbering": "source"
+      }
+    },
+    "restored_images": 24,
+    "table_translation": {
+      "status": "skipped",
+      "reason": "no vector tables detected"
+    },
+    "vector_page_translation": {
+      "status": "skipped",
+      "translated_pages": [],
+      "skipped": [
+        {
+          "page": 1,
+          "reason": "OpenAI batch IDs are incomplete or duplicated"
+        }
+      ]
+    },
+    "restored_vector_pages": {
+      "restored_page_count": 1,
+      "restored_pages": [
+        1
+      ]
+    },
+    "mineru_unit_count": 0,
+    "translated_unit_count": 0,
+    "translation_warning_count": 0,
+    "cmap_repairs": {
+      "repaired_fonts": 0,
+      "repairs": []
+    }
+  }
+}

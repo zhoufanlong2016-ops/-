@@ -1,0 +1,747 @@
+DIMTXT layout 1400
+DIMTXT layout 4869
+CTRL layout TEXT 5%%%
+CTRL layout TEXT 5%%%
+DIMTXT layout 1300
+DIMTXT layout 800
+DIMTXT layout 1400
+DIMTXT layout 2850(2450)
+DIMTXT layout 1300
+DIMTXT layout 200
+DIMTXT layout 2850(2450)
+DIMTXT layout 1500
+DIMTXT layout 2450
+DIMTXT layout 2450
+DIMTXT layout 100
+DIMTXT layout 100
+DIMTXT layout 400
+DIMTXT layout 2
+DIMTXT layout 2
+DIMTXT layout 2
+DIMTXT layout d
+DIMTXT layout 2
+DIMTXT layout t
+DIMTXT layout 700
+DIMTXT layout 16
+DIMTXT layout 400
+DIMTXT layout 100
+DIMTXT layout 100
+DIMTXT layout 100
+DIMTXT layout 300
+DIMTXT layout 50
+DIMTXT layout 50
+DIMTXT layout 100
+DIMTXT layout 750
+DIMTXT layout 750
+DIMTXT layout 2800
+DIMTXT layout 2800
+CTRL layout TEXT  1. For the elevation of %%p0.000 of this project, please refer to the architectural drawings. 
+DIMTXT layout b2/2
+DIMTXT layout b2/2
+DIMTXT layout a2/2
+DIMTXT layout a2/2
+DIMTXT layout B
+DIMTXT layout b1/2
+DIMTXT layout b1/2
+DIMTXT layout L
+DIMTXT layout a1/2
+DIMTXT layout a1/2
+DIMTXT layout h
+DIMTXT layout h
+DIMTXT layout B
+DIMTXT layout b/2
+DIMTXT layout b/2
+DIMTXT layout H
+DIMTXT layout a/2
+DIMTXT layout a/2
+DIMTXT layout 750
+DIMTXT layout 300
+DIMTXT layout 40d
+DIMTXT layout 300
+DIMTXT layout 100
+DIMTXT layout 100
+DIMTXT layout 1100
+DIMTXT layout 100
+CTRL layout TEXT %%C12+%%C32x3.0
+CTRL layout TEXT %%C12
+CTRL layout TEXT %%C12
+DIMTXT layout 100
+DIMTXT layout 400
+DIMTXT layout 2
+DIMTXT layout 2
+DIMTXT layout 2
+DIMTXT layout d
+DIMTXT layout 2
+DIMTXT layout t
+DIMTXT layout 700
+DIMTXT layout 16
+DIMTXT layout 400
+DIMTXT layout 100
+DIMTXT layout 100
+DIMTXT layout 100
+DIMTXT layout 300
+DIMTXT layout 50
+DIMTXT layout 50
+DIMTXT layout 2850
+DIMTXT layout 150
+DIMTXT layout 150
+DIMTXT layout 2850
+DIMTXT layout 150
+DIMTXT layout 150
+DIMTXT layout 1600
+DIMTXT layout 2450
+DIMTXT layout 2800
+DIMTXT layout 120
+DIMTXT layout 120
+DIMTXT layout 225
+DIMTXT layout 250
+DIMTXT layout 300x14=4200
+DIMTXT layout 300x14=4200
+DIMTXT layout 300x14=4200
+DIMTXT layout 300x14=4200
+DIMTXT layout 300x14=4200
+DIMTXT layout 300x14=4200
+DIMTXT layout 300x14=4200
+DIMTXT layout 300x14=4200
+DIMTXT layout 225
+DIMTXT layout 250
+DIMTXT layout 120
+DIMTXT layout 120
+DIMTXT layout 300x14=4200
+DIMTXT layout 300x14=4200
+DIMTXT layout 300x14=4200
+DIMTXT layout 300x14=4200
+CTRL layout TEXT 5%%%
+DIMTXT layout 50
+DIMTXT layout 500
+DIMTXT layout 100
+DIMTXT layout 150
+DIMTXT layout 200
+DIMTXT layout 75
+DIMTXT layout 75
+DIMTXT layout 40
+DIMTXT layout 40
+DIMTXT layout 150
+DIMTXT layout 80
+CTRL layout TEXT hole%%c23
+CTRL layout TEXT hole%%c23
+DIMTXT layout 350
+DIMTXT layout 350
+DIMTXT layout 43
+DIMTXT layout 43
+DIMTXT layout 57
+DIMTXT layout 43
+DIMTXT layout 43
+DIMTXT layout 57
+DIMTXT layout 1400
+DIMTXT layout 4869
+CTRL layout TEXT 5%%%
+CTRL layout TEXT 5%%%
+DIMTXT layout 1400
+DIMTXT layout 1400
+DIMTXT layout 1300
+DIMTXT layout 600
+DIMTXT layout 225
+DIMTXT layout 450
+DIMTXT layout 450
+DIMTXT layout 1150
+DIMTXT layout 1150
+DIMTXT layout 1150
+DIMTXT layout 770
+CTRL layout TEXT %%P0.000
+DIMTXT layout 4210
+DIMTXT layout 8790
+CTRL layout TEXT 5%%%
+CTRL layout TEXT 5%%%
+DIMTXT layout 400
+CTRL layout TEXT %%C400x14
+CTRL layout TEXT %%C12+%%C32x3.0
+CTRL layout TEXT %%C12
+CTRL layout TEXT %%C12
+DIMTXT layout 180
+DIMTXT layout 150
+DIMTXT layout 230
+DIMTXT layout 200
+DIMTXT layout 50
+DIMTXT layout 50
+DIMTXT layout 100
+DIMTXT layout 50
+CTRL layout TEXT %%C15.5 hole
+CTRL layout ATTDEF %%p0.000
+CTRL layout ATTDEF %%p0.000
+CTRL layout ATTDEF %%p0.000
+CTRL layout ATTDEF %%p0.000
+CTRL layout ATTDEF %%p0.000
+CTRL layout ATTDEF %%p0.000
+CTRL layout ATTDEF %%p0.000
+CTRL layout ATTDEF %%p0.000
+CTRL layout ATTDEF %%p0.000
+DIMTXT layout 50
+DIMTXT layout 50
+CTRL layout TEXT %%C30x3 tube
+DIMTXT layout 100
+DIMTXT layout 100
+CTRL layout TEXT %%c12 LT
+DIMTXT layout 60
+DIMTXT layout 60
+DIMTXT layout L
+DIMTXT layout L1
+DIMTXT layout 25
+CTRL layout TEXT %%C12 Round tie bar
+CTRL layout TEXT %%C12+%%C32X3.0
+CTRL layout TEXT %%C12 Round tie bar
+CTRL layout TEXT %%C12 Round tie bar
+CTRL layout TEXT %%C12 Round tie bar
+CTRL layout TEXT %%C12 Batter round tie bar
+DIMTXT layout 30
+DIMTXT layout 25
+DIMTXT layout Loft length
+CTRL layout TEXT %%C15.5 hole
+DIMTXT layout Lofting
+DIMTXT layout 50
+DIMTXT layout 150
+DIMTXT layout 50
+DIMTXT layout 50
+DIMTXT layout 50
+DIMTXT layout 150
+DIMTXT layout 50
+DIMTXT layout 50
+CTRL layout TEXT %%C15.5 hole
+DIMTXT layout D
+CTRL layout TEXT %%C21.5 hole
+CTRL layout TEXT %%C12 Round tie bar
+DIMTXT layout 65
+DIMTXT layout 35
+DIMTXT layout 35
+DIMTXT layout 65
+DIMTXT layout L
+CTRL layout TEXT %%C12 Batter round tie bar
+DIMTXT layout Lx
+DIMTXT layout Ly
+DIMTXT layout 55
+DIMTXT layout L
+DIMTXT layout 55
+CTRL layout TEXT Hole %%c26
+CTRL layout TEXT base plate hole %%c35
+DIMTXT layout 50
+DIMTXT layout 750
+DIMTXT layout 150
+DIMTXT layout 150
+DIMTXT layout 200
+CTRL layout TEXT Hole %%c33
+DIMTXT layout 600
+DIMTXT layout B
+DIMTXT layout 150
+DIMTXT layout 800
+DIMTXT layout 50
+DIMTXT layout 600
+DIMTXT layout B
+DIMTXT layout B
+DIMTXT layout 150
+DIMTXT layout 150
+DIMTXT layout 800
+DIMTXT layout 50
+DIMTXT layout 500
+CTRL layout TEXT Steel column%%C400X14
+DIMTXT layout 600
+DIMTXT layout 450
+DIMTXT layout 450
+DIMTXT layout 200
+CTRL layout TEXT Main rebars28 %%13320
+DIMTXT layout 200
+DIMTXT layout 400
+DIMTXT layout 500
+CTRL layout TEXT Steel column%%C400X12
+CTRL layout TEXT Hole %%c26
+DIMTXT layout 50
+DIMTXT layout 150
+DIMTXT layout 50
+DIMTXT layout 100
+DIMTXT layout 25
+DIMTXT layout 25
+CTRL layout TEXT base plate hole %%c32
+DIMTXT layout 50
+DIMTXT layout 600
+DIMTXT layout 100
+DIMTXT layout 150
+DIMTXT layout 200
+CTRL layout TEXT %%C400x14
+DIMTXT layout 250
+DIMTXT layout 250
+DIMTXT layout 1800
+DIMTXT layout 250
+DIMTXT layout 700
+DIMTXT layout 250
+DIMTXT layout 650
+DIMTXT layout £¼2850
+DIMTXT layout 800
+DIMTXT layout 250
+DIMTXT layout 250
+DIMTXT layout 1800
+DIMTXT layout 900
+DIMTXT layout 250
+DIMTXT layout 650
+DIMTXT layout £¼2850
+DIMTXT layout 250
+CTRL layout TEXT %%C21.5 hole
+DIMTXT layout 20
+DIMTXT layout 20
+CTRL layout TEXT %%C21.5 hole
+CTRL layout TEXT %%C21.5 hole
+DIMTXT layout 100
+DIMTXT layout 100
+CTRL layout TEXT %%C19@305
+DIMTXT layout 100
+CTRL layout TEXT %%C19@305
+DIMTXT layout 130
+CTRL layout TEXT %%C21.5 hole
+DIMTXT layout 63
+DIMTXT layout 400
+DIMTXT layout 63
+DIMTXT layout 38(63)
+DIMTXT layout 38(63)
+DIMTXT layout 400(450)
+DIMTXT layout 38(63)
+DIMTXT layout 38(63)
+CTRL layout TEXT %%C21.5 hole
+DIMTXT layout 400(450)
+DIMTXT layout 52925
+DIMTXT layout 24500
+DIMTXT layout 23475
+DIMTXT layout h
+DIMTXT layout h
+DIMTXT layout h
+DIMTXT layout h
+DIMTXT layout 450
+DIMTXT layout 450
+DIMTXT layout 300x14=4200
+DIMTXT layout 300x14=4200
+DIMTXT layout 300x14=4200
+DIMTXT layout 300x14=4200
+DIMTXT layout 4210
+DIMTXT layout 8790
+CTRL layout TEXT %%P0.000
+DIMTXT layout 770
+DIMTXT layout 2934
+DIMTXT layout 2934
+DIMTXT layout 2934
+DIMTXT layout 2934
+DIMTXT layout 1062
+DIMTXT layout 23475
+DIMTXT layout 2934
+DIMTXT layout 2934
+DIMTXT layout 2934
+DIMTXT layout 2934
+DIMTXT layout 3063
+DIMTXT layout 3063
+DIMTXT layout 3063
+DIMTXT layout 3063
+DIMTXT layout 52925
+DIMTXT layout 24500
+DIMTXT layout 3063
+DIMTXT layout 3063
+DIMTXT layout 3063
+DIMTXT layout 3063
+CTRL layout ATTDEF %%p0.000
+DIMTXT layout 1062
+CTRL layout ATTDEF %%p0.000
+DIMTXT layout 1062
+CTRL layout ATTDEF %%p0.000
+DIMTXT layout 52925
+CTRL layout TEXT 0.1%%%
+CTRL layout TEXT 0.1%%%
+CTRL layout TEXT 0.1%%%
+CTRL layout TEXT 0.1%%%
+CTRL layout TEXT 0.1%%%
+CTRL layout TEXT 0.1%%%
+DIMTXT layout 300x14=4200
+DIMTXT layout 300x14=4200
+DIMTXT layout 300x14=4200
+DIMTXT layout 300x14=4200
+DIMTXT layout 169.98x15=2550
+DIMTXT layout 169.98x15=2550
+DIMTXT layout 169.98x15=2550
+DIMTXT layout 169.98x15=2550
+DIMTXT layout 300x14=4200
+DIMTXT layout 300x14=4200
+DIMTXT layout 300x14=4200
+DIMTXT layout 300x14=4200
+DIMTXT layout 169.98x15=2550
+DIMTXT layout 169.98x15=2550
+DIMTXT layout 169.98x15=2550
+DIMTXT layout 169.98x15=2550
+CTRL layout TEXT %%P0.000(Station elevation)
+CTRL layout TEXT %%P0.000(Station elevation)
+CTRL layout TEXT %%P0.000(Station elevation)
+CTRL layout TEXT %%c100Steel rainwater pipe
+DIMTXT layout 5369
+DIMTXT layout 5669
+CTRL layout TEXT %%c100Steel rainwater pipe
+DIMTXT layout 5369
+DIMTXT layout 5.669
+CTRL layout TEXT %%P0.000(Station elevation)
+CTRL layout TEXT %%P0.000(Station elevation)
+DIMTXT layout 40
+DIMTXT layout 40
+DIMTXT layout 80
+CTRL layout TEXT ¿×%%c26
+CTRL layout TEXT ¿×%%c26
+DIMTXT layout 110
+DIMTXT layout 50
+DIMTXT layout 200
+DIMTXT layout 100
+CTRL layout TEXT ¿×%%c26
+CTRL layout TEXT ¿×%%c26
+DIMTXT layout 1150
+DIMTXT layout 1150
+DIMTXT layout 1150
+CTRL layout TEXT %%P0.000
+DIMTXT layout 4210
+DIMTXT layout 8790
+CTRL layout TEXT 5%%%
+CTRL layout TEXT 5%%%
+DIMTXT layout 400
+CTRL layout TEXT %%C400x14
+CTRL layout TEXT %%C12+%%C32x3.0
+CTRL layout TEXT %%C12
+CTRL layout TEXT %%C12
+DIMTXT layout 180
+DIMTXT layout 150
+DIMTXT layout 230
+DIMTXT layout 200
+DIMTXT layout 50
+DIMTXT layout 50
+DIMTXT layout 100
+DIMTXT layout 50
+CTRL layout TEXT %%C15.5 hole
+CTRL layout ATTDEF %%p0.000
+CTRL layout ATTDEF %%p0.000
+CTRL layout ATTDEF %%p0.000
+CTRL layout ATTDEF %%p0.000
+CTRL layout ATTDEF %%p0.000
+CTRL layout ATTDEF %%p0.000
+CTRL layout ATTDEF %%p0.000
+CTRL layout ATTDEF %%p0.000
+CTRL layout ATTDEF %%p0.000
+DIMTXT layout 50
+DIMTXT layout 50
+CTRL layout TEXT %%C30x3 tube
+DIMTXT layout 100
+DIMTXT layout 100
+CTRL layout TEXT %%c12 LT
+DIMTXT layout 60
+DIMTXT layout 60
+DIMTXT layout L
+DIMTXT layout L1
+DIMTXT layout 25
+CTRL layout TEXT %%C12 Round tie bar
+CTRL layout TEXT %%C12+%%C32X3.0
+CTRL layout TEXT %%C12 Round tie bar
+CTRL layout TEXT %%C12 Round tie bar
+CTRL layout TEXT %%C12 Round tie bar
+CTRL layout TEXT %%C12 Batter round tie bar
+DIMTXT layout 30
+DIMTXT layout 25
+DIMTXT layout Loft length
+CTRL layout TEXT %%C15.5 hole
+DIMTXT layout Lofting
+DIMTXT layout 50
+DIMTXT layout 150
+DIMTXT layout 50
+DIMTXT layout 50
+DIMTXT layout 50
+DIMTXT layout 150
+DIMTXT layout 50
+DIMTXT layout 50
+CTRL layout TEXT %%C15.5 hole
+DIMTXT layout D
+CTRL layout TEXT %%C21.5 hole
+CTRL layout TEXT %%C12 Round tie bar
+DIMTXT layout 65
+DIMTXT layout 35
+DIMTXT layout 35
+DIMTXT layout 65
+DIMTXT layout L
+CTRL layout TEXT %%C12 Batter round tie bar
+DIMTXT layout Lx
+DIMTXT layout Ly
+DIMTXT layout 55
+DIMTXT layout L
+DIMTXT layout 55
+DIMTXT layout 400
+DIMTXT layout 400
+CTRL layout TEXT Hole %%c33
+CTRL layout TEXT base plate hole %%c35
+DIMTXT layout 50
+DIMTXT layout 750
+DIMTXT layout 150
+DIMTXT layout 150
+DIMTXT layout 200
+CTRL layout TEXT Hole %%c33
+DIMTXT layout 600
+DIMTXT layout B
+DIMTXT layout 150
+DIMTXT layout 800
+DIMTXT layout 50
+DIMTXT layout 500
+DIMTXT layout B
+DIMTXT layout B
+DIMTXT layout 150
+DIMTXT layout 150
+DIMTXT layout 800
+DIMTXT layout 50
+DIMTXT layout 700
+CTRL layout TEXT Steel column%%C400X14
+DIMTXT layout 600
+DIMTXT layout 450
+DIMTXT layout 450
+DIMTXT layout 200
+CTRL layout TEXT Main rebars28 %%13320
+DIMTXT layout 200
+DIMTXT layout 400
+DIMTXT layout 500
+CTRL layout TEXT Steel column%%C400X12
+CTRL layout TEXT Hole %%c26
+DIMTXT layout 50
+DIMTXT layout 150
+DIMTXT layout 50
+DIMTXT layout 100
+DIMTXT layout 25
+DIMTXT layout 25
+CTRL layout TEXT base plate hole %%c32
+DIMTXT layout 50
+DIMTXT layout 600
+DIMTXT layout 100
+DIMTXT layout 150
+DIMTXT layout 200
+CTRL layout TEXT %%C400x14
+DIMTXT layout 800
+DIMTXT layout 250
+DIMTXT layout 2300
+DIMTXT layout 5002
+DIMTXT layout 2498
+DIMTXT layout 1150
+DIMTXT layout 1150
+DIMTXT layout 1150
+DIMTXT layout 500~1200
+DIMTXT layout 300
+DIMTXT layout 300
+DIMTXT layout 500~1200
+DIMTXT layout 250
+DIMTXT layout 250
+DIMTXT layout 250
+DIMTXT layout a
+DIMTXT layout 250
+DIMTXT layout 250
+DIMTXT layout 900
+DIMTXT layout 250
+DIMTXT layout 2800
+DIMTXT layout 2500
+DIMTXT layout a
+DIMTXT layout 250
+DIMTXT layout 700
+DIMTXT layout 250
+DIMTXT layout 2800
+DIMTXT layout 2500
+DIMTXT layout 300
+DIMTXT layout 300
+DIMTXT layout 1200
+DIMTXT layout 200
+DIMTXT layout 1400
+DIMTXT layout 250
+DIMTXT layout 1800
+DIMTXT layout 250
+DIMTXT layout 700
+DIMTXT layout 250
+DIMTXT layout 650
+DIMTXT layout 2500
+DIMTXT layout 800
+DIMTXT layout 250
+DIMTXT layout 250
+DIMTXT layout 1800
+DIMTXT layout 900
+DIMTXT layout 250
+DIMTXT layout 650
+DIMTXT layout 2500
+DIMTXT layout 250
+DIMTXT layout 560
+DIMTXT layout 710
+DIMTXT layout 710
+DIMTXT layout 710
+DIMTXT layout 710
+CTRL layout TEXT %%C12+%%C32x3.0
+CTRL layout TEXT %%C12
+CTRL layout TEXT %%C12
+DIMTXT layout 5002
+DIMTXT layout 2498
+DIMTXT layout 43
+DIMTXT layout 43
+DIMTXT layout 57
+DIMTXT layout 43
+DIMTXT layout 43
+DIMTXT layout 57
+DIMTXT layout 1400
+DIMTXT layout 4869
+CTRL layout TEXT 5%%%
+CTRL layout TEXT 5%%%
+DIMTXT layout 1400
+DIMTXT layout 1400
+DIMTXT layout 1300
+CTRL layout TEXT %%C21.5 hole
+DIMTXT layout 20
+DIMTXT layout 20
+CTRL layout TEXT %%C21.5 hole
+CTRL layout TEXT %%C21.5 hole
+DIMTXT layout 100
+DIMTXT layout 100
+CTRL layout TEXT %%C19@305
+DIMTXT layout 100
+CTRL layout TEXT %%C19@305
+DIMTXT layout 130
+CTRL layout TEXT %%C21.5 hole
+DIMTXT layout 63
+DIMTXT layout 400
+DIMTXT layout 63
+DIMTXT layout 38(63)
+DIMTXT layout 38(63)
+DIMTXT layout 400(450)
+DIMTXT layout 38(63)
+DIMTXT layout 38(63)
+CTRL layout TEXT %%C21.5 hole
+DIMTXT layout 400(450)
+DIMTXT layout 55650
+DIMTXT layout 23200
+DIMTXT layout 21800
+DIMTXT layout b2/2
+DIMTXT layout b2/2
+DIMTXT layout a2/2
+DIMTXT layout a2/2
+DIMTXT layout B
+DIMTXT layout b1/2
+DIMTXT layout b1/2
+DIMTXT layout L
+DIMTXT layout a1/2
+DIMTXT layout a1/2
+CTRL layout TEXT  1. For the elevation of %%p0.000 of this project, please refer to the architectural drawings. 
+DIMTXT layout h
+DIMTXT layout h
+DIMTXT layout B
+DIMTXT layout b/2
+DIMTXT layout b/2
+DIMTXT layout H
+DIMTXT layout a/2
+DIMTXT layout a/2
+DIMTXT layout 150
+DIMTXT layout 150
+DIMTXT layout 150
+DIMTXT layout 150
+DIMTXT layout 300x14=4200
+DIMTXT layout 300x14=4200
+DIMTXT layout 300x14=4200
+DIMTXT layout 300x14=4200
+DIMTXT layout 169.98x15=2550
+DIMTXT layout 169.98x15=2550
+DIMTXT layout 169.98x15=2550
+DIMTXT layout 169.98x15=2550
+DIMTXT layout 300x14=4200
+DIMTXT layout 300x14=4200
+DIMTXT layout 300x14=4200
+DIMTXT layout 300x14=4200
+DIMTXT layout 169.98x15=2550
+DIMTXT layout 169.98x15=2550
+DIMTXT layout 169.98x15=2550
+DIMTXT layout 169.98x15=2550
+DIMTXT layout 300x14=4200
+DIMTXT layout 300x14=4200
+DIMTXT layout 300x14=4200
+DIMTXT layout 300x14=4200
+DIMTXT layout 300x14=4200
+DIMTXT layout 300x14=4200
+DIMTXT layout 300x14=4200
+DIMTXT layout 300x14=4200
+DIMTXT layout 150
+DIMTXT layout 150
+DIMTXT layout 150
+DIMTXT layout 150
+DIMTXT layout h
+DIMTXT layout h
+DIMTXT layout h
+DIMTXT layout h
+DIMTXT layout 300x14=4200
+DIMTXT layout 300x14=4200
+DIMTXT layout 300x14=4200
+DIMTXT layout 300x14=4200
+DIMTXT layout 169.98x15=2550
+DIMTXT layout 169.98x15=2550
+DIMTXT layout 169.98x15=2550
+DIMTXT layout 169.98x15=2550
+DIMTXT layout 450
+DIMTXT layout 450
+DIMTXT layout 650
+DIMTXT layout 650
+DIMTXT layout 1000
+DIMTXT layout 2000
+DIMTXT layout 150
+DIMTXT layout 600
+DIMTXT layout 1000
+DIMTXT layout 300x14=4200
+DIMTXT layout 300x14=4200
+DIMTXT layout 300x14=4200
+DIMTXT layout 300x14=4200
+DIMTXT layout 169.98x15=2550
+DIMTXT layout 169.98x15=2550
+DIMTXT layout 169.98x15=2550
+DIMTXT layout 169.98x15=2550
+DIMTXT layout 300x14=4200
+DIMTXT layout 300x14=4200
+DIMTXT layout 300x14=4200
+DIMTXT layout 300x14=4200
+DIMTXT layout 300x14=4200
+DIMTXT layout 300x14=4200
+DIMTXT layout 300x14=4200
+DIMTXT layout 300x14=4200
+DIMTXT layout 4210
+DIMTXT layout 8790
+CTRL layout TEXT %%P0.000
+DIMTXT layout 1050
+DIMTXT layout 21800
+DIMTXT layout 1150
+DIMTXT layout 23200
+CTRL layout ATTDEF %%p0.000
+CTRL layout ATTDEF %%p0.000
+CTRL layout ATTDEF %%p0.000
+DIMTXT block:FFFAA 300x14=4200
+DIMTXT block:FFFAA 300x14=4200
+DIMTXT block:FFFAA 300x14=4200
+DIMTXT block:FFFAA 300x14=4200
+DIMTXT block:FFFAA 300x14=4200
+DIMTXT block:FFFAA 300x14=4200
+DIMTXT block:FFFAA 300x14=4200
+DIMTXT block:FFFAA 300x14=4200
+DIMTXT block:FFFAA 300x14=4200
+DIMTXT block:FFFAA 300x14=4200
+DIMTXT block:FFFAA 300x14=4200
+DIMTXT block:FFFAA 300x14=4200
+DIMTXT block:FFFAA 300x14=4200
+DIMTXT block:FFFAA 300x14=4200
+DIMTXT block:FFFAA 300x14=4200
+DIMTXT block:FFFAA 300x14=4200
+COUNT SEQEND 33
+COUNT ATTRIB 33
+COUNT ENDBLK 1
+COUNT POINT 1
+COUNT ACAD_PROXY_ENTITY 18
+COUNT ATTDEF 29
+COUNT ELLIPSE 32
+COUNT SOLID 7
+COUNT ARC 773
+COUNT SPLINE 96
+COUNT CIRCLE 4269
+COUNT MTEXT 103
+COUNT DIMENSION 3247
+COUNT LINE 17350
+COUNT INSERT 4667
+COUNT LWPOLYLINE 9786
+COUNT TEXT 5456
+COUNT LEADER 553
+COUNT HATCH 1005

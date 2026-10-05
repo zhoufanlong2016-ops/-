@@ -1,0 +1,9 @@
+{
+  "export_json": "D:\\01 绿色程序\\文档翻译器\\_final_v2\\gulshan_dwg\\document-translator-dwg-w10sg5oo\\export.json",
+  "layer_allow": [],
+  "layer_deny": [],
+  "operation": "export",
+  "overwrite": false,
+  "schema_version": 1,
+  "source_dwg": "D:\\01 绿色程序\\文档翻译器\\_final_v2\\gulshan_dwg\\source.dwg"
+}

@@ -1,0 +1,31 @@
+{
+  "status": "FAILED",
+  "source_hash": "db85271e63d4daf59f214bdad69c5d1e817daa863631b08f8ce481381f9ecad0",
+  "classification": "B",
+  "provider": "openai",
+  "model": "gpt-5.6-luna",
+  "run": {
+    "engine": "mineru4",
+    "mineru_tier": "flash",
+    "mineru_ocr_mode": "txt",
+    "source_hash": "db85271e63d4daf59f214bdad69c5d1e817daa863631b08f8ce481381f9ecad0",
+    "hybrid_parse": {
+      "parser": "native",
+      "native_line_count": 631,
+      "semantic_block_count": 212,
+      "rotated_pages": [],
+      "table_pages": [
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10
+      ]
+    }
+  },
+  "error": "OpenAIProviderError: OpenAI batch request failed"
+}

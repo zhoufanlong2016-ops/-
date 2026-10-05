@@ -1,0 +1,81 @@
+Page 5 of 10 
+Sr # Reference Section 
+Description 
+Employer’s Response 
+please provide the type and design parameters (flow 
+rate, head) of the fire pumps. 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+2) 
+Please specify the fire-fighting systems 
+required for each building (fire hydrant system, gas-
+based fire-extinguishing, automatic sprinklers, etc.). 
+standards, by using design., codes/references mention 
+hereunder: NFPA 20 (fire pumps), NFPA 13 (automatic 
+sprinklers), NFPA 14/NFPA 24 (hydrants / private mains), 
+NFPA 22 (fire water tanks), and NFPA 2001 (clean-agent 
+systems). Provide a standalone fire water supply capable 
+of supporting private hydrants and sprinklers for a 
+minimum 2-hour duration dedicated water tank at the 
+chosen design flow. 
+System Requirement: Install external hydrants (industrial 
+style) distributed to provide required coverage; hydrant 
+outlets, 2.5-in nozzles, and provisions for fire department 
+connections (FDC). 
+Plant buildings, workshops, stores, hazardous material 
+storage (if any): Hydrant system inside/outside + hose 
+reels as required; consider local sprinklers inside enclosed 
+buildings where combustible materials are stored.  
+Additional: manual fire extinguishers, detection & alarms, 
+emergency lighting, and signage. 
+Jockey pump (pressure maintenance): Jockey pumps are 
+small, typical flow 5–10% of main pump flow to maintain 
+pressure and avoid main pump cycling. 
+Design Pressure: Consider a minimum of 7 barG at the 
+hydraulically most remote hydrant/nozzle. The pump head 
+shall be calculated based on the terminal pressure of 7 
+barG + static head + friction losses. 
+Design Flows: EPC contractor shall calculate the fire pump 
+flow rate considering the worst-case scenario, but shall not 
+be less than 1000 gpm. 
+Fire Pump shall be FM-approved and UL-listed. 
+Large Electric Motors: In case of a large pump room, 
+partially open and containing lubricants/oils, install both 
+local deluge zones (for fuel fires) and gaseous total-
+flooding for electrical enclosures. Systems must be zoned 
+to avoid water flooding live switchgear. 
+ 
+2. For the offices at the Ultimate Disposal Station, the 
+Contractor shall design and provide an Automatic wet-pipe 
+sprinkler system (light hazard). 

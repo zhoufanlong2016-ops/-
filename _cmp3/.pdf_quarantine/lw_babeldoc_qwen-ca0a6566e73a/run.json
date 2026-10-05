@@ -1,0 +1,25 @@
+{
+  "error": "table translation gateway returned HTTP 504 (UPSTREAM_DEADLINE_EXCEEDED)",
+  "error_type": "RuntimeError",
+  "run": {
+    "engine": "babeldoc.format.pdf.high_level.async_translate",
+    "gateway": "local",
+    "source_hash": "115bfbdf9f14601b12278aaead820c82e5b18981598ee3d0f5b97225664fe674",
+    "timing_seconds": {
+      "total_until_failure": 226.643
+    },
+    "gateway_requests": 7,
+    "gateway_batch_sizes": [
+      20,
+      20,
+      16,
+      16
+    ],
+    "gateway_structured_requests": 4,
+    "gateway_fallback_requests": 3,
+    "gateway_upstream_results": 6,
+    "gateway_upstream_elapsed_ms_total": 442496,
+    "gateway_upstream_elapsed_ms_max": 120618,
+    "gateway_upstream_failures": 2
+  }
+}

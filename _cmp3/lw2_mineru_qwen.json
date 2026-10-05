@@ -1,0 +1,3666 @@
+{
+  "status": "PENDING_VISUAL_REVIEW",
+  "preflight": {
+    "source_hash": "cabdd1db42941e0779606d82e715e471a4acf5e782b0c07ec07ff70eccc75571",
+    "page_count": 9,
+    "page_sizes": [
+      [
+        1191.0,
+        842.0
+      ],
+      [
+        1191.0,
+        842.0
+      ],
+      [
+        1191.0,
+        842.0
+      ],
+      [
+        612.0,
+        792.0
+      ],
+      [
+        1191.0,
+        842.0
+      ],
+      [
+        612.0,
+        792.0
+      ],
+      [
+        612.0,
+        792.0
+      ],
+      [
+        612.0,
+        792.0
+      ],
+      [
+        1043.26,
+        737.26
+      ]
+    ],
+    "text_characters": 5824,
+    "image_count": 35,
+    "rotated_text_spans": 74,
+    "classification": "B",
+    "reasons": [
+      "complex layout requires full visual review",
+      "table-like grid detected on page(s) 1, 2, 3, 5, 7; table translation is experimental and requires separate visual acceptance"
+    ],
+    "table_pages": [
+      1,
+      2,
+      3,
+      5,
+      7
+    ],
+    "visual_review_required": true
+  },
+  "validation": {
+    "candidate_hash": "57ce9cf98674b32ab53c2830eef11b6cf7f4974bb7a1319dad95b53fa2d6096f",
+    "embedded_font_references": 21,
+    "blank_pages": [],
+    "cjk_residue": 755,
+    "control_characters": [],
+    "unicode_dashes": [],
+    "candidate_warnings": [],
+    "identifier_dash_mismatches": [],
+    "missing_identifiers": [],
+    "mixed_document_references": [],
+    "preserved_mixed_document_references": [],
+    "minimum_font_size": 6.0,
+    "font_size_acceptance_policy": "candidate >= 0.5 * corresponding source",
+    "name_acceptance_policy": "Chinese rendering or original English spelling accepted; Chinese + English bilingual output is not required",
+    "name_warnings": [],
+    "font_size_ratio_checks": [
+      {
+        "page": 4,
+        "source_font_size": 32.040000915527344,
+        "candidate_font_size": 32.040000915527344,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 6,
+        "source_font_size": 32.040000915527344,
+        "candidate_font_size": 32.040000915527344,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 6.070000171661377,
+        "ratio": 0.858971569896693,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 7,
+        "source_font_size": 7.066590309143066,
+        "candidate_font_size": 7.070000171661377,
+        "ratio": 1.0004825329287732,
+        "below_minimum": false
+      },
+      {
+        "page": 8,
+        "source_font_size": 32.040000915527344,
+        "candidate_font_size": 32.040000915527344,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.719794750213623,
+        "candidate_font_size": 6.719794750213623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.719794750213623,
+        "candidate_font_size": 6.719794750213623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.719794750213623,
+        "candidate_font_size": 6.719794750213623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.719794750213623,
+        "candidate_font_size": 6.719794750213623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.719794750213623,
+        "candidate_font_size": 6.719794750213623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.719794750213623,
+        "candidate_font_size": 6.719794750213623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.719794750213623,
+        "candidate_font_size": 6.719794750213623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.719794750213623,
+        "candidate_font_size": 6.719794750213623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.719794750213623,
+        "candidate_font_size": 6.719794750213623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.719794750213623,
+        "candidate_font_size": 6.719794750213623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.719794750213623,
+        "candidate_font_size": 6.719794750213623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.719794750213623,
+        "candidate_font_size": 6.719794750213623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.719794750213623,
+        "candidate_font_size": 6.719794750213623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.719794750213623,
+        "candidate_font_size": 6.719794750213623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.719794750213623,
+        "candidate_font_size": 6.719794750213623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.719794750213623,
+        "candidate_font_size": 6.719794750213623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.719794750213623,
+        "candidate_font_size": 6.719794750213623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.719794750213623,
+        "candidate_font_size": 6.719794750213623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.719794750213623,
+        "candidate_font_size": 6.719794750213623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.719794750213623,
+        "candidate_font_size": 6.719794750213623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.719794750213623,
+        "candidate_font_size": 6.719794750213623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.719794750213623,
+        "candidate_font_size": 6.719794750213623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.719794750213623,
+        "candidate_font_size": 6.719794750213623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.719794750213623,
+        "candidate_font_size": 6.719794750213623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.719794750213623,
+        "candidate_font_size": 6.719794750213623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.719794750213623,
+        "candidate_font_size": 6.719794750213623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.719794750213623,
+        "candidate_font_size": 6.719794750213623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.719794750213623,
+        "candidate_font_size": 6.719794750213623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.719794750213623,
+        "candidate_font_size": 6.719794750213623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.719794750213623,
+        "candidate_font_size": 6.719794750213623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.719794750213623,
+        "candidate_font_size": 6.719794750213623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.719794750213623,
+        "candidate_font_size": 6.719794750213623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.719794750213623,
+        "candidate_font_size": 6.719794750213623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.719794750213623,
+        "candidate_font_size": 6.719794750213623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.719794750213623,
+        "candidate_font_size": 6.719794750213623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.719794750213623,
+        "candidate_font_size": 6.719794750213623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.719794750213623,
+        "candidate_font_size": 6.719794750213623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.719794750213623,
+        "candidate_font_size": 6.719794750213623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.719794750213623,
+        "candidate_font_size": 6.719794750213623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.719794750213623,
+        "candidate_font_size": 6.719794750213623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.719794750213623,
+        "candidate_font_size": 6.719794750213623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.719794750213623,
+        "candidate_font_size": 6.719794750213623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.719794750213623,
+        "candidate_font_size": 6.719794750213623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.719794750213623,
+        "candidate_font_size": 6.719794750213623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.719794750213623,
+        "candidate_font_size": 6.719794750213623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.719794750213623,
+        "candidate_font_size": 6.719794750213623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.719794750213623,
+        "candidate_font_size": 6.719794750213623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.719794750213623,
+        "candidate_font_size": 6.719794750213623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.719794750213623,
+        "candidate_font_size": 6.719794750213623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.719794750213623,
+        "candidate_font_size": 6.719794750213623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.719794750213623,
+        "candidate_font_size": 6.719794750213623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.719794750213623,
+        "candidate_font_size": 6.719794750213623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 9.599705696105957,
+        "candidate_font_size": 9.599705696105957,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 10.319680213928223,
+        "candidate_font_size": 10.319680213928223,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.719794750213623,
+        "candidate_font_size": 6.719794750213623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.719794750213623,
+        "candidate_font_size": 6.719794750213623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.719794750213623,
+        "candidate_font_size": 6.719794750213623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.719794750213623,
+        "candidate_font_size": 6.719794750213623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.719794750213623,
+        "candidate_font_size": 6.719794750213623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.719794750213623,
+        "candidate_font_size": 6.719794750213623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.719794750213623,
+        "candidate_font_size": 6.719794750213623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.719794750213623,
+        "candidate_font_size": 6.719794750213623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.719794750213623,
+        "candidate_font_size": 6.719794750213623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.719794750213623,
+        "candidate_font_size": 6.719794750213623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.719794750213623,
+        "candidate_font_size": 6.719794750213623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.719794750213623,
+        "candidate_font_size": 6.719794750213623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.719794750213623,
+        "candidate_font_size": 6.719794750213623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.719794750213623,
+        "candidate_font_size": 6.719794750213623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 5.999816417694092,
+        "candidate_font_size": 5.999816417694092,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 5.999813079833984,
+        "candidate_font_size": 5.999813079833984,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 5.999814987182617,
+        "candidate_font_size": 5.999814987182617,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 5.999816417694092,
+        "candidate_font_size": 5.999816417694092,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 5.999814987182617,
+        "candidate_font_size": 5.999814987182617,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 5.999814510345459,
+        "candidate_font_size": 5.999814510345459,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 5.99981689453125,
+        "candidate_font_size": 5.99981689453125,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 5.999814510345459,
+        "candidate_font_size": 5.999814510345459,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 5.999815464019775,
+        "candidate_font_size": 5.999815464019775,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 5.999818801879883,
+        "candidate_font_size": 5.999818801879883,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 5.999814510345459,
+        "candidate_font_size": 5.999814510345459,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 5.999812126159668,
+        "candidate_font_size": 5.999812126159668,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 5.999816417694092,
+        "candidate_font_size": 5.999816417694092,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 5.999817371368408,
+        "candidate_font_size": 5.999817371368408,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 3.839881658554077,
+        "candidate_font_size": 3.839881658554077,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 5.999813556671143,
+        "candidate_font_size": 5.999813556671143,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 5.999814033508301,
+        "candidate_font_size": 5.999814033508301,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 5.999814510345459,
+        "candidate_font_size": 5.999814510345459,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 5.999814987182617,
+        "candidate_font_size": 5.999814987182617,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 5.999812602996826,
+        "candidate_font_size": 5.999812602996826,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 5.999813079833984,
+        "candidate_font_size": 5.999813079833984,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 5.999814987182617,
+        "candidate_font_size": 5.999814987182617,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 5.999814510345459,
+        "candidate_font_size": 5.999814510345459,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 3.8398783206939697,
+        "candidate_font_size": 3.8398783206939697,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 5.999815464019775,
+        "candidate_font_size": 5.999815464019775,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 5.99981689453125,
+        "candidate_font_size": 5.99981689453125,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 5.999813556671143,
+        "candidate_font_size": 5.999813556671143,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 5.999814033508301,
+        "candidate_font_size": 5.999814033508301,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 5.999814510345459,
+        "candidate_font_size": 5.999814510345459,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 5.999814510345459,
+        "candidate_font_size": 5.999814510345459,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 5.999813556671143,
+        "candidate_font_size": 5.999813556671143,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 3.8398842811584473,
+        "candidate_font_size": 3.8398842811584473,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 5.999816417694092,
+        "candidate_font_size": 5.999816417694092,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 3.8398821353912354,
+        "candidate_font_size": 3.8398821353912354,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 5.999812126159668,
+        "candidate_font_size": 5.999812126159668,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 5.999814510345459,
+        "candidate_font_size": 5.999814510345459,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 5.999815464019775,
+        "candidate_font_size": 5.999815464019775,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 5.999818325042725,
+        "candidate_font_size": 5.999818325042725,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 5.999816417694092,
+        "candidate_font_size": 5.999816417694092,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 5.999817848205566,
+        "candidate_font_size": 5.999817848205566,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 5.999813556671143,
+        "candidate_font_size": 5.999813556671143,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 5.999815464019775,
+        "candidate_font_size": 5.999815464019775,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 5.999812602996826,
+        "candidate_font_size": 5.999812602996826,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 5.999816417694092,
+        "candidate_font_size": 5.999816417694092,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 5.999815464019775,
+        "candidate_font_size": 5.999815464019775,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 5.999814510345459,
+        "candidate_font_size": 5.999814510345459,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 5.999818325042725,
+        "candidate_font_size": 5.999818325042725,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 5.999814987182617,
+        "candidate_font_size": 5.999814987182617,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 5.999817371368408,
+        "candidate_font_size": 5.999817371368408,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 3.839883804321289,
+        "candidate_font_size": 3.839883804321289,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 5.999812602996826,
+        "candidate_font_size": 5.999812602996826,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 5.999814987182617,
+        "candidate_font_size": 5.999814987182617,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 5.999812126159668,
+        "candidate_font_size": 5.999812126159668,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 5.999817848205566,
+        "candidate_font_size": 5.999817848205566,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 1.4399549961090088,
+        "candidate_font_size": 1.4399549961090088,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 1.4399549961090088,
+        "candidate_font_size": 1.4399549961090088,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799851894378662,
+        "candidate_font_size": 4.799851894378662,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 5.999818325042725,
+        "candidate_font_size": 5.999818325042725,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 3.5998899936676025,
+        "candidate_font_size": 3.5998899936676025,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799851417541504,
+        "candidate_font_size": 4.799851417541504,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 5.999813556671143,
+        "candidate_font_size": 5.999813556671143,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 5.999815940856934,
+        "candidate_font_size": 5.999815940856934,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 3.839879035949707,
+        "candidate_font_size": 3.839879035949707,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799850940704346,
+        "candidate_font_size": 4.799850940704346,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 11.999632835388184,
+        "candidate_font_size": 11.999632835388184,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 11.99963092803955,
+        "candidate_font_size": 11.99963092803955,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 9.839699745178223,
+        "candidate_font_size": 9.839699745178223,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 9.839699745178223,
+        "candidate_font_size": 9.839699745178223,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 11.99963092803955,
+        "candidate_font_size": 11.99963092803955,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 11.99963092803955,
+        "candidate_font_size": 11.99963092803955,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 6.959784984588623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 6.959784984588623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 6.959784984588623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 6.959784984588623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 6.959784984588623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 6.959784984588623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 6.959784984588623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 6.959784984588623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 6.959784984588623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 6.959784984588623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 6.959784984588623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 6.959784984588623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 6.959784984588623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 6.959784984588623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 6.959784984588623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 6.959784984588623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 6.959784984588623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 6.959784984588623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 6.959784984588623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 6.959784984588623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 6.959784984588623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 6.959784984588623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 6.959784984588623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 6.959784984588623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 6.959784984588623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 6.959784984588623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 6.959784984588623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 6.959784984588623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 6.959784984588623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 6.959784984588623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 6.959784984588623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 6.959784984588623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 6.959784984588623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 6.959784984588623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 6.959784984588623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 6.959784984588623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 6.959784984588623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 6.959784984588623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 6.959784984588623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 6.959784984588623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 6.959784984588623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 6.959784984588623,
+        "candidate_font_size": 6.959784984588623,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 85.43737030029297,
+        "candidate_font_size": 85.43737030029297,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 5.999814987182617,
+        "candidate_font_size": 5.999814987182617,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 5.999814987182617,
+        "candidate_font_size": 5.999814987182617,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 5.999814987182617,
+        "candidate_font_size": 5.999814987182617,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 5.999814987182617,
+        "candidate_font_size": 5.999814987182617,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 8.399744987487793,
+        "candidate_font_size": 8.399744987487793,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 9.839699745178223,
+        "candidate_font_size": 9.839699745178223,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 9.839699745178223,
+        "candidate_font_size": 9.839699745178223,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 9.839699745178223,
+        "candidate_font_size": 9.839699745178223,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 9.839699745178223,
+        "candidate_font_size": 9.839699745178223,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 15.119535446166992,
+        "candidate_font_size": 15.119535446166992,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 10.799665451049805,
+        "candidate_font_size": 10.799665451049805,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 10.799665451049805,
+        "candidate_font_size": 10.799665451049805,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 10.799665451049805,
+        "candidate_font_size": 10.799665451049805,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 10.799665451049805,
+        "candidate_font_size": 10.799665451049805,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 10.799665451049805,
+        "candidate_font_size": 10.799665451049805,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 10.799665451049805,
+        "candidate_font_size": 10.799665451049805,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 10.799665451049805,
+        "candidate_font_size": 10.799665451049805,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 10.799665451049805,
+        "candidate_font_size": 10.799665451049805,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 8.399744987487793,
+        "candidate_font_size": 8.399744987487793,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 9.83969497680664,
+        "candidate_font_size": 9.83969497680664,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 8.399744987487793,
+        "candidate_font_size": 8.399744987487793,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 8.399744987487793,
+        "candidate_font_size": 8.399744987487793,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 8.159745216369629,
+        "candidate_font_size": 8.159745216369629,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 7.919754981994629,
+        "candidate_font_size": 5.999814987182617,
+        "ratio": 0.7575758342048524,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 5.999814987182617,
+        "candidate_font_size": 5.999814987182617,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 5.999814987182617,
+        "candidate_font_size": 5.999814987182617,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 5.999814987182617,
+        "candidate_font_size": 5.999814987182617,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 5.999814987182617,
+        "candidate_font_size": 5.999814987182617,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 5.999814987182617,
+        "candidate_font_size": 5.999814987182617,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 5.999814987182617,
+        "candidate_font_size": 5.999814987182617,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 5.999814987182617,
+        "candidate_font_size": 5.999814987182617,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 7.919754981994629,
+        "candidate_font_size": 6.900000095367432,
+        "ratio": 0.8712390864432568,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 7.9197587966918945,
+        "candidate_font_size": 7.919788360595703,
+        "ratio": 1.0000037329298237,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 4.799849987030029,
+        "candidate_font_size": 4.799849987030029,
+        "ratio": 1.0,
+        "below_minimum": false
+      },
+      {
+        "page": 9,
+        "source_font_size": 7.9197587966918945,
+        "candidate_font_size": 7.919788360595703,
+        "ratio": 1.0000037329298237,
+        "below_minimum": false
+      }
+    ],
+    "minimum_observed_font_size": 1.4399549961090088,
+    "visual_review_required": true,
+    "layout_contract": {
+      "status": "passed",
+      "contract_count": 3,
+      "failures": [],
+      "observed": [
+        {
+          "page": 4,
+          "role": "centered_text",
+          "source_block": 7,
+          "candidate_block": 0,
+          "candidate_line_count": 1,
+          "center_error": 0.0,
+          "text": "附件-B"
+        },
+        {
+          "page": 6,
+          "role": "centered_text",
+          "source_block": 7,
+          "candidate_block": 0,
+          "candidate_line_count": 1,
+          "center_error": 0.0,
+          "text": "附件-C"
+        },
+        {
+          "page": 8,
+          "role": "centered_text",
+          "source_block": 7,
+          "candidate_block": 0,
+          "candidate_line_count": 1,
+          "center_error": 0.0,
+          "text": "附件-D"
+        }
+      ]
+    }
+  },
+  "provider": "qwen",
+  "model": "qwen3.8-flash",
+  "run": {
+    "engine": "mineru4",
+    "mineru_tier": "flash",
+    "mineru_ocr_mode": "txt",
+    "source_hash": "cabdd1db42941e0779606d82e715e471a4acf5e782b0c07ec07ff70eccc75571",
+    "hybrid_parse": {
+      "parser": "native",
+      "native_line_count": 391,
+      "semantic_block_count": 323,
+      "rotated_pages": [
+        9
+      ],
+      "table_pages": [
+        1,
+        2,
+        3,
+        5,
+        7
+      ]
+    },
+    "layout_restore": {
+      "status": "restored",
+      "contract_count": 3,
+      "operation_count": 3,
+      "roles": {
+        "centered_text": 3
+      },
+      "profile": {
+        "target_language": "zh",
+        "chapter_label": "",
+        "article_label": "",
+        "chapter_numbering": "source",
+        "article_numbering": "source"
+      }
+    },
+    "restored_images": 30,
+    "table_translation": {
+      "status": "skipped",
+      "reason": "no vector tables detected"
+    },
+    "restored_table_images": 14,
+    "vector_page_translation": {
+      "status": "patched",
+      "translated_pages": [
+        1,
+        2,
+        3,
+        5,
+        7,
+        9
+      ],
+      "skipped": []
+    },
+    "restored_vector_pages": {
+      "restored_page_count": 0,
+      "restored_pages": []
+    },
+    "mineru_unit_count": 3,
+    "translated_unit_count": 3,
+    "translation_warning_count": 0,
+    "cmap_repairs": {
+      "repaired_fonts": 9,
+      "repairs": [
+        {
+          "font": "PDFLayout_simhei",
+          "mapping": "U+2010->U+002D",
+          "control_count": 1
+        },
+        {
+          "font": "PDFLayout_simhei",
+          "mapping": "U+2013->U+002D",
+          "control_count": 1
+        },
+        {
+          "font": "pdfTablecfb1a71e49",
+          "mapping": "U+2010->U+002D",
+          "control_count": 1
+        },
+        {
+          "font": "pdfTablecfb1a71e49",
+          "mapping": "U+2013->U+002D",
+          "control_count": 1
+        },
+        {
+          "font": "pdfTablecd1b8ba52f",
+          "mapping": "U+2012->U+002D",
+          "control_count": 1
+        },
+        {
+          "font": "pdfTablecd1b8ba52f",
+          "mapping": "U+2013->U+002D",
+          "control_count": 1
+        },
+        {
+          "font": "pdfTablecd1b8ba52f",
+          "mapping": "U+2015->U+002D",
+          "control_count": 1
+        },
+        {
+          "font": "PT_simhei",
+          "mapping": "U+2010->U+002D",
+          "control_count": 1
+        },
+        {
+          "font": "PT_simhei",
+          "mapping": "U+2013->U+002D",
+          "control_count": 1
+        }
+      ]
+    }
+  }
+}
