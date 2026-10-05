@@ -2481,8 +2481,30 @@ def _render_tables(
         try:
             pdf_table.validate_pdf_table_translations((table,), mapping, source_language=source_language, target_language=target_language)
         except pdf_table.PdfTableError as exc:
+            # One cell's translation dropping a name ("Poonch Road.") left
+            # the whole table in English. A cell-level problem is reported
+            # and only that cell is checked again: a name finding keeps the
+            # translation (as for paragraphs), anything else keeps that
+            # cell's source text; the table is written.
             warnings.append({"table": f"page:{table.page_number}:table:{table.table_number}", "errors": [str(exc)]})
-            continue
+            for cell in table.cells:
+                if cell.is_empty:
+                    continue
+                try:
+                    pdf_table.validate_pdf_table_translations(
+                        (dataclasses.replace(table, cells=(cell,)),), {cell.id: mapping[cell.id]},
+                        source_language=source_language, target_language=target_language,
+                    )
+                except pdf_table.PdfTableError as cell_exc:
+                    if "NAME" not in str(cell_exc) and "name" not in str(cell_exc):
+                        cell_translations[cell.id] = cell.text
+            try:
+                remapped = {cell.id: (cell_translations.get(cell.id, cell.text) if not cell.is_empty else "") for cell in table.cells}
+                for cell in table.cells:
+                    if not cell.is_empty and not remapped[cell.id].strip():
+                        raise pdf_table.PdfTableMappingError(f"non-empty source cell {cell.id} has an empty translation")
+            except pdf_table.PdfTableError:
+                continue
         good.append(table)
     pages: dict[int, dict[str, object]] = {}
     sized: list[Any] = []
@@ -2601,7 +2623,13 @@ def _table_alignment(source_page: Any, tables: list[Any]) -> dict[str, tuple[int
                 if cell.column == column and cell.id in detected:
                     if majority is None:
                         alignment[cell.id] = detected[cell.id]
-                    elif cell.row in header_rows and not detected[cell.id][1] and _balanced_in_cell(source_page, cell):
+                    elif (
+                        cell.row in header_rows and not detected[cell.id][1]
+                        # a heading is short; a page whose table goes on from
+                        # the last page starts with a body row instead
+                        and len(cell.text) <= 60 and len(cell.text.splitlines()) <= 3
+                        and _balanced_in_cell(source_page, cell)
+                    ):
                         # A header whose lines fill the cell with equal room
                         # above and below ("Structures need to / Dismantle"):
                         # its shorter translation goes in the middle.
