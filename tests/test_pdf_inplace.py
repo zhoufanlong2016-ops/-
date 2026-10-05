@@ -897,3 +897,18 @@ def test_a_cell_holding_a_picture_is_split_around_it():
     split = pdf_inplace._split_around_images(page, table)
     assert [(c.id, c.text) for c in split.cells] == [("c:a", "Text above the picture."), ("c:b", "Text below the picture.")]
     assert split.cells[0].rect[3] <= 90 and split.cells[1].rect[1] >= 150
+
+
+def test_an_inline_bullet_is_measured_as_written():
+    # SimHei has no "•": it is written as an inline "·". Measured as "•"
+    # every bullet started a line, and a continued cell was filled short.
+    from types import SimpleNamespace
+
+    head = SimpleNamespace(id="b", rect=(0, 0, 200, 60), source_font_size=10.0, is_empty=False, text="x")
+    pdf_inplace._CELL_SOURCE_FONTS[head.id] = "ArialMT"
+    try:
+        text = "电动机 • 泵应由立式、风冷电动机驱动。 • 所有电动机均应适用于3300伏。"
+        assert pdf_inplace._cell_fits(head, text, 10.0, 1.5) == pdf_inplace._cell_fits(head, text.replace("•", "·"), 10.0, 1.5)
+        assert pdf_inplace._cell_fits(head, text, 10.0, 1.5)
+    finally:
+        pdf_inplace._CELL_SOURCE_FONTS.pop(head.id, None)

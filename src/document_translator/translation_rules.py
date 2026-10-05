@@ -137,6 +137,10 @@ _NAME_BOUNDARIES = frozenset((
     "complete completed build construct widen temporary permanent river lake level training"
 ).split())
 _ENGLISH_WORD_RE = re.compile(r"\b[A-Za-z]{2,}\b")
+_ORGANISATION_TAIL_RE = re.compile(
+    r"(?:[ \t]+(?:and|&|[A-Z][A-Za-z]*))*?[ \t]+"
+    r"(?:Corporation|Corp\.?|Company|Co\.|Ltd\.?|Limited|Group|Inc\.?|Authority|Department|Agency|Bureau)\b"
+)
 _IZAFAT_NAME_RE = re.compile(r"\b[A-Z][a-z]+(?:[- ]e[- ][A-Z][a-z]+)+\b")
 _DATE_RE = re.compile(r"\b(?P<day>\d{1,2})(?P<ordinal>st|nd|rd|th)\s+(?P<month>[A-Za-z]+)\s+(?P<year>\d{4})\b", re.I)
 _DATE_MONTHS = frozenset(
@@ -172,6 +176,10 @@ def proper_names(text: str) -> list[str]:
             start = word.start()
             if len(_NAME_WORD_RE.findall(text[start:end])) >= 4:
                 break
+        # "China Road and Bridge Corporation" is a company, not a road: the
+        # rest of the capitalised name ends in an organisation word.
+        if start < end and _ORGANISATION_TAIL_RE.match(text, suffix.end()):
+            continue
         if start < end:
             spans.append((start, suffix.end()))
     for prefix in re.finditer(r"\b(?:River|Lake)\b", text, re.I):
@@ -258,9 +266,24 @@ def validate_name_retention(
 _LOWER_RUN_RE = re.compile(r"\b[a-z]+(?:[ \t]+[a-z]+){3,}\b")
 
 
+_WORD_RUN_RE = re.compile(r"\b[a-z]+(?:[ \t]+[a-z]+){3,}\b")
+
+
 def _untranslated_phrase(source_text: str, translation: str) -> str | None:
     source = " ".join(source_text.split()).casefold()
     for match in _LOWER_RUN_RE.finditer(translation):
+        if match.group(0) in source:
+            return match.group(0)
+    # A title-cased line ("Lahore Water and Wastewater Management Project")
+    # copied whole is untranslated too: the lowercase test above let every
+    # heading and project name through. The names kept by policy (roads,
+    # colonies, Gulshan-e-Ravi) are taken out first; what is left of a name
+    # ("and Bridge Corporation") is shorter than four words.
+    kept = translation
+    for name in [*source_name_constraints(source_text, "en", "zh"), *_IZAFAT_NAME_RE.findall(source_text)]:
+        kept = re.sub(re.escape(name), " | ", kept, flags=re.I)
+        source = re.sub(re.escape(name.casefold()), " | ", source)
+    for match in _WORD_RUN_RE.finditer(" ".join(kept.split()).casefold()):
         if match.group(0) in source:
             return match.group(0)
     return None

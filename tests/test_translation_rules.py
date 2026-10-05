@@ -426,3 +426,19 @@ def test_short_volume_references_before_a_part():
 
     text, _ = localize_chinese_dates("Based on V3A – Part II – Tender Drawings and V2-Part II; a 400 V2 motor", "en", "zh")
     assert text == "Based on 第3A卷 – Part II – Tender Drawings and 第2卷-Part II; a 400 V2 motor"
+
+
+def test_title_cased_line_copied_whole_is_untranslated_english():
+    # A project name or heading returned as it came was let through: the
+    # residue test only looked for lowercase runs.
+    title = "Lahore Water and Wastewater Management Project (LWWMP)"
+    assert validate_translation_residue(title, title, "en", "zh")
+    assert not validate_translation_residue(title, "拉合尔供水与废水管理项目（LWWMP）", "en", "zh")
+    # Names kept by policy are not counted.
+    source = "Sewerage system from Larech Colony to Gulshan-e-Ravi, Lahore"
+    assert not validate_translation_residue(source, "从Larech Colony至Gulshan-e-Ravi, Lahore的污水系统", "en", "zh")
+
+
+def test_company_named_after_a_road_is_not_a_kept_road_name():
+    assert proper_names("China Road and Bridge Corporation (CRBC)") == []
+    assert proper_names("along Multan Road and Ferozepur Road") == ["Multan Road", "Ferozepur Road"]

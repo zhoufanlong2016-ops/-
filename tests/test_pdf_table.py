@@ -177,3 +177,53 @@ def test_chinese_is_set_one_and_a_half_lines_apart_when_it_fits():
     tight = pdf_table.chinese_line_height(300, 22, text, fontfile=font, fontname="F", fontsize=10)
     assert tight is None or tight * ascender < 1.5
     assert pdf_table.chinese_line_height(300, 100, "English only", fontfile=font, fontname="F", fontsize=10) is None
+
+
+def test_reserve_includes_descent_so_full_cell_keeps_wide_spacing() -> None:
+    # A cell filled to its last line at 1.5 spacing was refused by the
+    # font's descent and written at the cramped pitch instead.
+    import fitz
+
+    from document_translator.services.pdf_table import _with_reserve, chinese_line_height
+
+    font = r"C:\Windows\Fonts\simhei.ttf"
+    if not Path(font).exists():
+        pytest.skip("SimHei not installed")
+    for lines in range(1, 8):
+        text = "\n".join(["汉字测试"] * lines)
+        rect = fitz.Rect(0, 0, 200, (lines - 1) * 1.5 * 11 + 11 + 0.6)
+        lineheight = chinese_line_height(rect.width, rect.height, text, fontfile=font, fontname="p", fontsize=11)
+        assert lineheight is not None
+        page = fitz.open().new_page()
+        result = page.insert_textbox(_with_reserve(rect, text, font, "p", 11, lineheight), text, fontfile=font, fontname="p", fontsize=11, lineheight=lineheight)
+        assert result >= 0
+
+
+def test_header_row_without_column_rules_gets_its_columns_back() -> None:
+    # White labels on a blue band, no rules between them: found as one cell
+    # across the table, translated as "全名公司名称电子邮件地址".
+    import fitz
+
+    from document_translator.services.pdf_table import PdfTableCell, _split_unruled_spans
+
+    page = fitz.open().new_page(width=600, height=200)
+    for x, text in ((52, "Full Name"), (182, "Company Name"), (402, "Email Address"), (52, "Engineering Team"), (182, "CRBC"), (402, "a@b.com")):
+        page.insert_text((x, 30 if text in ("Full Name", "Company Name", "Email Address") else 45), text, fontsize=8)
+
+    def cell(row, column, rect, text):
+        return PdfTableCell(f"c{row}{column}", 1, 1, row, column, rect, text)
+
+    cells = (
+        cell(1, 1, (50, 20, 560, 34), "Full Name Company Name Email Address"), cell(1, 2, None, ""), cell(1, 3, None, ""),
+        cell(2, 1, (50, 34, 180, 48), "Engineering Team"), cell(2, 2, (180, 34, 400, 48), "CRBC"), cell(2, 3, (400, 34, 560, 48), "a@b.com"),
+    )
+    split = _split_unruled_spans(cells, page)
+    assert [(c.text, c.rect) for c in split[:3]] == [
+        ("Full Name", (50, 20, 180, 34)), ("Company Name", (180, 20, 400, 34)), ("Email Address", (400, 20, 560, 34)),
+    ]
+    # One title across the columns is a real merged cell and stays.
+    page2 = fitz.open().new_page(width=600, height=200)
+    page2.insert_text((150, 30), "Attendees of the Pre-Bid Meeting", fontsize=8)
+    page2.insert_text((52, 45), "Engineering Team", fontsize=8)
+    merged = (cell(1, 1, (50, 20, 560, 34), "Attendees of the Pre-Bid Meeting"), *cells[1:])
+    assert _split_unruled_spans(merged, page2) is merged

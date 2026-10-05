@@ -17,6 +17,7 @@ import functools
 import threading
 
 from collections.abc import Iterable, Mapping, Sequence
+import dataclasses
 from dataclasses import dataclass
 import hashlib
 import math
@@ -141,7 +142,10 @@ def _with_reserve(rect: Any, text: str, fontfile: str, fontname: str, fontsize: 
     lines = _wrapped_line_count(rect.width, text, fontfile=fontfile, fontname=fontname, fontsize=fontsize, align=align)
     if not lines:
         return rect
-    reserved = lines * lineheight * fontsize
+    # insert_textbox() also wants the font's descent below the last line:
+    # left out, a cell filled at 1.5 lines was refused by that hair and
+    # written at the cramped pitch instead, three lines short of its border.
+    reserved = lines * lineheight * fontsize - font.descender * fontsize + 0.05
     drawn = (lines - 1) * lineheight * font.ascender * fontsize + (font.ascender - font.descender) * fontsize
     return fitz.Rect(rect.x0, rect.y0, rect.x1, rect.y1 + max(0.0, reserved - drawn))
 
@@ -595,6 +599,77 @@ def _table_cells(table: Any, page_number: int, table_number: int) -> tuple[PdfTa
     return tuple(result)
 
 
+def _split_unruled_spans(cells: tuple[PdfTableCell, ...], page: Any) -> tuple[PdfTableCell, ...]:
+    """A row without column rules (white labels on a coloured header band)
+    comes out as one cell across the table, its labels joined into one
+    text ("全名公司名称电子邮件地址"). When every line in it sits inside one
+    column of the rows below, and two or more columns have one, it was
+    never a merged cell: it gets the columns back. A real merged cell (one
+    title across the columns) has a line crossing a column edge and stays."""
+    import fitz
+    from collections import Counter
+
+    starts: dict[int, Counter[float]] = {}
+    ends: dict[int, Counter[float]] = {}
+    by_slot = {(cell.row, cell.column): cell for cell in cells}
+    for cell in cells:
+        if cell.rect is None:
+            continue
+        following = by_slot.get((cell.row, cell.column + 1))
+        if following is not None and following.rect is None:
+            continue  # spans more than its own column
+        starts.setdefault(cell.column, Counter())[round(cell.rect[0])] += 1
+        ends.setdefault(cell.column, Counter())[round(cell.rect[2])] += 1
+    result: list[PdfTableCell] = []
+    replaced: dict[tuple[int, int], PdfTableCell] = {}
+    for cell in cells:
+        if cell.rect is None or cell.is_empty:
+            continue
+        covered = []
+        column = cell.column + 1
+        while (slot := by_slot.get((cell.row, column))) is not None and slot.rect is None:
+            covered.append(column)
+            column += 1
+        if not covered:
+            continue
+        columns = [cell.column, *covered]
+        if any(c not in starts or c not in ends for c in columns):
+            continue
+        bounds = {c: (starts[c].most_common(1)[0][0], ends[c].most_common(1)[0][0]) for c in columns}
+        texts: dict[int, list[str]] = {}
+        crossing = False
+        for block in page.get_text("dict", clip=fitz.Rect(cell.rect)).get("blocks", ()):
+            for line in block.get("lines", ()):
+                text = "".join(str(span.get("text", "")) for span in line.get("spans", ())).strip()
+                if not text:
+                    continue
+                x0, x1 = line["bbox"][0], line["bbox"][2]
+                home = [c for c in columns if bounds[c][0] - 1 <= x0 and x1 <= bounds[c][1] + 1]
+                if not home:
+                    crossing = True
+                    break
+                texts.setdefault(home[0], []).append(text)
+        if crossing or len(texts) < 2:
+            continue
+        # The lines found must be the cell's own text, nothing more: stray
+        # fragments ("Engi", "dited") clipped from text around it are not
+        # labels of their own.
+        if " ".join(word for c in columns for word in " ".join(texts.get(c, [])).split()) != " ".join(cell.text.split()):
+            continue
+        for c in columns:
+            x0 = cell.rect[0] if c == cell.column else bounds[c][0]
+            x1 = cell.rect[2] if c == columns[-1] else bounds[c][1]
+            replaced[(cell.row, c)] = dataclasses.replace(
+                by_slot[(cell.row, c)], rect=(x0, cell.rect[1], x1, cell.rect[3]), text=chr(10).join(texts.get(c, [])),
+                source_font_size=cell.source_font_size,
+            )
+    if not replaced:
+        return cells
+    for cell in cells:
+        result.append(replaced.get((cell.row, cell.column), cell))
+    return tuple(result)
+
+
 def _merge_phantom_rows(
     cells: tuple[PdfTableCell, ...],
     row_count: int,
@@ -827,7 +902,7 @@ def extract_tables_from_document(
             raise PdfTableExtractionError(f"failed to find vector tables on page {page_number}") from exc
         for table_number, table in enumerate(page_tables, 1):
             rect = _rect_tuple(getattr(table, "bbox", None), allow_none=False)
-            cells = _table_cells(table, page_number, table_number)
+            cells = _split_unruled_spans(_table_cells(table, page_number, table_number), page)
             if merge_phantom_rows:
                 cells = _merge_phantom_rows(
                     cells, int(table.row_count), int(table.col_count), _full_width_dividers(page, rect), rect

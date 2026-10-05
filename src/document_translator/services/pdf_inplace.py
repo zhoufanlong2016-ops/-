@@ -2685,6 +2685,11 @@ def _cell_fits(cell: Any, text: str, size: float, spacing: float | None = None) 
     if cell.rect is None or not text.strip():
         return True
     rect = fitz.Rect(cell.rect)
+    # Measured as it is written: a bullet "•" the font lacks is set as "·"
+    # before the text is laid out, and stays inline. Measured as "•" each
+    # bullet began a line of its own, and a continued cell was filled a line
+    # and more short of its border.
+    text = _with_font_glyphs(text, pdf_table.cached_font(str(_cell_font_for(cell, text))))
     normalised = pdf_table._normalise_render_text(text, keep_line_breaks=True)
     fontfile = str(_cell_font_for(cell, normalised))
     font = pdf_table.cached_font(fontfile)
