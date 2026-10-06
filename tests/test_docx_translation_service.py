@@ -142,3 +142,17 @@ def test_english_text_leaves_a_chinese_latin_font():
     assert fonts[0].get(f"{{{w}}}ascii") == "Times New Roman" and fonts[0].get(f"{{{w}}}eastAsia") == "宋体"
     assert fonts[0].get(f"{{{w}}}hint") is None
     assert fonts[1].get(f"{{{w}}}asciiTheme") == "minorHAnsi"
+
+
+def test_a_unit_failing_a_quality_check_is_kept_with_a_warning() -> None:
+    from test_pdf_inplace import _unit
+
+    class Mismatched(FakeProvider):
+        def translate_unit(self, unit):
+            return super().translate_unit(unit).model_copy(update={"provider": "other"})
+
+    service = DocxTranslationService(Mismatched(), max_attempts=2)
+    unit = _unit("短文本", 0)
+    result = service._translate_and_validate(unit)
+    assert result.translation == "translated:短文本"
+    assert service.warnings and "PROVIDER_MISMATCH" in str(service.warnings[0])

@@ -62,6 +62,22 @@ def default_destination(source: str | Path, output_dir: str | Path | None = None
     return candidate
 
 
+def quality_summary(report: Path) -> str | None:
+    """One line on a finished PDF's quality findings: they are reported for
+    review and never stop the translated file from being saved."""
+    import json
+
+    try:
+        data = json.loads(report.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    run = data.get("run") or {}
+    findings = int(run.get("translation_warning_count") or 0) + len((data.get("validation") or {}).get("candidate_warnings") or [])
+    if not findings:
+        return None
+    return f"质量提示 {findings} 条（译文已生成，供复核）：{report}"
+
+
 def build_cli_command(
     source: str | Path,
     destination: str | Path,
@@ -401,6 +417,9 @@ class TranslationApp:
                     self.root.after(0, self._write_log, "已停止：临时文件将被清理。\n")
                 elif code == 0 and temporary_path.exists():
                     keep_cache_file = True
+                    summary = quality_summary(temporary_path.with_suffix(".report.json"))
+                    if summary:
+                        self.root.after(0, self._write_log, summary + "\n")
                     self._request_save(temporary_path, source)
                 elif temporary_path.exists():
                     self.root.after(0, self._write_log, "未保存：翻译未通过，临时文件已保留供排查。\n")

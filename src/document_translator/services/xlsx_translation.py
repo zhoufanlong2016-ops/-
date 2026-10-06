@@ -85,6 +85,7 @@ class XlsxTranslationService:
 
     def _translate_and_validate(self, unit: TranslationUnit) -> TranslationResult:
         last_error: Exception | None = None
+        last_result: TranslationResult | None = None
         for _ in range(self._max_attempts):
             try:
                 result = self._provider.translate_unit(unit)
@@ -94,12 +95,18 @@ class XlsxTranslationService:
                 if result.model != self._provider.config.model:
                     errors.append("MODEL_MISMATCH")
                 if errors:
+                    last_result = result
                     raise XlsxTranslationServiceError(
                         "translation provider returned an invalid result: " + ", ".join(errors),
                     )
                 return result
             except Exception as error:
                 last_error = error
+        # A translation that only failed a quality check is kept and reported:
+        # one cell's finding no longer discards the whole workbook.
+        if last_result is not None:
+            self.warnings.append({"unit_id": unit.id, "object_id": unit.location.object_id, "errors": [str(last_error)]})
+            return last_result
         reason = getattr(last_error, "code", None) or type(last_error).__name__
         raise XlsxTranslationServiceError(
             f"translation provider failed after {self._max_attempts} attempts for unit {unit.id}: {reason}",

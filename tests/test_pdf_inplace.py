@@ -1213,3 +1213,192 @@ def test_a_reported_name_finding_does_not_abort_the_table_render():
     with pytest.raises(pdf_table.PdfTableMappingError):
         pdf_table.validate_pdf_table_translations((table,), {"c": "从堤路进入。"})
     assert pdf_table.validate_pdf_table_translations((table,), {"c": "从堤路进入。"}, check_names=False) == {"c": "从堤路进入。"}
+
+
+# ---- surveying rules (2015) and the quality checks that must not abort a run
+
+
+def test_a_code_with_an_english_word_joined_on_is_not_an_identifier():
+    from document_translator.services.pdf_pipeline import _IMMUTABLE_IDENTIFIER_RE as identifier
+
+    assert identifier.findall("IP20-rated and IP55-rated motors") == []
+    assert identifier.findall("COVID-19-related") == ["COVID-19"]
+    assert identifier.findall("LW-TD-403, M02-L8A, PP-142a") == ["LW-TD-403", "M02-L8A", "PP-142a"]
+
+
+def test_a_dash_after_a_word_is_no_inline_bullet():
+    from document_translator.services.pdf_table import _break_inline_list_markers as breaks
+
+    assert breaks("沿Line – A、– B和 - C的顶进井") == "沿Line – A、– B和 - C的顶进井"
+    assert "\n- 卫生间" in breaks("办公室； - 卫生间")
+
+
+def _hanging_definitions() -> fitz.Page:
+    page = fitz.open().new_page(width=596, height=843)
+    words = "the quality of a result and is distinct from precision which relates to the quality of the operation"
+    page.insert_text((74, 180), "(i)", fontsize=12, fontname="tibo")
+    _justified(page, 91, 564, 180, '"accuracy" means Degree of conformity with a standard or accepted value and relates to', size=12)
+    for i in range(2):
+        _justified(page, 95, 564, 195 + 15 * i, words, size=12)
+    page.insert_text((74, 240), "(vi)", fontsize=12, fontname="tibo")
+    page.insert_text((98, 240), '"delineation" involves survey and portrayal of the demarcated', fontsize=12, fontname="tiro")
+    page.insert_text((95, 255), "boundary in correct relation to topography on a map;", fontsize=12, fontname="tiro")
+    for i in range(6):
+        _justified(page, 74, 564, 300 + 15 * i, words, size=12)
+    return page
+
+
+def test_a_bracketed_roman_label_hangs_its_wrapped_lines():
+    page = _hanging_definitions()
+    lines, _ = pdf_inplace._visual_lines(page, [])
+    paragraphs = pdf_inplace._segment(1, lines, pdf_inplace._body_edges(lines, (74.0, 565.0)))
+    first = next(p for p in paragraphs if p.text.startswith("(i)"))
+    assert len(first.lines) == 3
+    # ... and a line wrapped mid-sentence goes on in lower case
+    assert len(next(p for p in paragraphs if p.text.startswith("(vi)")).lines) == 2
+    label, rest, text_start = pdf_inplace._hanging_label(first, '(i) "准确度"指与标准值的一致程度')
+    assert label == "(i)" and abs(text_start - first.lines[1].bbox[0]) < 0.5
+
+
+def test_a_one_line_item_keeps_its_size_in_lines_set_close():
+    page = fitz.open().new_page(width=596, height=843)
+    for i, text in enumerate(("(i) Director as Registrar;", "(ii) Deputy Director as Deputy Registrar;", "(iii) Assistant Director;")):
+        page.insert_text((100, 160 + 15 * i), text, fontsize=13, fontname="tiro")
+    lines, _ = pdf_inplace._visual_lines(page, [])
+    paragraphs = pdf_inplace._segment(1, lines, (74.0, 564.0))
+    item = paragraphs[1]
+    item.bounds = (74.0, 564.0)
+    others = [fitz.Rect(line.bbox) for p in paragraphs if p is not item for line in p.lines]
+    region = pdf_inplace._region(page, item, others, item.bounds)
+    item.cjk_font = r"C:\Windows\Fonts\STSONG.TTF"
+    assert pdf_inplace._fit_size(page, item, "(ii) 副主任作为副注册官；", region, item.bounds) == 13.0
+
+
+def test_a_fill_in_line_keeps_its_leader():
+    fill = pdf_inplace._FILL_LINE_RE
+    assert fill.match("Name\u00ad\u00ad\u00ad\u00ad\u00ad\u00ad\u00ad\u00ad").group("title") == "Name"
+    assert fill.match("In the capacity of ...............").group("title") == "In the capacity of"
+    assert fill.match("E-mail: ---------------").group("title") == "E-mail:"
+    assert fill.match("LW-TD-403") is None
+
+
+def test_scattered_pieces_beside_a_list_are_no_column():
+    line = lambda x0, y, x1: pdf_inplace._VisualLine([pdf_inplace._Segment("x", (x0, y, x1, y + 10), [{"size": 9.8, "color": 0}])])
+    entries = [line(120, 200 + 19 * i, 250 + (i % 3) * 20) for i in range(10)]
+    scattered = [line(266, 530, 297), line(445, 230, 600), line(452, 240, 590), line(271, 553, 294), line(266, 572, 299)]
+    assert pdf_inplace._gutter(entries + scattered, (119.0, 564.0)) is None
+
+
+def test_lines_centred_on_their_own_axis_are_one_block():
+    line = lambda x0, y, x1: pdf_inplace._VisualLine([pdf_inplace._Segment("x", (x0, y, x1, y + 9), [{"size": 8.0, "color": 0}])])
+    callout = [line(350, 67, 530), line(356, 79, 524), line(392, 91, 488), line(396, 103, 484)]
+    assert [len(p.lines) for p in pdf_inplace._segment(1, callout, (67.0, 554.0))] == [4]
+
+
+def test_three_lines_starting_together_after_a_wide_gap_are_a_column():
+    page = fitz.open().new_page(width=595, height=842)
+    for i, (left, right) in enumerate((("All DMDs/ WASA Lahore.", "Instant SOPs must be followed in"), ("All Directors/ WASA/ Lahore.", "development projects as well in"), ("Project Manager/ NESPAK.", "direction of Lahore High Court."))):
+        page.insert_text((130, 500 + 14 * i), left, fontsize=12)
+        page.insert_text((130 + fitz.get_text_length(left, fontsize=12) + 25, 500 + 14 * i), "", fontsize=12)
+        page.insert_text((306, 500 + 14 * i), right, fontsize=12)
+    texts = [line.text for line in pdf_inplace._visual_lines(page, [])[0]]
+    assert "All Directors/ WASA/ Lahore." in texts and "direction of Lahore High Court." in texts
+
+
+def test_a_highlighted_phrase_wrapped_anywhere_is_found():
+    page = fitz.open().new_page(width=300, height=200)
+    page.insert_text((20, 50), "abc Drawing", fontsize=11)
+    page.insert_text((20, 64), "LW-TD-005 shown here", fontsize=11)
+    assert len(pdf_inplace._find_phrase(page, "Drawing LW-TD-005", page.rect)) == 2
+
+
+def test_a_table_the_renderer_refuses_is_reported_and_the_rest_is_written(tmp_path, monkeypatch):
+    from document_translator.services import pdf_table
+
+    source, staged, output = tmp_path / "s.pdf", tmp_path / "staged.pdf", tmp_path / "out.pdf"
+    doc = fitz.open()
+    doc.new_page().insert_text((72, 72), "Total", fontsize=10)
+    doc.save(source)
+    doc.save(staged)
+    cell = pdf_table.PdfTableCell(id="pdf:p1:t1:r1:c1", page_number=1, table_number=1, row=1, column=1, text="Total", rect=(60, 60, 200, 80), source_font_size=10.0)
+    table = pdf_table.PdfTable(page_number=1, table_number=1, rect=(60, 60, 200, 80), row_count=1, column_count=1, cells=(cell,))
+
+    def refuse(*args, **kwargs):
+        raise pdf_table.PdfTableFitError("does not fit", cell_id=cell.id)
+
+    monkeypatch.setattr(pdf_table, "render_table_translations", refuse)
+    warnings: list = []
+    report = pdf_inplace._render_tables(source, staged, output, [table], {cell.id: "合计"}, "en", "zh", warnings)
+    assert output.exists()
+    assert report["skipped_table_count"] == 1
+    assert any("TABLE_RENDER_FAILED" in str(w) for w in warnings)
+
+
+def test_a_layout_check_that_cannot_run_is_a_warning(tmp_path, monkeypatch):
+    from document_translator.services import pdf_layout
+    from document_translator.services.pdf_pipeline import inspect_pdf, validate_candidate
+
+    source, candidate = tmp_path / "s.pdf", tmp_path / "c.pdf"
+    for path, text in ((source, "Short title"), (candidate, "简称")):
+        doc = fitz.open()
+        doc.new_page().insert_text((72, 72), text, fontsize=11, fontname="china-s")
+        doc.save(path)
+
+    def broken(*args, **kwargs):
+        raise RuntimeError("profile unreadable")
+
+    monkeypatch.setattr(pdf_layout, "validate_layout_contract", broken)
+    validation = validate_candidate(source, candidate, inspect_pdf(source), target_language="zh")
+    assert any("could not run" in warning for warning in validation["candidate_warnings"])
+
+
+def test_the_gui_sums_up_quality_findings(tmp_path):
+    import json
+
+    from document_translator.gui import quality_summary
+
+    report = tmp_path / "x.report.json"
+    report.write_text(json.dumps({"run": {"translation_warning_count": 3}, "validation": {"candidate_warnings": ["a"]}}), encoding="utf-8")
+    assert "4" in quality_summary(report)
+    assert quality_summary(tmp_path / "missing.report.json") is None
+
+
+def test_alternatives_separated_by_or_keep_their_lines():
+    text = "Bachelor in any discipline of Surveying &\nMapping with 5 years\nor\nDiploma from Survey Training Institute\n(SoP) with 5 year experience."
+    assert pdf_inplace._structure_cell_text(text).split("\n") == [
+        "Bachelor in any discipline of Surveying & Mapping with 5 years", "or", "Diploma from Survey Training Institute (SoP) with 5 year experience.",
+    ]
+
+
+def test_a_bold_heading_run_into_its_clause_does_not_make_it_bold():
+    bold = lambda text: {"text": text, "font": "Times-Bold", "flags": 16}
+    plain = lambda text: {"text": text, "font": "Times-Roman", "flags": 0}
+    lines = [
+        pdf_inplace._VisualLine([pdf_inplace._Segment("x", (37, 560, 627, 573), [bold("13. Protection, use and maintenance of survey marks."), plain("(1) The individual")])]),
+        pdf_inplace._VisualLine([pdf_inplace._Segment("x", (37, 574, 627, 587), [plain("or organization violating the procedure mentioned in sub-section (3) of section 18 of the Act shall bear")])]),
+        pdf_inplace._VisualLine([pdf_inplace._Segment("x", (37, 588, 627, 601), [plain("all expenses incurred on re-establishment of the survey mark and shall be liable to be dealt under")])]),
+    ]
+    assert not pdf_inplace._is_bold(pdf_inplace._Paragraph(1, lines, False))
+
+
+def test_each_fill_in_line_of_a_form_is_its_own_paragraph():
+    line = lambda y, text: pdf_inplace._VisualLine([pdf_inplace._Segment(text, (90.0, y, 525.0, y + 12), [{"size": 10.0, "color": 0}])])
+    lines = [line(159, "Name " + "." * 90), line(177, "In the capacity of " + "." * 80), line(195, "Signed " + "." * 88)]
+    assert [len(p.lines) for p in pdf_inplace._segment(1, lines, (89.0, 526.0))] == [1, 1, 1]
+
+
+def test_items_ending_in_a_semicolon_stay_apart_though_their_ends_align():
+    line = lambda y, x1, text: pdf_inplace._VisualLine([pdf_inplace._Segment(text, (267.9, y, x1, y + 13.7), [{"size": 10.0, "color": 0}])])
+    lines = [
+        line(366.0, 399.1, "\u201che/she\u201d is replaced with: \u201cit\u201d;"),
+        line(385.2, 399.6, "\u201chim/her\u201d is replaced with \u201cit\u201d;"),
+        line(404.5, 453.0, "\u201chis\u201d and \u201chis/her\u201d are replaced with: \u201cits\u201d;"),
+    ]
+    assert [len(p.lines) for p in pdf_inplace._segment(1, lines, (247.0, 513.0))] == [1, 1, 1]
+
+
+def test_a_sentence_with_blanks_is_no_fill_in_line():
+    fill = pdf_inplace._FILL_LINE_RE
+    assert fill.match("THIS CONTRACT AGREEMENT made the ________ day of ____________, _____,") is None
+    assert fill.match("between ______________ of _____________") is None
+    assert fill.match("Name ...............").group("title") == "Name"

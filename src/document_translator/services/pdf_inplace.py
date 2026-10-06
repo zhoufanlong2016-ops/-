@@ -172,6 +172,8 @@ class _Paragraph:
     # A contents entry's page number: the title is translated, the dot
     # leader and number are set again to end where they did.
     toc_page: str | None = None
+    # The leader a contents entry or a form's fill-in line is drawn with.
+    leader: str = "."
 
     @property
     def bbox(self) -> tuple[float, float, float, float]:
@@ -263,7 +265,12 @@ class InPlacePdfTranslationService:
                         progress=self.progress,
                     )
                 )
-                run["cmap_repairs"] = repair_pdf_text_cmaps(candidate)
+                # A repair that fails leaves the text as written: reported,
+                # never a reason to discard the translated document.
+                try:
+                    run["cmap_repairs"] = repair_pdf_text_cmaps(candidate)
+                except Exception as exc:
+                    run["cmap_repairs"] = {"error": f"{type(exc).__name__}: {exc}"}
                 validation = validate_candidate(
                     source,
                     candidate,
@@ -406,12 +413,20 @@ def _translate_in_place(
     tails = set(across.values())
     for paragraph in translatable:
         entry = _TOC_ENTRY_RE.match(paragraph.text) if len(paragraph.lines) == 1 else None
+        fill = _FILL_LINE_RE.match(paragraph.text) if len(paragraph.lines) == 1 and entry is None else None
         if entry:
             paragraph.toc_page = entry.group("page")
+        elif fill and re.search(r"[^\W\d_]", fill.group("title")):
+            # A form's fill-in line ("Name ---------", "Date ......"): the
+            # label is translated and the line drawn again to where it ended;
+            # sent along, the leader was dropped and the form had no line.
+            paragraph.toc_page = ""
+            leader = fill.group("leader")
+            paragraph.leader = "_" if "_" in leader else "." if re.search(r"[.·…]", leader) else "-"
     paragraph_units = [
         _unit(
             _mark_highlights(
-                (_TOC_ENTRY_RE.match(p.text).group("title") if p.toc_page else p.text)
+                ((_TOC_ENTRY_RE.match(p.text) or _FILL_LINE_RE.match(p.text)).group("title") if p.toc_page is not None else p.text)
                 + (" " + translatable[across[index]].text if index in across else ""),
                 highlights.get(p.page_number, ()), p.bbox,
             ),
@@ -522,8 +537,16 @@ def _translate_in_place(
         (cell.page_number, cell.rect) for table in tables for cell in table.cells
         if cell.rect is not None and not cell.is_empty and cell_translations.get(cell.id, cell.text) != cell.text
     ] + [(cell.page_number, cell.rect) for cell in cleared_tails]
-    highlight_report = _move_highlights(candidate, highlights, rewritten, highlight_targets)
-    _clear_cells(candidate, cleared_tails)
+    # Highlights and cleared cells are finishing touches: one that fails is
+    # reported, and the translated document is still written.
+    try:
+        highlight_report = _move_highlights(candidate, highlights, rewritten, highlight_targets)
+    except Exception as exc:
+        highlight_report = {"error": f"{type(exc).__name__}: {exc}"}
+    try:
+        _clear_cells(candidate, cleared_tails)
+    except Exception as exc:
+        warnings.append({"object_id": "continued-cells", "errors": [f"CLEAR_CONTINUED_CELLS_FAILED: {exc}"]})
     try:
         staged.unlink(missing_ok=True)
         if source.name.endswith(".upright" + source.suffix):
@@ -766,9 +789,15 @@ def _find_phrase(page: Any, phrase: str, clip: Any) -> list[Any]:
     quads = page.search_for(phrase, clip=clip, quads=True)
     if quads or len(phrase) < 4:
         return quads
+    # Wrapped wherever the line ended ("图纸" / "LW-TD-005中"), not
+    # necessarily in the middle: every split point is tried, the middle first.
     middle = len(phrase) // 2
-    first, second = _find_phrase(page, phrase[:middle], clip), _find_phrase(page, phrase[middle:], clip)
-    return first + second if first and second else []
+    for cut in sorted(range(2, len(phrase) - 1), key=lambda i: abs(i - middle)):
+        first = page.search_for(phrase[:cut], clip=clip, quads=True)
+        second = first and page.search_for(phrase[cut:], clip=clip, quads=True)
+        if first and second:
+            return first + second
+    return []
 
 
 def _split_around_images(page: Any, table: Any, nested: Any = ()) -> Any:
@@ -979,7 +1008,10 @@ def _structure_cell_text(text: str) -> str:
             # ... and the next clause's heading after a finished sentence
             _CLAUSE_HEADING_RE.match(line) is not None and re.search(r"[.:;\"”']$", lines[index - 1]) is not None
         )
-        if _CELL_ITEM_START.match(line) or key_value or heading:
+        # "or" / "and" alone on a line separates alternatives ("Bachelor ..."
+        # / "or" / "Diploma ..."): run together, the choice was lost.
+        separator = line.casefold() in {"or", "and", "and/or"} or lines[index - 1].casefold() in {"or", "and", "and/or"}
+        if _CELL_ITEM_START.match(line) or key_value or heading or separator:
             out.append(line)
         elif _CJK_RE.search(out[-1][-1:]) or _CJK_RE.search(line[:1]):
             out[-1] += line
@@ -1292,6 +1324,9 @@ def _visual_lines(page: Any, table_rects: list[Any]) -> tuple[list[_VisualLine],
                 and not re.fullmatch(r"\d+(?:\.\d+)*\.?", left_text)  # section number "4.1"
                 and (
                     sum(count for x, count in starts.items() if abs(x - right_start) <= 1.5) >= 4
+                    # three lines starting there after a gap wider than any
+                    # word space (a scan's two columns, OCR'd line by line)
+                    or (gap > 1.5 * size and sum(count for x, count in starts.items() if abs(x - right_start) <= 1.5) >= 3)
                     # ... or it starts just past an edge another line ends at
                     # (a running header justified to half the page: "...
                     # Management" / "... Larechs", then "Section 6 - ...")
@@ -1474,6 +1509,10 @@ def _reading_order(lines: list[_VisualLine], bounds: tuple[float, float]) -> lis
     return ordered
 
 
+def _middle(line: _VisualLine) -> float:
+    return (line.bbox[0] + line.bbox[2]) / 2
+
+
 def _stack_order(lines: list[_VisualLine]) -> list[_VisualLine]:
     """Lines stacked under each other (the same left or right edge, a line
     apart) are read one after the other, before the stack beside them.
@@ -1497,7 +1536,10 @@ def _stack_order(lines: list[_VisualLine]) -> list[_VisualLine]:
                 other for other in order
                 if id(other) not in placed and abs(other.size - last.size) <= 0.6
                 and 0 < other.bbox[1] - last.bbox[1] <= 1.6 * last.size
-                and (abs(other.bbox[0] - last.bbox[0]) <= 1.5 or abs(other.bbox[2] - last.bbox[2]) <= 1.5)
+                and (
+                    abs(other.bbox[0] - last.bbox[0]) <= 1.5 or abs(other.bbox[2] - last.bbox[2]) <= 1.5
+                    or abs(_middle(other) - _middle(last)) <= 1.5  # centred on one axis (a callout box)
+                )
             ]
             # Only where a line of another stack lies between: elsewhere the
             # order is the page's own.
@@ -1532,7 +1574,12 @@ def _gutter(lines: list[_VisualLine], bounds: tuple[float, float]) -> float | No
         crossing = sum(1 for line in lines if line.bbox[0] < gutter < line.bbox[2])
         left_side = sum(1 for line in lines if line.bbox[2] <= gutter)
         right_side = sum(1 for line in lines if line.bbox[0] >= gutter)
-        if left_side >= 4 and right_side >= 4 and crossing <= 0.25 * len(lines):
+        # A column's lines start at its edge; scattered pieces (a disclaimer
+        # box, centred "Form A" lines) beside a contents list are no column,
+        # and taken for one they split its wrapped entries apart.
+        right_starts = [line.bbox[0] for line in lines if line.bbox[0] >= gutter]
+        aligned = max((sum(1 for x in right_starts if abs(x - edge) <= 1.5) for edge in right_starts), default=0)
+        if left_side >= 4 and right_side >= 4 and crossing <= 0.25 * len(lines) and aligned * 2 >= right_side:
             score = min(left_side, right_side) - crossing
             if best is None or score > best[0]:
                 best = (score, gutter)
@@ -1723,6 +1770,8 @@ def _segment(
                 # a contents entry ends at its page number; a list label
                 # starts the next item ("i." / "ii." right-aligned)
                 or _TOC_ENTRY_RE.match(previous.text) is not None
+                # so does a form's fill-in line ("Name ......" / "Signed ....")
+                or _FILL_LINE_RE.match(previous.text) is not None or _FILL_LINE_RE.match(line.text) is not None
                 or (_label_text_start(line) is not None and not hanging)
                 # "S-mode: 6 m/s" / "P-mode: 5 m/s": entries of a list of
                 # key: value lines, one per line.
@@ -1738,7 +1787,17 @@ def _segment(
                 # lines of one paragraph sit under each other
                 or min(line.bbox[2], previous.bbox[2]) - max(line.bbox[0], previous.bbox[0]) <= 0
             )
-            if not new and not centred:
+            # Lines centred on their own axis, as in a callout box ("To be
+            # entered by the Tenderer." / "The tenderer shall specify ..."),
+            # are one block: their ragged edges are no indent and no early end.
+            own_axis = (
+                not new and not centred and abs(_middle(line) - _middle(previous)) <= 1.5
+                # centred, not merely as long as the line above from the same edge
+                and abs(line.bbox[0] - previous.bbox[0]) > 1.5
+                and (len(current) < 2 or abs(_middle(previous) - _middle(current[-2])) <= 1.5)
+                and min(line.bbox[0], previous.bbox[0]) - left > 0.8 * size
+            )
+            if not new and not centred and not own_axis:
                 indented = line.bbox[0] - left > 0.8 * size  # first-line indent
                 # Body text (in the left quarter of the text area) is
                 # indented only against the line above it: on a page whose
@@ -1751,7 +1810,10 @@ def _segment(
                 # ("1. In partial..." / "   Section 2..."), they do not
                 # start new paragraphs.
                 first = current[0]
-                if indented and _LABEL_RE.match(first.text) and first.bbox[0] < line.bbox[0] <= first.bbox[0] + 4.0 * size:
+                # ... a bracketed or roman label too ("(i) "accuracy" means ..."
+                # / "the quality of a result ..."): each definition's first line
+                # was set apart from the rest of it.
+                if indented and (_LABEL_RE.match(first.text) or _label_text_start(first) is not None) and first.bbox[0] < line.bbox[0] <= first.bbox[0] + 4.0 * size:
                     hang = current[1].bbox[0] if len(current) > 1 else line.bbox[0]
                     indented = abs(line.bbox[0] - hang) > 1.5
                 # A right-aligned block (a running header) has ragged left
@@ -1789,12 +1851,20 @@ def _segment(
                 # The paragraph's own measure: the lines before ended here too.
                 if ended_early and len(current) >= 2 and abs(current[-2].bbox[2] - previous.bbox[2]) <= 1.5:
                     ended_early = False
+                # A long line stopping on a word, followed by one starting in
+                # lower case, was wrapped mid-sentence ("... portrayal of the
+                # demarcated" / "boundary in correct relation ...").
+                if (
+                    ended_early and long_line and re.search(r"[A-Za-z]$", previous.text.rstrip())
+                    and re.match(r"[a-z]", line.text.lstrip()) is not None
+                ):
+                    ended_early = False
                 # ... or the next line, or other lines of the page, end here:
                 # footnotes under a table reach 526pt where the document's
                 # margin is 555pt (a wide table elsewhere), and each
                 # footnote's second line ("Labor wages") was set apart as a
                 # paragraph of its own.
-                if ended_early and long_line and (
+                if ended_early and long_line and not re.search(r"[.;:。；：]\W*$", previous.text.rstrip()) and (
                     abs(line.bbox[2] - previous.bbox[2]) <= 1.5
                     or sum(
                         1 for other in lines
@@ -2362,6 +2432,15 @@ def _shared_sizes(paragraphs: list[_Paragraph], fitted: list[float]) -> tuple[di
 
 # "4. Reference Datum ........ 6": a title, a dot leader and a page number,
 # which may carry its section ("Scope of Tender ........ 1-3").
+# "Name -------------", "In the capacity of ........": a label and the line
+# a form is filled in on.
+# The dashes may be soft hyphens (U+00AD), as some PDFs store "-". A label
+# with blanks of its own ("made the ____ day of ____, ____,") is a sentence
+# with blanks, translated whole: split at each line it read as fragments.
+_FILL_LINE_RE = re.compile(
+    r"^(?P<title>(?:(?!(?:[.·…]\s?){4,}|[-­‐-—]{4,}|_{4,}).)*?[^\s.\-­‐-—_…·])"
+    r"\s*(?P<leader>(?:[.·…]\s?){4,}|[-­‐-—]{4,}|_{4,})\s*$"
+)
 _TOC_ENTRY_RE = re.compile(r"^(?P<title>.*?\S)\s*(?:[.·…]\s?){4,}\s*(?P<page>(?:\d{1,3}\s?[-–]\s?)?\d{1,4})\s*$")
 
 
@@ -2375,6 +2454,7 @@ def _insert_toc_entry(page: Any, paragraph: _Paragraph, title: str, size: float)
 
     first = paragraph.lines[0]
     title = re.sub(r"\s*(?:[.·…]\s?){3,}\s*(?:\d{1,3}\s?[-–]\s?)?\d{0,4}\s*$", "", title.strip())
+    title = re.sub(r"\s*(?:[-­‐-—]{3,}|_{3,})\s*$", "", title)
     label_start = _label_text_start(first)
     label = ""
     if label_start is not None:
@@ -2393,11 +2473,11 @@ def _insert_toc_entry(page: Any, paragraph: _Paragraph, title: str, size: float)
     font = cached_font(fontfile)
     while True:
         dots = right - x0 - font.text_length(f"{title}  {number}", fontsize=size)
-        count = int(dots / max(font.text_length(".", fontsize=size), 0.1))
+        count = int(dots / max(font.text_length(paragraph.leader, fontsize=size), 0.1))
         if count >= 3 or size <= 0.6 * paragraph.size:
             break
         size = round(size - _FONT_STEP, 2)
-    content = f"{title} {'.' * max(count, 3)} "
+    content = f"{title} {paragraph.leader * max(count, 3)} "
     color = _rgb(first.color)
     bold = {"render_mode": 2, "fill": color, "border_width": 0.04} if (_is_bold(paragraph) and fontfile == paragraph.cjk_font) else {}
     alias = _font_alias(fontfile)
@@ -2425,13 +2505,18 @@ def _hanging_label(paragraph: _Paragraph, text: str) -> tuple[str, str, float] |
         ):
             return None
         return text[: colon + 1].strip(), text[colon + 1:].strip(), paragraph.lines[1].bbox[0]
-    if not all(abs(line.bbox[0] - text_start) <= 1.5 for line in paragraph.lines[1:]):
-        return None
     # The label is what stands before the text start ("3." of "3.Updated").
     label = "".join(
         str(char.get("c", "")) for span in first.spans for char in span.get("chars", ())
         if char["bbox"][2] <= text_start + 0.5
     ).strip()
+    rest = paragraph.lines[1:]
+    if rest and all(abs(line.bbox[0] - rest[0].bbox[0]) <= 1.5 for line in rest) and abs(rest[0].bbox[0] - text_start) <= 0.8 * first.size:
+        # The wrapped lines hang at their own tab stop, a few points from
+        # where the first line's text happened to start after its label.
+        text_start = rest[0].bbox[0]
+    elif not all(abs(line.bbox[0] - text_start) <= 1.5 for line in rest):
+        return None
     stripped = text.lstrip()
     if not label or not stripped.startswith(label):
         return None
@@ -2442,17 +2527,17 @@ def _insert_label(page: Any, paragraph: _Paragraph, label: str, size: float, wri
     """The label on the baseline its text was actually written on, in the
     same face (on the source baseline it sat lower than a CJK heading)."""
     first = paragraph.lines[0]
-    baseline, font_name = first.baseline, ""
-    for block in page.get_text("dict", clip=written_box).get("blocks", ()):
-        for line in block.get("lines", ()):
-            for span in line.get("spans", ()):
-                if str(span.get("text", "")).strip():
-                    baseline, font_name = float(span["origin"][1]), str(span.get("font", ""))
-                    break
-            if font_name:
-                break
-        if font_name:
-            break
+    # The written line nearest the source baseline: the box may reach over
+    # the item above (a one-line box is taller than its line), whose text
+    # set every label of a list one line too high.
+    origins = [
+        float(span["origin"][1])
+        for block in page.get_text("dict", clip=written_box).get("blocks", ())
+        for line in block.get("lines", ())
+        for span in line.get("spans", ())
+        if str(span.get("text", "")).strip()
+    ]
+    baseline = min(origins, key=lambda y: abs(y - first.baseline)) if origins else first.baseline
     from .pdf_table import cached_font
 
     # "viii." in a Latin face (SimHei spaced it out as "v i i i ."); a bullet
@@ -2705,13 +2790,40 @@ def _on_source_baseline(region: Any, paragraph: _Paragraph, fontfile: str, size:
     return fitz.Rect(region.x0, min(top, region.y1 - size), region.x1, region.y1)
 
 
+def _one_line_box(region: Any, paragraph: _Paragraph, content: str, fontfile: str, size: float) -> Any:
+    """``region``, deep enough for one line of ``content`` in its font.
+
+    A one-line item in lines 15pt apart has a 15pt place; insert_textbox()
+    asks for about 1.6 em (21pt at 13pt) for one line of STSONG, so every
+    item of a list ("(i) Director as Registrar;") was set at 9pt though its
+    text fits the line many times over. The glyphs sit on the source
+    baseline and leave the rest empty: a single line may reach below its
+    place by what the text box asks for.
+    """
+    import fitz
+
+    from .pdf_table import cached_font
+
+    if len(paragraph.lines) != 1 or "\n" in content.strip():
+        return region
+    from .pdf_table import probe_textbox
+
+    font = cached_font(fontfile)
+    if font.text_length(content.strip(), fontsize=size) > region.width - 1.0:
+        return region
+    # The height insert_textbox() asks for one line (more than the glyphs).
+    tall = 10.0 * size
+    needed = tall - probe_textbox(region.width, tall, content, fontfile=fontfile, fontname=_font_alias(fontfile), fontsize=size)[0] + 0.5
+    return region if region.height >= needed else fitz.Rect(region.x0, region.y0, region.x1, region.y0 + needed)
+
+
 def _fit_size(page: Any, paragraph: _Paragraph, text: str, region: Any, bounds: tuple[float, float]) -> float:
     """The source size if the text fits its place; otherwise stepped down until it does."""
     size = round(paragraph.size * 2) / 2 or paragraph.size
     while size - _FONT_STEP >= _ABSOLUTE_MIN_SIZE:
         content, fontfile, alias, align = _layout(page, paragraph, text, size, bounds, region.width)
         # Sitting on the source baseline is preferred, never worth a smaller size.
-        if _fits(region, content, fontfile, alias, size, align):
+        if _fits(_one_line_box(region, paragraph, content, fontfile, size), content, fontfile, alias, size, align):
             return size
         size = round(size - _FONT_STEP, 2)
     return size
@@ -2727,8 +2839,8 @@ def _insert(page: Any, paragraph: _Paragraph, text: str, region: Any, size: floa
     """
     while True:
         content, fontfile, alias, align = _layout(page, paragraph, text, size, bounds, region.width)
-        anchored = _on_source_baseline(region, paragraph, fontfile, size)
-        box = anchored if _fits(anchored, content, fontfile, alias, size, align) else region
+        anchored = _one_line_box(_on_source_baseline(region, paragraph, fontfile, size), paragraph, content, fontfile, size)
+        box = anchored if _fits(anchored, content, fontfile, alias, size, align) else _one_line_box(region, paragraph, content, fontfile, size)
         # Chinese is set 1.5 lines apart where it fits, closer only where
         # the space does not allow it (at the font's own spacing a body read
         # cramped).
@@ -2780,8 +2892,10 @@ def _scanned_page(page: Any) -> bool:
 def _is_bold(paragraph: _Paragraph) -> bool:
     # Weighed by letters, not spans: a bold lead-in ("Compliance
     # Monitoring" + ";") is two spans against one long plain one, and the
-    # whole paragraph was set bold.
-    spans = paragraph.lines[0].spans
+    # whole paragraph was set bold. Over the whole paragraph: a bold
+    # heading run in ("13. Protection ... survey marks.—(1) The ...") fills
+    # most of the first line, not of the clause.
+    spans = [span for line in paragraph.lines for span in line.spans]
     weight = [max(1, sum(1 for char in str(span.get("text", "")) if char.isalnum())) for span in spans]
     bold = [bool(int(span.get("flags") or 0) & 16) or "bold" in str(span.get("font", "")).casefold() for span in spans]
     return sum(w for w, b in zip(weight, bold) if b) * 2 > sum(weight)
@@ -3021,22 +3135,38 @@ def _render_tables(
         # Every table page in one pass: each cell keeps its page's size
         # (fixed_cell_size); rewriting the whole PDF once per table page made
         # a 777-page file take hours.
-        pdf_table.render_table_translations(
-            staged,
-            output,
-            mapping,
-            tables=sized,
-            fontfile=lambda cell, text: _cell_font_for(cell, text),
-            minimum_font_size=min(sizes),
-            initial_font_size=max(sizes),
-            align=lambda cell: alignment.get(cell.id, (0, False))[0],
-            middle_aligned=lambda cell: alignment.get(cell.id, (0, False))[1],
-            spread_lines=False,
-            fixed_cell_size=True,
-            keep_unchanged=True,
-            keep_line_breaks=True,
-            check_names=False,  # checked per table above; a finding is reported
-        )
+        # A table the renderer refuses (a cell that fits at no size, a check
+        # of its page) is left as the source has it and reported; the rest
+        # are written. Raised, it discarded the whole translated document.
+        while sized:
+            try:
+                pdf_table.render_table_translations(
+                    staged,
+                    output,
+                    {c.id: mapping[c.id] for t in sized for c in t.cells},
+                    tables=sized,
+                    fontfile=lambda cell, text: _cell_font_for(cell, text),
+                    minimum_font_size=min(sizes),
+                    initial_font_size=max(sizes),
+                    align=lambda cell: alignment.get(cell.id, (0, False))[0],
+                    middle_aligned=lambda cell: alignment.get(cell.id, (0, False))[1],
+                    spread_lines=False,
+                    fixed_cell_size=True,
+                    keep_unchanged=True,
+                    keep_line_breaks=True,
+                    check_names=False,  # checked per table above; a finding is reported
+                )
+                break
+            except pdf_table.PdfTableError as exc:
+                output.unlink(missing_ok=True)
+                cell_id = getattr(exc, "cell_id", None)
+                failed = [t for t in sized if cell_id is not None and any(c.id == cell_id for c in t.cells)]
+                failed = failed or list(sized)  # not traced to one table: none is written
+                warnings.append({"table": ", ".join(f"page:{t.page_number}:table:{t.table_number}" for t in failed), "errors": [f"TABLE_RENDER_FAILED: {exc}"]})
+                sized = [t for t in sized if t not in failed]
+                good = [t for t in good if not any(t.page_number == f.page_number and t.table_number == f.table_number for f in failed)]
+        if not sized:
+            shutil.copyfile(staged, output)
     return {
         "status": "patched" if len(good) == len(tables) else "partially_patched",
         "table_count": len(good),

@@ -263,7 +263,16 @@ def _break_inline_list_markers(text: str) -> str:
     genuine "\\n" before each marker removes that coincidence entirely: the
     marker now always leads its own line, exactly like a hand-typed list.
     """
-    return _INLINE_LIST_MARKER_RE.sub(lambda match: "\n" + match.group(1) + " ", text)
+    def marker(match: re.Match[str]) -> str:
+        # A hyphen after a word is a dash inside the sentence ("沿Line – A、
+        # – B和 - C的顶进井"), not a bullet: those follow the end of the
+        # previous item (punctuation) or start the text.
+        before = text[: match.start()].rstrip()
+        if match.group(1) == "-" and before and before[-1] not in ";；。.:：,，)）!！?？":
+            return match.group(0)
+        return "\n" + match.group(1) + " "
+
+    return _INLINE_LIST_MARKER_RE.sub(marker, text)
 
 
 def _normalise_render_text(text: str, *, keep_line_breaks: bool = False) -> str:

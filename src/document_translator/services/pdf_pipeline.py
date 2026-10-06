@@ -48,9 +48,12 @@ class PdfPreflightError(RuntimeError):
 _CONTROL_CHARACTER_RE = re.compile(r"[\x00-\x08\x0B\x0C\x0E-\x1F]")
 _UNICODE_DASHES = "\u2010\u2011\u2012\u2013\u2014\u2015"
 _UNICODE_DASH_CODES = tuple(f"{ord(char):04X}" for char in _UNICODE_DASHES)
+# A lowercase word joined on ("IP20-rated", "COVID-19-related") is English,
+# not part of the code: it is translated ("IP20级"), and taken for part of
+# the code it was reported as a changed identifier.
 _IMMUTABLE_IDENTIFIER_RE = re.compile(
     r"(?<![A-Za-z0-9])(?=[A-Za-z0-9-]*\d)"
-    r"[A-Za-z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)+(?![A-Za-z0-9])"
+    r"[A-Za-z][A-Za-z0-9]*(?:-(?![a-z]{3,}(?![A-Za-z0-9]))[A-Za-z0-9]+)+(?![A-Za-z0-9])"
 )
 # Chinese legal-document references such as ``中土经营〔2024〕341 号`` are
 # immutable identifiers too.  They are allowed to remain in an English
@@ -579,9 +582,9 @@ def validate_candidate(
                 minimum_font_size=minimum_font_size,
             )
         except Exception as exc:
-            if isinstance(exc, PdfPreflightError):
-                raise
-            raise PdfPreflightError(f"layout contract validation failed: {exc}") from exc
+            # The layout check itself failing says nothing about the
+            # translation: reported, and the document is still published.
+            layout_validation = {"status": "error", "failures": [f"layout contract validation could not run: {exc}"]}
         if layout_validation.get("status") != "passed":
             # A single heading/numbering/alignment mismatch is a layout
             # quality issue, not document corruption: warn and keep

@@ -111,6 +111,7 @@ class DocxTranslationService:
 
     def _translate_and_validate(self, unit: TranslationUnit) -> TranslationResult:
         last_error: Exception | None = None
+        last_result: TranslationResult | None = None
         segments = self._segment_unit(unit)
         for _ in range(self._max_attempts):
             try:
@@ -127,12 +128,20 @@ class DocxTranslationService:
                 )
                 errors = validate_result_for_unit(unit, result)
                 if errors:
-                    raise DocxTranslationServiceError(
+                    error = DocxTranslationServiceError(
                         "segmented translation failed validation: " + ", ".join(errors),
                     )
+                    error.result = result
+                    raise error
                 return result
             except Exception as error:
                 last_error = error
+                last_result = getattr(error, "result", None) or last_result
+        # A translation that only failed a quality check is kept and reported:
+        # one unit's finding no longer discards the whole document.
+        if last_result is not None:
+            self.warnings.append({"unit_id": unit.id, "object_id": unit.location.object_id, "errors": [str(last_error)]})
+            return last_result
         reason = getattr(last_error, "code", None) or type(last_error).__name__
         raise DocxTranslationServiceError(
             f"translation provider failed after {self._max_attempts} attempts for unit {unit.id}: {reason}",
@@ -151,9 +160,11 @@ class DocxTranslationService:
         if result.model != self._provider.config.model:
             errors.append("MODEL_MISMATCH")
         if errors:
-            raise DocxTranslationServiceError(
+            error = DocxTranslationServiceError(
                 "translation provider returned an invalid result: " + ", ".join(errors),
             )
+            error.result = result
+            raise error
         return result
 
     @staticmethod

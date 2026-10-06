@@ -51,3 +51,16 @@ def test_service_translates_a_safe_xlsx_copy_and_reports_hidden_sheet(tmp_path) 
     assert [result.translation for result in outcome.results] == ["EN:阀门", "EN:阀门", "EN:管道"]
     assert outcome.skipped == ("HIDDEN_SHEET:Hidden",)
     assert output.is_file()
+
+
+def test_a_cell_failing_a_quality_check_is_kept_with_a_warning(tmp_path) -> None:
+    class Mismatched(FakeProvider):
+        def translate_unit(self, unit: TranslationUnit) -> TranslationResult:
+            return super().translate_unit(unit).model_copy(update={"provider": "other"})
+
+    source, output = tmp_path / "source.xlsx", tmp_path / "translated.xlsx"
+    write_xlsx(source)
+    service = XlsxTranslationService(Mismatched(), max_attempts=2)
+    service.translate_file(source, output, source_language="zh-CN", target_language="en")
+    assert output.exists()
+    assert service.warnings and "PROVIDER_MISMATCH" in str(service.warnings[0])
