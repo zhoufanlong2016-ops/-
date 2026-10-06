@@ -95,6 +95,8 @@ class _VisualLine:
     bulleted: bool = False
     # The filled box (a diagram node, a slide panel) the line sits in.
     box: tuple[float, float, float, float] | None = None
+    # A row of a table cell read line by line (_row_list_cells).
+    in_cell: bool = False
 
     @property
     def bbox(self) -> tuple[float, float, float, float]:
@@ -334,12 +336,18 @@ def _translate_in_place(
         # A page stored rotated (/Rotate 90) has all its text rotated, which
         # the paragraph path leaves untouched; its tables stay too: written
         # unrotated, their cells came out as scattered vertical words.
+        # A floor plan is told by its overlapping "cells": checked before a
+        # cell holding others is dropped, or it is read as a table again.
+        tables = [
+            _without_spanning_cells(t) for t in tables
+            if not _cuts_through_text(t) and not _is_drawing_frame(t, doc[t.page_number - 1]) and not doc[t.page_number - 1].rotation
+        ]
         tables = [
             _split_around_images(
                 doc[t.page_number - 1], t,
                 nested=[o.rect for o in tables if o is not t and o.page_number == t.page_number],
             ) for t in tables
-            if not _is_drawing_frame(t, doc[t.page_number - 1]) and not doc[t.page_number - 1].rotation
+            if not _is_drawing_frame(t, doc[t.page_number - 1])
         ]
         # A cell holding a column of one-line rows (a Gantt chart's task
         # names, with no rule between the rows) is not one paragraph: its
@@ -356,6 +364,9 @@ def _translate_in_place(
             table_rects = [fitz.Rect(c.rect) for c in covered if c.page_number == page_number]
             lines, rotated = _visual_lines(page, table_rects)
             skipped_rotated += rotated
+            row_rects = [fitz.Rect(c.rect) for t in tables for c in t.cells if c.id in row_cells and c.page_number == page_number]
+            for line in lines:
+                line.in_cell = any(rect.contains(fitz.Point((line.bbox[0] + line.bbox[2]) / 2, (line.bbox[1] + line.bbox[3]) / 2)) for rect in row_rects)
             page_bounds = _body_edges(lines, bounds_by_size[_page_key(page)])
             page_paragraphs = _segment(page_number, lines, page_bounds, _horizontal_rules(page))
             gutter = _gutter(lines, page_bounds)
@@ -372,7 +383,7 @@ def _translate_in_place(
                     paragraph.centred = all(abs((line.bbox[0] + line.bbox[2]) / 2 - middle) <= max(4.0, 0.5 * line.size) for line in paragraph.lines)
                 # A column's paragraph is written within its column.
                 elif gutter is not None and paragraph.bbox[2] <= gutter:
-                    paragraph.bounds = (page_bounds[0], gutter - 0.5 * paragraph.size)
+                    paragraph.bounds = (min(page_bounds[0], paragraph.bbox[0]), gutter - 0.5 * paragraph.size)
                 elif gutter is not None and paragraph.bbox[0] >= gutter:
                     column_left = min(line.bbox[0] for line in lines if line.bbox[0] >= gutter)
                     paragraph.bounds = (column_left, page_bounds[1])
@@ -410,7 +421,13 @@ def _translate_in_place(
     ]
     cell_units: list[TranslationUnit] = []
     cell_by_unit: dict[str, Any] = {}
-    continued = _continued_cells(tables)
+    # A row list (read line by line) does not carry the next page's part of
+    # its row: paired with one, that part was skipped as "continued" and
+    # never translated -- a whole page left in English, with no warning.
+    continued = {
+        head: tail for head, tail in _continued_cells(tables).items()
+        if head not in row_cells and tail.id not in row_cells
+    }
     # Ids: a set of the cells themselves never matched "cell.id in", so each
     # continuation was also translated on its own and overwrote its share.
     continuations = {cell.id for cell in continued.values()}
@@ -428,8 +445,17 @@ def _translate_in_place(
             cell_units.append(unit)
             cell_by_unit[unit.id] = cell
 
+    # Every table text is translated by some path: as a cell, as part of
+    # the row it continues, or line by line (a row list). One that none of
+    # them took is reported, never silently left in the source language.
+    missed = _untranslated_cells(tables, {cell.id for cell in cell_by_unit.values()}, row_cells, continued, source_language)
+
     requested = [unit for index, unit in enumerate(paragraph_units) if index not in tails]
     translations, warnings, translation_stats = _translate_all(provider, requested + cell_units, cache=cache, progress=progress)
+    warnings.extend(
+        {"object_id": cell.id, "errors": [f"UNTRANSLATED_CELL: no translation path took this cell: {cell.text[:60]!r}"]}
+        for cell in missed
+    )
     # Highlighted phrases come back marked: record where the translation of
     # each goes, and take the markers out of the text that is written.
     highlight_targets: list[tuple[int, Any, str, Any]] = []
@@ -531,27 +557,38 @@ class _Covered:
 
 
 def _row_list_cells(page: Any, table: Any) -> list[Any]:
-    """Cells whose text is six or more separate one-line rows.
+    """Cells whose text is four or more separate one-line rows.
 
     Rows set at least 1.5 times their font size apart are a list of items
     (task names in a Gantt chart), not a paragraph wrapped in a cell:
-    reflowed as one, they overlapped forty rows of the chart.
+    reflowed as one, they overlapped forty rows of the chart. Four rows are
+    enough: a price-adjustment table's unruled "Index Description" column
+    ("Non adjustable" / "Foreign expert/ skilled labour" / "Stainless
+    Steel" / "HDPE lining", beside codes A-D) came back as one sentence.
     """
     import fitz
 
     result = []
     for cell in table.cells:
-        if cell.rect is None or cell.is_empty or len(cell.text.splitlines()) < 6:
+        if cell.rect is None or cell.is_empty or len(cell.text.splitlines()) < 2:
             continue
         rows: list[tuple[float, float]] = []
         widths: list[float] = []
+        colours: set[int] = set()
         for block in page.get_text("dict", clip=fitz.Rect(cell.rect)).get("blocks", ()):
             for line in block.get("lines", ()):
                 spans = [span for span in line.get("spans", ()) if str(span.get("text", "")).strip()]
                 if spans and not any(abs(line["bbox"][1] - top) <= 1.0 for top, _ in rows):
                     rows.append((float(line["bbox"][1]), float(spans[0].get("size") or 0.0)))
                     widths.append(float(line["bbox"][2] - line["bbox"][0]))
-        if len(rows) < 6:
+                    colours.add(int(max(spans, key=lambda span: len(str(span.get("text", "")).strip())).get("color") or 0))
+        # Lines in different colours are different texts (a blue "PART II
+        # -Employer Requirements" over a black "Section 6 - ..."): run
+        # together, the heading lost its line and its colour.
+        if len(rows) >= 2 and len(colours) > 1:
+            result.append(cell)
+            continue
+        if len(rows) < 4:
             continue
         tops = sorted(top for top, _ in rows)
         steps = sorted(b - a for a, b in zip(tops, tops[1:]))
@@ -839,6 +876,18 @@ def _cell_font_for(cell: Any, text: str) -> str:
     return _font_file(source, text, prefer_narrow=len(text) >= 80) or str(_table_cell_font(cell, text))
 
 
+def _untranslated_cells(
+    tables: list[Any], sent: set[str], row_cells: set[str], continued: dict[str, Any], source_language: str
+) -> list[Any]:
+    """Cells with text to translate that no path takes: not sent as a cell,
+    not the next page's part of a sent cell, not read line by line."""
+    handled = sent | row_cells | {continued[head].id for head in continued if head in sent}
+    return [
+        cell for table in tables for cell in table.cells
+        if not cell.is_empty and cell.id not in handled and _needs_translation(cell.text, source_language)
+    ]
+
+
 def _continued_cells(tables: list[Any]) -> dict[str, Any]:
     """Cells of a row that runs on from one page's table into the next.
 
@@ -887,12 +936,18 @@ def _continued_cells(tables: list[Any]) -> dict[str, Any]:
 
 
 # A line that starts a new item in a table cell: a numbered sub-item
-# ("2.1.2 Liaison", "3.41."), a lettered or bracketed one ("a)", "(ii)"), a
-# bullet, a percentage share ("70% of proportion ...") or a note.
+# ("2.1.2 Liaison", "3.41."), a lettered or bracketed one ("a)", "(ii)",
+# "C. Pump Station"), a bullet (also one on a line of its own, its text on
+# the next: "▪" / "A treatment plant ..."), a percentage share ("70% of
+# proportion ...") or a note.
+_CELL_BULLETS = "-*•●▪■□◆◇○►➢\uf0a7\uf0b7"
 _CELL_ITEM_START = re.compile(
-    r"^\s*(?:\d+(?:\.\d+)*[.)]\s|\d+(?:\.\d+){1,}\.?(?=\s?[A-Za-z])|\(?[a-zA-Z]\)|\(?[ivxIVX]{1,4}\)|[-*•●▪]\s"
+    r"^\s*(?:\d+(?:\.\d+)*[.)]\s|\d+(?:\.\d+){1,}\.?(?=\s?[A-Za-z])|\(?[a-zA-Z]\)|[A-Z]\.\s(?=[A-Z])|\(?[ivxIVX]{1,4}\)|[" + _CELL_BULLETS + r"](?:\s|$)"
     r"|\d+(?:\.\d+)?\s?%\s|(?:Note|NOTE|Notes)\s*:)"
 )
+
+
+_CLAUSE_HEADING_RE = re.compile(r"^[A-Z][A-Za-z-]*\s+\d+(?:\.\d+)+\.?(?:\s|$)")
 
 
 def _structure_cell_text(text: str) -> str:
@@ -915,7 +970,16 @@ def _structure_cell_text(text: str) -> str:
     out = [lines[0]]
     for index, line in enumerate(lines[1:], start=1):
         key_value = keyed[index] and (any(keyed[:index]) or (index + 1 < len(lines) and keyed[index + 1]))
-        if _CELL_ITEM_START.match(line) or key_value:
+        # A clause heading on its own line ("Sub-Clause 4.2.1" / "The first
+        # sentence of ..."): run into the text, the headings of a cell's
+        # clauses disappeared into one paragraph.
+        heading = (
+            len(lines[index - 1]) <= 25 and re.search(r"\d\.\d+\.?$", lines[index - 1]) is not None and line[:1].isupper()
+        ) or (
+            # ... and the next clause's heading after a finished sentence
+            _CLAUSE_HEADING_RE.match(line) is not None and re.search(r"[.:;\"”']$", lines[index - 1]) is not None
+        )
+        if _CELL_ITEM_START.match(line) or key_value or heading:
             out.append(line)
         elif _CJK_RE.search(out[-1][-1:]) or _CJK_RE.search(line[:1]):
             out[-1] += line
@@ -935,6 +999,7 @@ def _restore_item_breaks(source: str, translation: str) -> str:
     ("…获批2.1.2.与利益相关者…"). Only numbers that start a line in the
     source are used, so a reference like "第2.1.1款" is never split.
     """
+    translation = _restore_bullet_breaks(source, translation)
     numbers = _ITEM_NUMBER_AT_LINE_START.findall(source)
     if len(numbers) < 2:
         return translation
@@ -942,6 +1007,23 @@ def _restore_item_breaks(source: str, translation: str) -> str:
         translation = re.sub(
             rf"(?<=[^\n])[ \t]*(?=(?<![0-9.]){re.escape(number)}(?![0-9]))", "\n", translation, count=1
         )
+    return translation
+
+
+def _restore_bullet_breaks(source: str, translation: str) -> str:
+    """Each bulleted item of a cell on a line of its own again.
+
+    "▪ A treatment plant ..." / "▪ Proper sludge ..." came back as one run
+    ("…进行处理；・ 将根据…"). Only when the translation has exactly as many
+    bullets as the source has items, so a middle dot inside a name is
+    never taken for one.
+    """
+    marks = [line.strip()[0] for line in source.splitlines() if line.strip()[:1] and line.strip()[0] in _CELL_BULLETS[2:]]
+    if len(marks) < 2:
+        return translation
+    for mark in dict.fromkeys([marks[0], "•", "·", "・", "▪"]):
+        if translation.count(mark) == len(marks):
+            return re.sub(rf"(?<=\S)[ \t]*(?={re.escape(mark)})", "\n", translation)
     return translation
 
 
@@ -1195,13 +1277,30 @@ def _visual_lines(page: Any, table_rects: list[Any]) -> tuple[list[_VisualLine],
             )
             middle = (segment.bbox[1] + segment.bbox[3]) / 2
             rule_between = any(between[0] <= x <= between[1] and y0 <= middle <= y1 for x, y0, y1 in vertical_rules)
-            left_text = " ".join(other.text for other in line.segments).strip()
+            # The left piece and the right one, whichever was read first (a
+            # right-hand header set a point higher is read before the left).
+            if segment.bbox[0] > lx1:
+                left_text, left_end, right_start = " ".join(other.text for other in line.segments).strip(), lx1, segment.bbox[0]
+            else:
+                left_text, left_end, right_start = segment.text.strip(), segment.bbox[2], lx0
             column_start = (
-                segment.bbox[0] > lx1 and gap > 0.5 * size
+                right_start > left_end and gap > 0.5 * size
                 # a list label ("1.", "viii.") belongs with its text
-                and not _LIST_LABEL_RE.match(left_text) and not _LABEL_RE.match(left_text)
+                # (only the label itself: "27. Tender Opening" is a side
+                # heading of its own beside clause "27.1")
+                and not _LIST_LABEL_RE.match(left_text) and not _LABEL_RE.fullmatch(left_text)
                 and not re.fullmatch(r"\d+(?:\.\d+)*\.?", left_text)  # section number "4.1"
-                and sum(count for x, count in starts.items() if abs(x - segment.bbox[0]) <= 1.5) >= 4
+                and (
+                    sum(count for x, count in starts.items() if abs(x - right_start) <= 1.5) >= 4
+                    # ... or it starts just past an edge another line ends at
+                    # (a running header justified to half the page: "...
+                    # Management" / "... Larechs", then "Section 6 - ...")
+                    or sum(
+                        1 for other in segments
+                        if abs(other.bbox[2] - left_end) <= 1.0
+                        and not min(ly0, segment.bbox[1]) <= (other.bbox[1] + other.bbox[3]) / 2 <= max(ly1, segment.bbox[3])
+                    ) >= 1
+                )
             )
             own_box = box_of(segment.bbox)
             other_box = box_of(line.segments[-1].bbox)
@@ -1211,6 +1310,7 @@ def _visual_lines(page: Any, table_rects: list[Any]) -> tuple[list[_VisualLine],
                 break
         else:
             lines.append(_VisualLine([segment]))
+    lines = _join_spread_line(lines, vertical_rules)
     for line in lines:
         index = box_of(line.bbox)
         if index is not None and all(box_of(segment.bbox) == index for segment in line.segments):
@@ -1239,6 +1339,51 @@ def _visual_lines(page: Any, table_rects: list[Any]) -> tuple[list[_VisualLine],
         )
     lines.sort(key=lambda line: (line.bbox[1], line.bbox[0]))
     return lines, rotated
+
+
+def _join_spread_line(
+    lines: list[_VisualLine], vertical_rules: list[tuple[float, float, float]]
+) -> list[_VisualLine]:
+    """Pieces of one justified line spread far apart are one line again.
+
+    'marked      "WITHDRAWAL,"      "SUBSTITUTION,"' is justified with gaps
+    wider than three letters, so it was read as three texts and the quoted
+    words were translated and set on their own, scattered across the line.
+    Such a run spans exactly the line above it, the previous line of the
+    same justified paragraph; a running header's two halves ("... Project"
+    and "Section 1 - ...") or labels on a drawing that share a baseline do not.
+    """
+
+    def spans_line_above(run: list[_VisualLine]) -> bool:
+        x0, x1, top, size = run[0].bbox[0], run[-1].bbox[2], run[0].bbox[1], run[0].size
+        return any(
+            abs(other.bbox[0] - x0) <= 1.5 and abs(other.bbox[2] - x1) <= 1.5
+            and 0 < top - other.bbox[1] <= 2.0 * size
+            for other in lines
+        )
+
+    order = sorted(lines, key=lambda line: (round(line.baseline, 1), line.bbox[0]))
+    result: list[_VisualLine] = []
+    index = 0
+    while index < len(order):
+        run = [order[index]]
+        for line in order[index + 1:]:
+            last = run[-1]
+            gap = line.bbox[0] - last.bbox[2]
+            if not (
+                abs(line.baseline - last.baseline) <= 0.5 and abs(line.size - last.size) <= 0.1
+                and 0 < gap <= 6.0 * last.size
+                and not any(last.bbox[2] <= x <= line.bbox[0] and y0 <= line.baseline <= y1 for x, y0, y1 in vertical_rules)
+            ):
+                break
+            run.append(line)
+        if len(run) > 1 and spans_line_above(run):
+            result.append(_VisualLine([segment for line in run for segment in line.segments]))
+            index += len(run)
+        else:
+            result.append(order[index])
+            index += 1
+    return result
 
 
 def _body_edges(lines: list[_VisualLine], bounds: tuple[float, float]) -> tuple[float, float]:
@@ -1310,7 +1455,7 @@ def _reading_order(lines: list[_VisualLine], bounds: tuple[float, float]) -> lis
     """
     gutter = _gutter(lines, bounds)
     if gutter is None:
-        return lines
+        return _stack_order(lines)
     ordered: list[_VisualLine] = []
     band: list[_VisualLine] = []
 
@@ -1329,8 +1474,54 @@ def _reading_order(lines: list[_VisualLine], bounds: tuple[float, float]) -> lis
     return ordered
 
 
+def _stack_order(lines: list[_VisualLine]) -> list[_VisualLine]:
+    """Lines stacked under each other (the same left or right edge, a line
+    apart) are read one after the other, before the stack beside them.
+
+    A running header in two blocks ("Lahore ... (LWDMP) -" / "Sewerage
+    System ..." on the left, "Part III- Conditions of Contract and" /
+    "Contract Forms" right-aligned beside it) read strictly top to bottom
+    alternated between the blocks, and every line became a paragraph.
+    """
+    order = sorted(lines, key=lambda line: (line.bbox[1], line.bbox[0]))
+    placed: set[int] = set()
+    result: list[_VisualLine] = []
+    for line in order:
+        if id(line) in placed:
+            continue
+        placed.add(id(line))
+        result.append(line)
+        last = line
+        while True:
+            below = [
+                other for other in order
+                if id(other) not in placed and abs(other.size - last.size) <= 0.6
+                and 0 < other.bbox[1] - last.bbox[1] <= 1.6 * last.size
+                and (abs(other.bbox[0] - last.bbox[0]) <= 1.5 or abs(other.bbox[2] - last.bbox[2]) <= 1.5)
+            ]
+            # Only where a line of another stack lies between: elsewhere the
+            # order is the page's own.
+            if not below:
+                break
+            following = min(below, key=lambda other: other.bbox[1])
+            between = [
+                other for other in order
+                if id(other) not in placed and other is not following and last.bbox[1] <= other.bbox[1] < following.bbox[1]
+            ]
+            if between and any(min(o.bbox[2], following.bbox[2]) - max(o.bbox[0], following.bbox[0]) > 0 for o in between):
+                break  # a line in between overlaps the stack: not side by side
+            placed.add(id(following))
+            result.append(following)
+            last = following
+    return result
+
+
 def _gutter(lines: list[_VisualLine], bounds: tuple[float, float]) -> float | None:
     """x of a vertical band between two columns that few lines cross."""
+    # A table's rows are no text columns: the short lines of an unruled
+    # price table made a page of footnotes "two columns", and a footnote
+    # ending short of that gutter ran into the next one.
+    lines = [line for line in lines if not line.in_cell]
     left, right = bounds
     width = right - left
     if len(lines) < 8 or width <= 0:
@@ -1345,6 +1536,17 @@ def _gutter(lines: list[_VisualLine], bounds: tuple[float, float]) -> float | No
             score = min(left_side, right_side) - crossing
             if best is None or score > best[0]:
                 best = (score, gutter)
+    if best is None:
+        # Side headings in a column left of the body's edge ("24. Deadline
+        # for" / "Submission of" / "Tenders" beside clause 24.1): read line
+        # by line across both, each heading line became a paragraph of its own.
+        side = [line for line in lines if line.bbox[2] < left - 0.5 * line.size]
+        if len(side) >= 2:
+            gutter = max(line.bbox[2] for line in side) + 0.5
+            crossing = sum(1 for line in lines if line.bbox[0] < gutter < line.bbox[2])
+            right_side = sum(1 for line in lines if line.bbox[0] >= gutter)
+            if right_side >= 4 and crossing <= 0.25 * len(lines):
+                return gutter
     return None if best is None else best[1]
 
 
@@ -1381,6 +1583,44 @@ def _is_drawing_frame(table: Any, page: Any) -> bool:
             if smaller > 0 and (one & other).get_area() > 0.5 * smaller:
                 return True
     return False
+
+
+def _cuts_through_text(table: Any) -> bool:
+    """A "grid" with a cell lower than the text in it is no table.
+
+    A callout box beside a running header was found as a table whose first
+    cell was 6pt tall around a 9pt header line; one font size fits every
+    cell of a page's tables, so that cell set the whole page at 3pt.
+    """
+    return any(
+        cell.rect is not None and not cell.is_empty and cell.source_font_size
+        and cell.rect[3] - cell.rect[1] < 0.8 * cell.source_font_size
+        for cell in table.cells
+    )
+
+
+def _without_spanning_cells(table: Any) -> Any:
+    """Drop a cell whose rectangle holds other filled cells of its table.
+
+    Such a cell (the whole grid plus the text above it, found from a box
+    drawn round the table) repeats every other cell's text; written as one
+    block it covered the table, and took the sentence above it along.
+    """
+    import fitz
+
+    filled = [c for c in table.cells if c.rect is not None and not c.is_empty]
+
+    def holds_others(cell: Any) -> bool:
+        rect = fitz.Rect(cell.rect)
+        return any(
+            other is not cell and (rect & fitz.Rect(other.rect)).get_area() >= 0.9 * fitz.Rect(other.rect).get_area() > 0
+            for other in filled
+        )
+
+    spanning = {cell.id for cell in filled if holds_others(cell)}
+    if not spanning:
+        return table
+    return dataclasses.replace(table, cells=tuple(c for c in table.cells if c.id not in spanning))
 
 
 def _horizontal_rules(page: Any) -> list[tuple[float, float, float, float]]:
@@ -1549,6 +1789,20 @@ def _segment(
                 # The paragraph's own measure: the lines before ended here too.
                 if ended_early and len(current) >= 2 and abs(current[-2].bbox[2] - previous.bbox[2]) <= 1.5:
                     ended_early = False
+                # ... or the next line, or other lines of the page, end here:
+                # footnotes under a table reach 526pt where the document's
+                # margin is 555pt (a wide table elsewhere), and each
+                # footnote's second line ("Labor wages") was set apart as a
+                # paragraph of its own.
+                if ended_early and long_line and (
+                    abs(line.bbox[2] - previous.bbox[2]) <= 1.5
+                    or sum(
+                        1 for other in lines
+                        if other is not previous and abs(other.size - previous.size) <= 0.6
+                        and abs(other.bbox[2] - previous.bbox[2]) <= 1.5
+                    ) >= 2
+                ):
+                    ended_early = False
                 # Ragged right: the line ended short only because the next
                 # word did not fit in what was left ("... Road to" /
                 # "Gulshan-e-Ravi ..." was split into two paragraphs).
@@ -1584,6 +1838,7 @@ def _segment(
 
 # "1.", "a)", "(iv)", "viii.", "[2]", or a bullet character.
 _LIST_LABEL_RE = re.compile(r"^(?:[(\[]?(?:\d{1,3}(?:\.\d{1,3})*|[ivxlcdm]{1,6}|[IVXLCDM]{1,6}|[A-Za-z])[.)\]]|[•·▪●○■□◆◇\-–—])$")
+_CLAUSE_NUMBER_RE = re.compile(r"\d{1,3}(?:\.\d{1,3})+")
 
 
 def _label_text_start(first: _VisualLine) -> float | None:
@@ -1606,7 +1861,13 @@ def _label_text_start(first: _VisualLine) -> float | None:
         if label and (gap > 0.3 * first.size or (gap > 0.1 * first.size and _LIST_LABEL_RE.match("".join(label)))):
             label.append(" ")
         if label and label[-1] == " ":
-            return char["bbox"][0] if _LIST_LABEL_RE.match("".join(label).strip()) else None
+            text = "".join(label).strip()
+            # A clause number with no closing dot ("23.4  The inner ...") is
+            # a label only when set apart by a tab stop, not a word space
+            # ("2.5 m deep"): read as plain text, each clause's first line
+            # became a paragraph of its own.
+            numbered = _CLAUSE_NUMBER_RE.fullmatch(text) is not None and gap > 0.6 * first.size
+            return char["bbox"][0] if _LIST_LABEL_RE.match(text) or numbered else None
         label.append(value)
         previous_end = char["bbox"][2]
     return None
@@ -1685,6 +1946,11 @@ def _needs_translation(text: str, source_language: str) -> bool:
     # only risks changing it.
     from .pdf_pipeline import _IMMUTABLE_IDENTIFIER_RE
 
+    # A column of item letters ("A" / "B" / "C") is a list of labels:
+    # translated, it came back as "甲乙丙丁戊".
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    if lines and all(re.fullmatch(r"\(?[A-Za-z][.)]?", line) for line in lines):
+        return False
     return any(char.isalpha() for char in _IMMUTABLE_IDENTIFIER_RE.sub("", text))
 
 
@@ -1965,6 +2231,7 @@ def _render_paragraphs(
 ) -> dict[str, object]:
     import fitz
 
+    _FRAMES.clear()
     # Plan every paragraph on every page first: the space it may use, and the
     # largest size at which its translation fits there.
     plans: list[tuple[_Paragraph, str, Any]] = []
@@ -2000,19 +2267,19 @@ def _render_paragraphs(
         for p, text, region in plans
     ]
 
-    # Paragraphs sharing a source style (body text, chapter headings, ...)
-    # share one size, as the source does: the smallest any of them needed,
-    # so every paragraph still fits its own place. Sizing each on its own
-    # gave a page of body text in five different sizes.
-    group_size: dict[tuple[object, ...], float] = {}
-    for (paragraph, _, _), size in zip(plans, fitted):
-        key = _style_key(paragraph)
-        group_size[key] = min(group_size.get(key, size), size)
+    sizes, group_size = _shared_sizes([paragraph for paragraph, _, _ in plans], fitted)
+
+    def size_of(paragraph: _Paragraph) -> float:
+        return sizes[id(paragraph)]
 
     shrunk: list[dict[str, object]] = []
+    scanned_pages: list[int] = []
     for page_number in sorted({p.page_number for p, _, _ in plans}):
         page = doc[page_number - 1]
         page_plans = [plan for plan in plans if plan[0].page_number == page_number]
+        scanned = _scanned_page(page)
+        if scanned:
+            scanned_pages.append(page_number)
         # Remove every original glyph being replaced first, then write.
         for paragraph, _, _ in page_plans:
             # A small box at each glyph's centre: a whole-span box also
@@ -2023,11 +2290,21 @@ def _render_paragraphs(
                     page.add_redact_annot(fitz.Rect(x0, y0, x1, y1), fill=False)
         page.apply_redactions(images=0, graphics=0, text=0)
         rules = _rule_drawings(page)
+        if scanned:
+            # The words are pixels of the scan, under an invisible OCR layer:
+            # written over them, the translation and the English were both
+            # unreadable. The scanned words, and the space each translation
+            # will take, are covered -- all of them before any is written,
+            # so one cover never hides another paragraph's new text.
+            for paragraph, text, region in page_plans:
+                if text:
+                    cover = fitz.Rect(paragraph.bbox) | _written_extent(page, paragraph, text, region, size_of(paragraph))
+                    page.draw_rect(cover + (-1, -1, 1, 1), color=None, fill=(1, 1, 1), overlay=True)
         for paragraph, text, region in page_plans:
             if not text:
                 continue  # its text now ends on the previous page
             if paragraph.toc_page is not None:
-                _insert_toc_entry(page, paragraph, text, group_size[_style_key(paragraph)])
+                _insert_toc_entry(page, paragraph, text, size_of(paragraph))
                 continue
             hanging = _hanging_label(paragraph, text)
             if hanging is not None:
@@ -2036,24 +2313,56 @@ def _render_paragraphs(
                 from .pdf_table import cached_font
 
                 label_font = paragraph.cjk_font if (_CJK_RE.search(label) and paragraph.cjk_font) else _latin_font(paragraph.lines[0].font, paragraph.size, page)
-                label_end = paragraph.lines[0].bbox[0] + cached_font(label_font).text_length(label, fontsize=group_size[_style_key(paragraph)])
+                label_end = paragraph.lines[0].bbox[0] + cached_font(label_font).text_length(label, fontsize=size_of(paragraph))
                 text_start = max(text_start, label_end + 0.25 * paragraph.size)
                 region = fitz.Rect(text_start, region.y0, region.x1, region.y1)
-            size, written_box = _insert(page, paragraph, text, region, group_size[_style_key(paragraph)], paragraph.bounds)
+            size, written_box = _insert(page, paragraph, text, region, size_of(paragraph), paragraph.bounds)
             if hanging is not None:
                 _insert_label(page, paragraph, label, size, written_box)
             _refit_underline(page, paragraph, text, size, written_box, rules)
             if size < paragraph.size - 1e-6:
                 shrunk.append({"page": page_number, "source_size": round(paragraph.size, 2), "size": size, "text": text[:60]})
+    styles: dict[tuple[object, ...], float] = {}
+    for key, size in group_size.items():
+        styles[key[1:]] = min(styles.get(key[1:], size), size)
     return {
         "paragraphs": len(translatable),
-        "style_sizes": [{"source_size": key[0], "font": key[1], "size": size} for key, size in group_size.items()],
+        # the smallest size each style was set at on any page
+        "style_sizes": [{"source_size": key[0], "font": key[1], "size": size} for key, size in styles.items()],
         "size_reduced": shrunk,
+        **({"scanned_pages_covered": scanned_pages} if scanned_pages else {}),
     }
 
 
-# "4. Reference Datum ........ 6": a title, a dot leader and a page number.
-_TOC_ENTRY_RE = re.compile(r"^(?P<title>.*?\S)\s*(?:[.·…]\s?){4,}\s*(?P<page>\d{1,4})\s*$")
+def _shared_sizes(paragraphs: list[_Paragraph], fitted: list[float]) -> tuple[dict[int, float], dict[tuple[object, ...], float]]:
+    """The size each paragraph is written at (by id), and each (page, style) group's.
+
+    Paragraphs of a page sharing a source style (body text, chapter
+    headings, ...) share one size, as the source does: the smallest any of
+    them needed, so every paragraph still fits its own place. Sizing each on
+    its own gave a page of body text in five different sizes. Shared over
+    the whole document, one cramped paragraph set 57 pages of a tender at
+    6pt instead of 10pt; one that fits only far below its source size keeps
+    that size for itself, as an outlier table cell does.
+    """
+    group_size: dict[tuple[object, ...], float] = {}
+    own_size: dict[int, float] = {}
+    for paragraph, size in zip(paragraphs, fitted):
+        if size < 0.75 * paragraph.size:
+            own_size[id(paragraph)] = size
+            continue
+        key = (paragraph.page_number, *_style_key(paragraph))
+        group_size[key] = min(group_size.get(key, size), size)
+    sizes = {
+        id(paragraph): own_size.get(id(paragraph)) or group_size[(paragraph.page_number, *_style_key(paragraph))]
+        for paragraph in paragraphs
+    }
+    return sizes, group_size
+
+
+# "4. Reference Datum ........ 6": a title, a dot leader and a page number,
+# which may carry its section ("Scope of Tender ........ 1-3").
+_TOC_ENTRY_RE = re.compile(r"^(?P<title>.*?\S)\s*(?:[.·…]\s?){4,}\s*(?P<page>(?:\d{1,3}\s?[-–]\s?)?\d{1,4})\s*$")
 
 
 def _insert_toc_entry(page: Any, paragraph: _Paragraph, title: str, size: float) -> None:
@@ -2065,7 +2374,7 @@ def _insert_toc_entry(page: Any, paragraph: _Paragraph, title: str, size: float)
     from .pdf_table import cached_font
 
     first = paragraph.lines[0]
-    title = re.sub(r"\s*(?:[.·…]\s?){3,}\s*\d{0,4}\s*$", "", title.strip())
+    title = re.sub(r"\s*(?:[.·…]\s?){3,}\s*(?:\d{1,3}\s?[-–]\s?)?\d{0,4}\s*$", "", title.strip())
     label_start = _label_text_start(first)
     label = ""
     if label_start is not None:
@@ -2269,14 +2578,39 @@ def _region(page: Any, paragraph: _Paragraph, obstacles: list[Any], bounds: tupl
     else:
         x1 = max(x1, max_right)
     x0, x1 = max(x0, 2.0), min(x1, page.rect.width - 2.0)
+    # Text in a drawn frame (a callout "To be entered by the Tenderer ...")
+    # stays inside it: grown to the margin, it ran out through the frame.
+    frame = _frame_around(page, paragraph.bbox)
+    if frame is not None:
+        x0, x1 = max(x0, frame.x0 + 1.0), min(x1, frame.x1 - 1.0)
     column = fitz.Rect(x0, y1, x1, page.rect.height)
     below = [r.y0 for r in obstacles if r.intersects(column) and r.y0 >= y1 - 0.5]
-    bottom = min(below + [page.rect.height - 24.0]) - 1.0
+    bottom = min(below + [page.rect.height - 24.0] + ([frame.y1] if frame is not None else [])) - 1.0
     # Never reach up into a table (or text) directly above: the table pass
     # later clears its own area and would erase any glyph overlapping it.
     above = [r.y1 + 0.5 for r in obstacles if r.x0 < x1 and r.x1 > x0 and y0 - 1.5 <= r.y1 <= y0 + 0.5]
     top = max(above + [y0 - 1.0])
     return fitz.Rect(x0 - 0.5, top, x1 + 0.5, max(y1 + 1.0, bottom))
+
+
+_FRAMES: dict[tuple[int, int], list[Any]] = {}
+
+
+def _frame_around(page: Any, bbox: tuple[float, float, float, float]) -> Any:
+    """The smallest stroked rectangle drawn around ``bbox`` (a text box), if any."""
+    import fitz
+
+    key = (id(page.parent), page.number)
+    if key not in _FRAMES:
+        _FRAMES[key] = [
+            fitz.Rect(d["rect"]) for d in page.get_drawings()
+            if d.get("color") is not None and d.get("rect") is not None
+            and any(item[0] == "re" for item in d.get("items", ()))
+            and d["rect"].width < 0.9 * page.rect.width and d["rect"].height < 0.5 * page.rect.height
+        ]
+    inner = fitz.Rect(bbox) + (1, 1, -1, -1)
+    around = [rect for rect in _FRAMES[key] if rect.contains(inner)]
+    return min(around, key=lambda rect: rect.get_area()) if around else None
 
 
 def _layout(
@@ -2415,10 +2749,42 @@ def _insert(page: Any, paragraph: _Paragraph, text: str, region: Any, size: floa
         size = round(size - _FONT_STEP, 2)
 
 
+def _written_extent(page: Any, paragraph: _Paragraph, text: str, region: Any, size: float) -> Any:
+    """Where ``text`` will be written, found by writing it on a blank page."""
+    import fitz
+
+    with fitz.open() as scratch:
+        blank = scratch.new_page(width=page.rect.width, height=page.rect.height)
+        _insert(blank, paragraph, text, region, size, paragraph.bounds)
+        extent = fitz.Rect()
+        for block in blank.get_text("dict").get("blocks", ()):
+            extent |= fitz.Rect(block["bbox"])
+    return extent
+
+
+def _scanned_page(page: Any) -> bool:
+    """A scanned page: a full-page image whose only text is an invisible
+    OCR layer (text render mode 3)."""
+    import fitz
+
+    trace = page.get_texttrace()
+    if not trace or any(span.get("type") != 3 for span in trace):
+        return False
+    area = page.rect.get_area()
+    return any(
+        fitz.Rect(rect).get_area() > 0.5 * area
+        for image in page.get_images() for rect in page.get_image_rects(image[0])
+    )
+
+
 def _is_bold(paragraph: _Paragraph) -> bool:
+    # Weighed by letters, not spans: a bold lead-in ("Compliance
+    # Monitoring" + ";") is two spans against one long plain one, and the
+    # whole paragraph was set bold.
     spans = paragraph.lines[0].spans
+    weight = [max(1, sum(1 for char in str(span.get("text", "")) if char.isalnum())) for span in spans]
     bold = [bool(int(span.get("flags") or 0) & 16) or "bold" in str(span.get("font", "")).casefold() for span in spans]
-    return sum(bold) * 2 > len(bold)
+    return sum(w for w, b in zip(weight, bold) if b) * 2 > sum(weight)
 
 
 def _rule_drawings(page: Any) -> list[tuple[Any, tuple[float, ...] | None, float]]:

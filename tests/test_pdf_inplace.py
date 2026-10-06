@@ -948,3 +948,243 @@ def test_a_floor_plan_found_as_a_table_is_a_drawing():
     assert pdf_inplace._is_drawing_frame(SimpleNamespace(cells=rooms), page)
     grid = [cell((x, y, x + 50, y + 20), "a") for x in range(0, 200, 50) for y in range(0, 100, 20)]
     assert not pdf_inplace._is_drawing_frame(SimpleNamespace(cells=grid), page)
+
+
+# ---- tender documents (V1/V2/V4): clause labels, side headings, sizes, tables, scans
+
+
+def _tender_clause_page() -> fitz.Page:
+    """ITT-style page: side headings at 77pt, clause numbers at 202pt set
+    apart by a tab, clause text hanging at 234pt."""
+    page = fitz.open().new_page(width=595, height=842)
+    words = "the inner envelopes containing the Price Tender shall bear a warning not to open until advised by the Employer in accordance"
+    y = 100
+    for number, wrapped in (("23.4", 3), ("23.5", 3), ("24.1", 2), ("24.2", 3)):
+        if number == "24.1":
+            for dy, heading in enumerate(("24. Deadline for", "Submission of", "Tenders")):
+                page.insert_text((77 if dy == 0 else 95, y + 12.5 * dy), heading, fontsize=11, fontname="hebo")
+        page.insert_text((202, y), number, fontsize=10)
+        for i in range(wrapped):
+            _justified(page, 234, 523, y + 12 * i, words, size=10)
+        y += 12 * wrapped + 20
+    return page
+
+
+def _one_line(text: str, size: float = 10) -> fitz.Page:
+    page = fitz.open().new_page(width=595, height=842)
+    page.insert_text((72, 100), text, fontsize=size)
+    return page
+
+
+def test_a_clause_number_set_apart_by_a_tab_is_a_label():
+    page = _tender_clause_page()
+    lines, _ = pdf_inplace._visual_lines(page, [])
+    bounds = pdf_inplace._body_edges(lines, (72.0, 555.0))
+    paragraphs = pdf_inplace._segment(1, lines, bounds)
+    texts = [p.text for p in paragraphs]
+    # each clause is one paragraph, its number first; the side heading is one too
+    assert [t[:4] for t in texts if t[:4] in {"23.4", "23.5", "24.1", "24.2"}] == ["23.4", "23.5", "24.1", "24.2"]
+    assert [len(p.lines) for p in paragraphs if p.text.startswith("23.4")] == [3]
+    assert "24. Deadline for Submission of Tenders" in texts
+    # a decimal followed by a word space is no label
+    line = pdf_inplace._visual_lines(_one_line("2.5 m deep trenches are excavated"), [])[0][0]
+    assert pdf_inplace._label_text_start(line) is None
+
+
+def test_a_justified_line_spread_wide_is_one_line_but_header_halves_are_not():
+    page = fitz.open().new_page(width=595, height=842)
+    page.insert_text((73, 46), "Lahore Wastewater and Drainage Project", fontsize=9)
+    page.insert_text((372, 46), "Section 1 - Instructions to Tenderers", fontsize=9)
+    _justified(page, 252, 523, 300, "and in addition the respective envelopes shall be clearly", size=10)
+    above = [line for line in pdf_inplace._visual_lines(page, [])[0] if line.bbox[1] > 280][0]
+    page.insert_text((252, 312), "marked", fontsize=10)
+    page.insert_text((322, 312), '"WITHDRAWAL,"', fontsize=10)
+    end = above.bbox[2] - fitz.get_text_length('"SUBSTITUTION,"', fontsize=10)
+    page.insert_text((end, 312), '"SUBSTITUTION,"', fontsize=10)
+    texts = [line.text for line in pdf_inplace._visual_lines(page, [])[0]]
+    assert any(text.startswith("marked") and "SUBSTITUTION" in text for text in texts)
+    assert "Lahore Wastewater and Drainage Project" in texts
+    assert "Section 1 - Instructions to Tenderers" in texts
+
+
+def test_paragraph_sizes_are_shared_per_page_and_an_outlier_keeps_its_own():
+    line = lambda: pdf_inplace._VisualLine([pdf_inplace._Segment("x", (72, 100, 500, 112), [{"size": 10.0, "color": 0, "font": "ArialMT"}])])
+    paragraph = lambda page: pdf_inplace._Paragraph(page, [line()], False)
+    a, b, c, d = paragraph(1), paragraph(1), paragraph(1), paragraph(2)
+    sizes, _ = pdf_inplace._shared_sizes([a, b, c, d], [9.5, 10.0, 6.0, 10.0])
+    assert sizes[id(a)] == sizes[id(b)] == 9.5  # one size for the page's body text
+    assert sizes[id(c)] == 6.0  # a cramped paragraph does not pull the others down
+    assert sizes[id(d)] == 10.0  # nor another page
+
+
+def test_contents_entries_may_carry_a_section_page_number():
+    match = pdf_inplace._TOC_ENTRY_RE.match("1. Scope of Tender ............................. 1-3")
+    assert match and match.group("page") == "1-3" and match.group("title") == "1. Scope of Tender"
+
+
+def test_a_grid_cutting_through_its_text_or_a_cell_holding_the_others_is_not_kept():
+    from document_translator.services.pdf_table import PdfTable, PdfTableCell
+
+    cell = lambda id, rect, text="x": PdfTableCell(id=id, page_number=1, table_number=1, row=1, column=1, text=text, rect=rect, source_font_size=9.0)
+    table = lambda *cells: PdfTable(page_number=1, table_number=1, rect=(62, 62, 565, 633), row_count=1, column_count=len(cells), cells=cells)
+    callout = table(cell("a", (69, 62, 338, 68), "Gulshan-e-Ravi Lahore"), cell("b", (338, 62, 534, 118)))
+    assert pdf_inplace._cuts_through_text(callout)
+    grid = table(cell("a", (62, 425, 565, 633), "everything"), cell("b", (62, 474, 106, 503)), cell("c", (106, 474, 196, 503)))
+    assert not pdf_inplace._cuts_through_text(grid)
+    kept = pdf_inplace._without_spanning_cells(grid)
+    assert [c.id for c in kept.cells] == ["b", "c"]
+
+
+def test_footnotes_reaching_the_pages_own_edge_keep_their_second_line():
+    line = lambda y, x1, text: pdf_inplace._VisualLine([pdf_inplace._Segment(text, (72.0, y, x1, y + 9), [{"size": 8.0, "color": 0}])])
+    lines = [
+        line(654.0, 525.7, "3 the index shall be the cost of one bag of cement as published in the Bulletin under"),
+        line(663.0, 120.1, "Labor wages"),
+        line(672.0, 525.8, "4 the index shall be the cost of one tonne of steel as published in the Bulletin under"),
+        line(681.0, 237.8, "Prices of Construction Input and Labor Wages"),
+        line(690.0, 525.8, "5 the index shall be the minimum wage for unskilled labor as published in the"),
+        line(699.0, 117.5, "labor wages"),
+    ]
+    assert [len(p.lines) for p in pdf_inplace._segment(1, lines, (67.0, 555.0))] == [2, 2, 2]
+
+
+def test_table_rows_are_no_text_columns():
+    line = lambda x0, y, x1, in_cell=False: pdf_inplace._VisualLine(
+        [pdf_inplace._Segment("x", (x0, y, x1, y + 9), [{"size": 8.0, "color": 0}])], in_cell=in_cell
+    )
+    rows = [line(74, 100 + 20 * i, 120, True) for i in range(5)] + [line(350, 100 + 20 * i, 420, True) for i in range(5)]
+    footnotes = [line(72, 600 + 9 * i, 313) for i in range(4)]
+    assert pdf_inplace._gutter(rows + footnotes, (67.0, 554.0)) is None
+    plain = [pdf_inplace._VisualLine(line.segments) for line in rows]
+    assert pdf_inplace._gutter(plain + footnotes, (67.0, 554.0)) is not None
+
+
+def test_item_letters_and_bulleted_cell_items_keep_their_form():
+    assert not pdf_inplace._needs_translation("A\nB\nC\nD\nE", "en")
+    assert pdf_inplace._needs_translation("No", "en")
+    assert pdf_inplace._structure_cell_text("▪\nA treatment plant will be\nconstructed;\n▪\nProper sludge plan") == (
+        "▪ A treatment plant will be constructed;\n▪ Proper sludge plan"
+    )
+    source = "▪\nA treatment plant\n▪\nProper sludge plan"
+    assert pdf_inplace._restore_bullet_breaks(source, "· 将建设处理厂；· 制定污泥计划") == "· 将建设处理厂；\n· 制定污泥计划"
+    # a middle dot inside a name is no bullet
+    assert pdf_inplace._restore_bullet_breaks(source, "约翰·史密斯说") == "约翰·史密斯说"
+
+
+def test_clause_headings_in_a_cell_stay_on_their_own_lines():
+    structure = pdf_inplace._structure_cell_text
+    text = "Sub-Clause 4.2.1\nThe first sentence is replaced\nwith the following.”\nSub-Clause 4.2.2\nThe first paragraph"
+    assert structure(text).split("\n") == [
+        "Sub-Clause 4.2.1", "The first sentence is replaced with the following.”", "Sub-Clause 4.2.2", "The first paragraph",
+    ]
+    assert structure("shall be as described in\nSub-Clause 5.2.2 [Review]") == "shall be as described in Sub-Clause 5.2.2 [Review]"
+    assert pdf_inplace._structure_cell_text("Section A.\nC. Pump Station Wet Well").split("\n") == ["Section A.", "C. Pump Station Wet Well"]
+
+
+def test_short_unruled_lists_and_two_colour_cells_are_read_line_by_line():
+    page = fitz.open().new_page(width=595, height=842)
+    for i, name in enumerate(("Non adjustable", "Foreign expert", "Stainless Steel", "HDPE lining")):
+        page.insert_text((110, 520 + 25 * i), name, fontsize=8)
+    listing = SimpleNamespace(id="l", rect=(106, 503, 196, 633), is_empty=False, text="Non adjustable\nForeign expert\nStainless Steel\nHDPE lining")
+    page.insert_text((240, 300), "PART II -Employer Requirements", fontsize=12, color=(0, 0, 1))
+    page.insert_text((255, 326), "Section 6 - Employer Requirements", fontsize=12)
+    toc = SimpleNamespace(id="t", rect=(236, 280, 590, 340), is_empty=False, text="PART II -Employer Requirements\nSection 6 - Employer Requirements")
+    assert pdf_inplace._row_list_cells(page, SimpleNamespace(cells=[listing, toc])) == [listing, toc]
+
+
+def test_a_cell_no_path_translates_is_reported():
+    cell = lambda id, text="Visual inspection of shafts": SimpleNamespace(id=id, text=text, is_empty=not text)
+    table = SimpleNamespace(cells=(cell("head"), cell("tail"), cell("code", "A\nB"), cell("sent")))
+    missed = pdf_inplace._untranslated_cells([table], {"sent"}, {"head"}, {"head": table.cells[1]}, "en")
+    assert [c.id for c in missed] == ["tail"]
+
+
+def test_running_header_blocks_side_by_side_are_read_block_by_block():
+    page = fitz.open().new_page(width=612, height=792)
+    left = ["Lahore Wastewater and Drainage Management Project (LWDMP) -", "Sewerage System from Larechs Colony to Gulshan-e-Ravi Lahore", "(Through Trenchless Technology)"]
+    right = ["Part III- Conditions of Contract and", "Contract Forms", "Section 9 - Contract Forms"]
+    width = max(fitz.get_text_length(text, fontsize=10) for text in left[:2])
+    for i, text in enumerate(left):
+        if i < 2:  # justified to the block's measure
+            words = text.split()
+            gap = (width - fitz.get_text_length("".join(words), fontsize=10)) / (len(words) - 1)
+            x = 73.0
+            for word in words:
+                page.insert_text((x, 43 + 11 * i), word, fontsize=10)
+                x += fitz.get_text_length(word, fontsize=10) + gap
+        else:
+            page.insert_text((73, 43 + 11 * i), text, fontsize=10)
+    for i, text in enumerate(right):
+        page.insert_text((580 - fitz.get_text_length(text, fontsize=10), 43 + 11 * i), text, fontsize=10)
+    for i in range(10):
+        _justified(page, 72, 524, 200 + 14 * i, "body text of the conditions of contract set in justified lines", size=11)
+    lines, _ = pdf_inplace._visual_lines(page, [])
+    paragraphs = pdf_inplace._segment(1, lines, (72.0, 524.0))
+    assert [len(p.lines) for p in paragraphs[:2]] == [3, 3]
+    assert paragraphs[0].text.startswith("Lahore") and paragraphs[1].text.startswith("Part III")
+
+
+def test_a_bold_lead_in_does_not_make_its_paragraph_bold():
+    spans = [
+        {"text": "Compliance Monitoring", "font": "Arial-BoldItalicMT", "flags": 16},
+        {"text": ";", "font": "Arial-BoldMT", "flags": 16},
+        {"text": " which checks whether the actions proposed under the ESMP have", "font": "ArialMT", "flags": 0},
+    ]
+    paragraph = pdf_inplace._Paragraph(1, [pdf_inplace._VisualLine([pdf_inplace._Segment("x", (72, 100, 500, 112), spans)])], False)
+    assert not pdf_inplace._is_bold(paragraph)
+
+
+def test_a_scanned_page_is_recognised_and_its_words_covered(tmp_path):
+    import json
+
+    doc = fitz.open()
+    page = doc.new_page(width=595, height=842)
+    pixmap = fitz.Pixmap(fitz.csRGB, fitz.IRect(0, 0, 60, 80), False)
+    pixmap.set_rect(pixmap.irect, (250, 250, 250))
+    page.insert_image(page.rect, pixmap=pixmap)
+    page.insert_text((100, 200), "STANDARD OPERATING PROCEDURES FOR PUBLIC", fontsize=11, render_mode=3)
+    page.insert_text((100, 214), "CONVENIENCE DURING CONSTRUCTION", fontsize=11, render_mode=3)
+    source, destination, report_path = tmp_path / "scan.pdf", tmp_path / "out.pdf", tmp_path / "report.json"
+    doc.save(source)
+    assert pdf_inplace._scanned_page(fitz.open(source)[0])
+    assert not pdf_inplace._scanned_page(_one_line("ordinary text"))
+
+    class _Chinese(_Provider):
+        def translate_batch(self, units):
+            text = "公共便利标准作业程序"
+            return [r.model_copy(update={"translation": text, "result_hash": sha256_text(text)}) for r in super().translate_batch(units)]
+
+    InPlacePdfTranslationService(_Chinese()).translate_file(
+        source, destination, source_language="en", target_language="zh",
+        report_path=report_path, allow_complex_pdf=True, allow_cad_pdf=True,
+    )
+    out = fitz.open(destination)[0]
+    assert "公共便利" in out.get_text()
+    # the translation is visible text, over a white cover on the scan
+    assert any(span["type"] == 0 for span in out.get_texttrace())
+    assert any(d.get("fill") == (1.0, 1.0, 1.0) for d in out.get_drawings())
+    run = json.loads(report_path.read_text(encoding="utf-8"))["run"]
+    assert run["rendered_paragraphs"]["scanned_pages_covered"] == [1]
+
+
+def test_text_in_a_drawn_frame_stays_inside_it():
+    page = fitz.open().new_page(width=595, height=842)
+    page.draw_rect(fitz.Rect(376, 62, 532, 118), color=(0, 0, 0))
+    page.insert_text((388, 80), "To be entered by the Tenderer.", fontsize=8)
+    lines, _ = pdf_inplace._visual_lines(page, [])
+    paragraph = pdf_inplace._Paragraph(1, lines, False, bounds=(72.0, 555.0))
+    pdf_inplace._FRAMES.clear()
+    region = pdf_inplace._region(page, paragraph, [], (72.0, 555.0))
+    assert region.x1 <= 532.5 and region.y1 <= 118
+
+
+def test_a_floor_plan_is_still_a_drawing_after_spanning_cells_go():
+    from document_translator.services.pdf_table import PdfTable, PdfTableCell
+
+    page = fitz.open().new_page(width=600, height=800)
+    cell = lambda id, rect, text="": PdfTableCell(id=id, page_number=1, table_number=1, row=1, column=1, text=text, rect=rect, source_font_size=8.0)
+    rooms = (cell("hall", (0, 0, 200, 200), "Office\nOffice"), cell("room", (50, 0, 150, 100), "Office"), *(cell(f"e{i}", (0, 0, 10, 10)) for i in range(20)))
+    plan = PdfTable(page_number=1, table_number=1, rect=(0, 0, 200, 200), row_count=1, column_count=len(rooms), cells=rooms)
+    # the overlap that tells a floor plan is gone once the hall "cell" is dropped
+    assert pdf_inplace._is_drawing_frame(plan, page)
+    assert not pdf_inplace._is_drawing_frame(pdf_inplace._without_spanning_cells(plan), page)
