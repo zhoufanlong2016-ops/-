@@ -1020,7 +1020,7 @@ def validate_table_translations(
 def validate_pdf_table_translations(
     tables: Iterable[PdfTable],
     translations: Mapping[str, str] | Iterable[PdfTableTranslation | Mapping[str, str] | Sequence[str]],
-    *, source_language: str = "auto", target_language: str = "zh",
+    *, source_language: str = "auto", target_language: str = "zh", check_names: bool = True,
 ) -> dict[str, str]:
     """Validate one complete mapping covering all supplied tables."""
 
@@ -1039,7 +1039,8 @@ def validate_pdf_table_translations(
     for cell_id in expected_ids:
         cell = cell_map[cell_id]
         translated = result[cell_id]
-        _validate_cell_names(cell, translated, source_language, target_language)
+        if check_names:
+            _validate_cell_names(cell, translated, source_language, target_language)
         if cell.is_empty and translated.strip():
             raise PdfTableMappingError(f"empty source cell {cell_id} cannot receive non-empty translation")
         if not cell.is_empty and not translated.strip():
@@ -1660,6 +1661,7 @@ def render_table_translations(
     fixed_cell_size: bool = False,
     keep_unchanged: bool = False,
     keep_line_breaks: bool = False,
+    check_names: bool = True,
 ) -> PdfTableRenderReport:
     """Render complete table translations into a new PDF.
 
@@ -1727,7 +1729,10 @@ def render_table_translations(
         )
         if not table_list:
             raise PdfTableExtractionError("no vector tables found in selected pages")
-        mapping = validate_pdf_table_translations(table_list, translations)
+        # check_names=False: the caller has checked the names already and
+        # reported any finding (the in-place engine keeps such a cell's
+        # translation); found again here, one cell aborted a 483-page file.
+        mapping = validate_pdf_table_translations(table_list, translations, check_names=check_names)
 
         # keep_unchanged: a cell whose text needs no translation (a row
         # number "1.") keeps its original glyphs, alignment and weight.

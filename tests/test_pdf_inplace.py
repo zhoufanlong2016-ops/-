@@ -1079,6 +1079,9 @@ def test_clause_headings_in_a_cell_stay_on_their_own_lines():
     ]
     assert structure("shall be as described in\nSub-Clause 5.2.2 [Review]") == "shall be as described in Sub-Clause 5.2.2 [Review]"
     assert pdf_inplace._structure_cell_text("Section A.\nC. Pump Station Wet Well").split("\n") == ["Section A.", "C. Pump Station Wet Well"]
+    assert structure("x) Jacking and Receiving Shafts\na. Construction of Jacking Shafts").split("\n") == [
+        "x) Jacking and Receiving Shafts", "a. Construction of Jacking Shafts",
+    ]
 
 
 def test_short_unruled_lists_and_two_colour_cells_are_read_line_by_line():
@@ -1167,6 +1170,15 @@ def test_a_scanned_page_is_recognised_and_its_words_covered(tmp_path):
     assert run["rendered_paragraphs"]["scanned_pages_covered"] == [1]
 
 
+def test_a_table_inside_another_tables_cell_is_sized_on_its_own():
+    inner = SimpleNamespace(rect=(200, 100, 600, 540))
+    outer = SimpleNamespace(rect=(120, 90, 630, 770))
+    beside = SimpleNamespace(rect=(700, 90, 800, 200))
+    assert pdf_inplace._inside_other_table(inner, [outer, inner, beside])
+    assert not pdf_inplace._inside_other_table(outer, [outer, inner, beside])
+    assert not pdf_inplace._inside_other_table(beside, [outer, inner, beside])
+
+
 def test_text_in_a_drawn_frame_stays_inside_it():
     page = fitz.open().new_page(width=595, height=842)
     page.draw_rect(fitz.Rect(376, 62, 532, 118), color=(0, 0, 0))
@@ -1188,3 +1200,16 @@ def test_a_floor_plan_is_still_a_drawing_after_spanning_cells_go():
     # the overlap that tells a floor plan is gone once the hall "cell" is dropped
     assert pdf_inplace._is_drawing_frame(plan, page)
     assert not pdf_inplace._is_drawing_frame(pdf_inplace._without_spanning_cells(plan), page)
+
+
+def test_a_reported_name_finding_does_not_abort_the_table_render():
+    import pytest
+
+    from document_translator.services import pdf_table
+    from document_translator.services.pdf_table import PdfTable, PdfTableCell
+
+    cell = PdfTableCell(id="c", page_number=1, table_number=1, row=1, column=1, text="Approach from Bund Road.", rect=(0, 0, 100, 20), source_font_size=9.0)
+    table = PdfTable(page_number=1, table_number=1, rect=(0, 0, 100, 20), row_count=1, column_count=1, cells=(cell,))
+    with pytest.raises(pdf_table.PdfTableMappingError):
+        pdf_table.validate_pdf_table_translations((table,), {"c": "从堤路进入。"})
+    assert pdf_table.validate_pdf_table_translations((table,), {"c": "从堤路进入。"}, check_names=False) == {"c": "从堤路进入。"}

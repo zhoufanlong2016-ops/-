@@ -937,12 +937,12 @@ def _continued_cells(tables: list[Any]) -> dict[str, Any]:
 
 # A line that starts a new item in a table cell: a numbered sub-item
 # ("2.1.2 Liaison", "3.41."), a lettered or bracketed one ("a)", "(ii)",
-# "C. Pump Station"), a bullet (also one on a line of its own, its text on
+# "C. Pump Station", "a. Construction of"), a bullet (also one on a line of its own, its text on
 # the next: "▪" / "A treatment plant ..."), a percentage share ("70% of
 # proportion ...") or a note.
 _CELL_BULLETS = "-*•●▪■□◆◇○►➢\uf0a7\uf0b7"
 _CELL_ITEM_START = re.compile(
-    r"^\s*(?:\d+(?:\.\d+)*[.)]\s|\d+(?:\.\d+){1,}\.?(?=\s?[A-Za-z])|\(?[a-zA-Z]\)|[A-Z]\.\s(?=[A-Z])|\(?[ivxIVX]{1,4}\)|[" + _CELL_BULLETS + r"](?:\s|$)"
+    r"^\s*(?:\d+(?:\.\d+)*[.)]\s|\d+(?:\.\d+){1,}\.?(?=\s?[A-Za-z])|\(?[a-zA-Z]\)|[A-Za-z]\.\s(?=[A-Z])|\(?[ivxIVX]{1,4}\)|[" + _CELL_BULLETS + r"](?:\s|$)"
     r"|\d+(?:\.\d+)?\s?%\s|(?:Note|NOTE|Notes)\s*:)"
 )
 
@@ -2976,12 +2976,27 @@ def _render_tables(
                     # of the row is cleared once the tables are written.
                     cell_translations[tail.id] = tail.text
                     cleared_tails.append(tail)
-            size, outliers = _table_font_size(page_tables, cell_translations)
-            sized.extend(
-                dataclasses.replace(t, cells=tuple(dataclasses.replace(c, source_font_size=outliers.get(c.id, size)) for c in t.cells))
-                for t in page_tables
-            )
-            pages[page_number] = {"font_size": size, "tables": len(page_tables)}
+            # A table drawn inside another table's cell is sized on its own:
+            # sized with it, its narrow cells set the notes and headings of
+            # the cell around it at 5pt.
+            nested = [t for t in page_tables if _inside_other_table(t, page_tables)]
+            outer = [t for t in page_tables if t not in nested]
+            sizes_here: list[float] = []
+            outliers: dict[str, float] = {}
+            for group in (outer, nested):
+                if not group:
+                    continue
+                size, group_outliers = _table_font_size(group, cell_translations)
+                sizes_here.append(size)
+                outliers.update(group_outliers)
+                sized.extend(
+                    dataclasses.replace(t, cells=tuple(dataclasses.replace(c, source_font_size=group_outliers.get(c.id, size)) for c in t.cells))
+                    for t in group
+                )
+            pages[page_number] = {"font_size": min(sizes_here), "tables": len(page_tables)}
+            if len(sizes_here) > 1:
+                pages[page_number]["nested_table_font_size"] = sizes_here[-1]
+                pages[page_number]["font_size"] = sizes_here[0]
             if outliers:
                 pages[page_number]["smaller_cells"] = outliers
     if not sized:
@@ -3001,6 +3016,7 @@ def _render_tables(
                 if text and text != c.text:
                     mapping[c.id] = _with_font_glyphs(text, pdf_table.cached_font(str(_cell_font_for(c, text))))
         sizes = [float(page["font_size"]) for page in pages.values()]
+        sizes += [float(page["nested_table_font_size"]) for page in pages.values() if "nested_table_font_size" in page]
         sizes += [float(v) for page in pages.values() for v in dict(page.get("smaller_cells", {})).values()]
         # Every table page in one pass: each cell keeps its page's size
         # (fixed_cell_size); rewriting the whole PDF once per table page made
@@ -3019,6 +3035,7 @@ def _render_tables(
             fixed_cell_size=True,
             keep_unchanged=True,
             keep_line_breaks=True,
+            check_names=False,  # checked per table above; a finding is reported
         )
     return {
         "status": "patched" if len(good) == len(tables) else "partially_patched",
@@ -3026,6 +3043,16 @@ def _render_tables(
         "skipped_table_count": len(tables) - len(good),
         "pages": pages,
     }
+
+
+def _inside_other_table(table: Any, tables: list[Any]) -> bool:
+    import fitz
+
+    rect = fitz.Rect(table.rect)
+    return any(
+        other is not table and fitz.Rect(other.rect).contains(rect) and fitz.Rect(other.rect) != rect
+        for other in tables
+    )
 
 
 def _table_alignment(source_page: Any, tables: list[Any]) -> dict[str, tuple[int, bool]]:
