@@ -327,8 +327,11 @@ def _translate_in_place(
             original.save(str(upright), garbage=1, deflate=True)
             source = upright
 
+    with fitz.open(source) as scan_doc:
+        untranslated_image_pages = {page.number + 1 for page in scan_doc if _scanned_page(page)}
+        visible_pages = [page.number + 1 for page in scan_doc if page.number + 1 not in untranslated_image_pages]
     try:
-        tables = pdf_table.extract_pdf_tables(source)
+        tables = pdf_table.extract_pdf_tables(source, page_numbers=visible_pages) if visible_pages else []
     except pdf_table.PdfTableError:
         tables = []
     doc = fitz.open(source)
@@ -345,6 +348,10 @@ def _translate_in_place(
         # unrotated, their cells came out as scattered vertical words.
         # A floor plan is told by its overlapping "cells": checked before a
         # cell holding others is dropped, or it is read as a table again.
+        drawing_frames = [
+            _Covered(t.page_number, t.rect) for t in tables
+            if _is_drawing_frame(t, doc[t.page_number - 1])
+        ]
         tables = [
             _without_spanning_cells(t) for t in tables
             if not _cuts_through_text(t) and not _is_drawing_frame(t, doc[t.page_number - 1]) and not doc[t.page_number - 1].rotation
@@ -511,7 +518,7 @@ def _translate_in_place(
             translations[unit.id] = _normalise_structure(
                 paragraph, paragraph_translation, paragraph.bounds, profile, target_language
             )
-        rendered = _render_paragraphs(work, paragraphs, translatable, paragraph_units, translations, covered, flow)
+        rendered = _render_paragraphs(work, paragraphs, translatable, paragraph_units, translations, covered, flow, drawing_frames)
         staged = candidate.with_name(candidate.stem + ".paragraphs" + candidate.suffix)
         work.save(str(staged), garbage=1, deflate=True)
 
@@ -558,6 +565,7 @@ def _translate_in_place(
     return {
         "paragraph_count": len(paragraphs),
         "translated_paragraph_count": len(translatable),
+        **({"untranslated_image_pages": sorted(untranslated_image_pages)} if untranslated_image_pages else {}),
         "rendered_paragraphs": rendered,
         "table_translation": table_report,
         "rotated_lines_left_untouched": skipped_rotated,
@@ -1134,16 +1142,16 @@ def _split_continued(translation: str, share: float) -> tuple[str, str]:
     best = None
     for offset in range(window + 1):
         for index in (target + offset, target - offset):
-            if 0 < index < len(translation) and translation[index - 1] in _SPLIT_MARKS:
+            if 0 < index < len(translation) and translation[index - 1] in _SPLIT_MARKS and _can_break(translation, index):
                 best = index
                 break
         if best is not None:
             break
     if best is None:
-        best = min(max(target, 1), len(translation) - 1)
-        # Never cut through a Latin word or a number.
-        while 0 < best < len(translation) and translation[best - 1].isascii() and translation[best - 1].isalnum() and translation[best].isascii() and translation[best].isalnum():
-            best += 1
+        breaks = [index for index in range(1, len(translation)) if _can_break(translation, index)]
+        if not breaks:
+            return translation, ""
+        best = min(breaks, key=lambda index: (abs(index - target), index < target))
     head, tail = translation[:best].strip(), translation[best:].strip()
     return (head or translation, tail or translation) if not (head and tail) else (head, tail)
 
@@ -1195,6 +1203,8 @@ def _visual_lines(page: Any, table_rects: list[Any]) -> tuple[list[_VisualLine],
     """Horizontal text lines outside tables, with same-baseline fragments merged."""
     import fitz
 
+    if _scanned_page(page):
+        return [], 0
     segments: list[_Segment] = []
     markers: list[tuple[float, float, float, float]] = []
     rotated = 0
@@ -1753,7 +1763,11 @@ def _segment(
             previous = current[-1]
             size = previous.size
             new = (
-                abs(line.size - size) > 0.6
+                abs(line.size - size) > 0.6 and not (
+                    abs(line.size - size) <= 1.5
+                    and re.search(r"[A-Za-z]$", previous.text.rstrip())
+                    and re.match(r"[a-z]", line.text.lstrip())
+                )
                 or line.color != previous.color
                 or line.bbox[1] - previous.bbox[1] > 2.0 * size
                 or line.bbox[1] < previous.bbox[1]
@@ -1771,7 +1785,8 @@ def _segment(
                 # starts the next item ("i." / "ii." right-aligned)
                 or _TOC_ENTRY_RE.match(previous.text) is not None
                 # so does a form's fill-in line ("Name ......" / "Signed ....")
-                or _FILL_LINE_RE.match(previous.text) is not None or _FILL_LINE_RE.match(line.text) is not None
+                or (_FILL_LINE_RE.match(previous.text) is not None and not re.match(r"[a-z]", line.text.lstrip()))
+                or _FILL_LINE_RE.match(line.text) is not None
                 or (_label_text_start(line) is not None and not hanging)
                 # "S-mode: 6 m/s" / "P-mode: 5 m/s": entries of a list of
                 # key: value lines, one per line.
@@ -2298,6 +2313,7 @@ def _render_paragraphs(
     translations: dict[str, str],
     tables: list[Any],
     flow: dict[int, _Paragraph] | None = None,
+    drawing_frames: list[_Covered] | None = None,
 ) -> dict[str, object]:
     import fitz
 
@@ -2329,7 +2345,8 @@ def _render_paragraphs(
         # paragraph in YaHei, so one page mixed two faces (and sizes fitted
         # with SimHei were written in YaHei).
         paragraph.cjk_font = _font_file(paragraph.lines[0].font, "中", page=page) or r"C:\Windows\Fonts\simhei.ttf"
-        plans.append((paragraph, translations[unit.id], _region(page, paragraph, others, paragraph.bounds)))
+        frames = [fitz.Rect(item.rect) for item in drawing_frames or () if item.page_number == paragraph.page_number]
+        plans.append((paragraph, translations[unit.id], _region(page, paragraph, others, paragraph.bounds, frames)))
     if flow:
         plans = _flow_over_pages(doc, plans, flow)
     fitted = [
@@ -2602,6 +2619,8 @@ def _can_break(text: str, index: int) -> bool:
     """A line may end before ``text[index]``: never inside a Latin word or number."""
     from .pdf_table import _NO_LINE_END, _NO_LINE_START
 
+    if any(match.start() < index < match.end() for match in re.finditer(r"[A-Za-z][A-Za-z0-9]*(?:[-/][A-Za-z0-9]+)+", text)):
+        return False
     before, after = text[index - 1], text[index]
     if before.isspace() or after.isspace():
         return True
@@ -2636,7 +2655,7 @@ def _style_key(paragraph: _Paragraph) -> tuple[object, ...]:
     return (round(paragraph.size * 2) / 2, first.font, first.color, paragraph.centred)
 
 
-def _region(page: Any, paragraph: _Paragraph, obstacles: list[Any], bounds: tuple[float, float]) -> Any:
+def _region(page: Any, paragraph: _Paragraph, obstacles: list[Any], bounds: tuple[float, float], drawing_frames: list[Any] = ()) -> Any:
     """The space a paragraph's translation may use: its own box, plus free space.
 
     Starts from the source text's own box and grows only into blank space --
@@ -2666,6 +2685,11 @@ def _region(page: Any, paragraph: _Paragraph, obstacles: list[Any], bounds: tupl
     # Text in a drawn frame (a callout "To be entered by the Tenderer ...")
     # stays inside it: grown to the margin, it ran out through the frame.
     frame = _frame_around(page, paragraph.bbox)
+    enclosing = [rect for rect in drawing_frames if rect.contains(fitz.Rect(paragraph.bbox))]
+    if enclosing:
+        outer = min(enclosing, key=lambda rect: rect.get_area())
+        if frame is None or outer.get_area() < frame.get_area():
+            frame = outer
     if frame is not None:
         x0, x1 = max(x0, frame.x0 + 1.0), min(x1, frame.x1 - 1.0)
     column = fitz.Rect(x0, y1, x1, page.rect.height)
@@ -2675,7 +2699,10 @@ def _region(page: Any, paragraph: _Paragraph, obstacles: list[Any], bounds: tupl
     # later clears its own area and would erase any glyph overlapping it.
     above = [r.y1 + 0.5 for r in obstacles if r.x0 < x1 and r.x1 > x0 and y0 - 1.5 <= r.y1 <= y0 + 0.5]
     top = max(above + [y0 - 1.0])
-    return fitz.Rect(x0 - 0.5, top, x1 + 0.5, max(y1 + 1.0, bottom))
+    lower = max(y1 + 1.0, bottom)
+    if frame is not None:
+        lower = min(lower, frame.y1 - 0.1)
+    return fitz.Rect(x0 - 0.5, top, x1 + 0.5, lower)
 
 
 _FRAMES: dict[tuple[int, int], list[Any]] = {}

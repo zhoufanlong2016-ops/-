@@ -1137,7 +1137,7 @@ def test_a_bold_lead_in_does_not_make_its_paragraph_bold():
     assert not pdf_inplace._is_bold(paragraph)
 
 
-def test_a_scanned_page_is_recognised_and_its_words_covered(tmp_path):
+def test_a_scanned_page_is_preserved_without_using_its_hidden_text(tmp_path):
     import json
 
     doc = fitz.open()
@@ -1152,22 +1152,51 @@ def test_a_scanned_page_is_recognised_and_its_words_covered(tmp_path):
     assert pdf_inplace._scanned_page(fitz.open(source)[0])
     assert not pdf_inplace._scanned_page(_one_line("ordinary text"))
 
-    class _Chinese(_Provider):
+    class NoTranslation(_Provider):
         def translate_batch(self, units):
-            text = "公共便利标准作业程序"
-            return [r.model_copy(update={"translation": text, "result_hash": sha256_text(text)}) for r in super().translate_batch(units)]
+            raise AssertionError("hidden text must not reach the provider")
 
-    InPlacePdfTranslationService(_Chinese()).translate_file(
+    InPlacePdfTranslationService(NoTranslation()).translate_file(
         source, destination, source_language="en", target_language="zh",
         report_path=report_path, allow_complex_pdf=True, allow_cad_pdf=True,
     )
-    out = fitz.open(destination)[0]
-    assert "公共便利" in out.get_text()
-    # the translation is visible text, over a white cover on the scan
-    assert any(span["type"] == 0 for span in out.get_texttrace())
-    assert any(d.get("fill") == (1.0, 1.0, 1.0) for d in out.get_drawings())
-    run = json.loads(report_path.read_text(encoding="utf-8"))["run"]
-    assert run["rendered_paragraphs"]["scanned_pages_covered"] == [1]
+    with fitz.open(source) as original, fitz.open(destination) as translated:
+        assert original[0].get_pixmap().samples == translated[0].get_pixmap().samples
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    assert report["status"] == "PENDING_VISUAL_REVIEW"
+    assert report["run"]["untranslated_image_pages"] == [1]
+
+
+def test_visible_text_page_is_still_translated_beside_a_scanned_page(tmp_path):
+    import json
+
+    doc = fitz.open()
+    scan = doc.new_page(width=595, height=842)
+    pixmap = fitz.Pixmap(fitz.csRGB, fitz.IRect(0, 0, 60, 80), False)
+    pixmap.set_rect(pixmap.irect, (250, 250, 250))
+    scan.insert_image(scan.rect, pixmap=pixmap)
+    scan.insert_text((100, 200), "Hidden source text", fontsize=11, render_mode=3)
+    visible = doc.new_page(width=595, height=842)
+    visible.insert_text((100, 200), "Visible source text", fontsize=11)
+    source, destination, report_path = tmp_path / "mixed.pdf", tmp_path / "out.pdf", tmp_path / "report.json"
+    doc.save(source)
+
+    class Chinese(_Provider):
+        def translate_batch(self, units):
+            assert [unit.source_text for unit in units] == ["Visible source text"]
+            text = "可见原文"
+            return [result.model_copy(update={"translation": text, "result_hash": sha256_text(text)}) for result in super().translate_batch(units)]
+
+    InPlacePdfTranslationService(Chinese()).translate_file(
+        source, destination, source_language="en", target_language="zh",
+        report_path=report_path, allow_complex_pdf=True, allow_cad_pdf=True,
+    )
+    with fitz.open(source) as original, fitz.open(destination) as translated:
+        assert original[0].get_pixmap().samples == translated[0].get_pixmap().samples
+        assert "可见原文" in translated[1].get_text()
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    assert report["status"] == "PENDING_VISUAL_REVIEW"
+    assert report["run"]["untranslated_image_pages"] == [1]
 
 
 def test_a_table_inside_another_tables_cell_is_sized_on_its_own():
@@ -1402,3 +1431,39 @@ def test_a_sentence_with_blanks_is_no_fill_in_line():
     assert fill.match("THIS CONTRACT AGREEMENT made the ________ day of ____________, _____,") is None
     assert fill.match("between ______________ of _____________") is None
     assert fill.match("Name ...............").group("title") == "Name"
+
+
+def test_a_sentence_continues_after_a_fill_in_blank():
+    page = fitz.open().new_page(width=595, height=842)
+    page.insert_text((72, 200), "WHEREAS the Employer desires the Works known as __________", fontsize=10)
+    page.insert_text((72, 212), "should be executed by the Contractor, and has accepted its Tender", fontsize=10)
+    lines, _ = pdf_inplace._visual_lines(page, [])
+    paragraphs = pdf_inplace._segment(1, lines, (72, 530))
+    assert len(paragraphs) == 1
+    assert "Employer desires" in paragraphs[0].text
+    assert "has accepted its Tender" in paragraphs[0].text
+
+
+def test_small_font_variation_does_not_split_a_sentence():
+    page = fitz.open().new_page(width=595, height=842)
+    page.insert_text((130, 85), "Viable diversion plans include guidance", fontsize=11)
+    page.insert_text((130, 100), "personnel to maintain traffic flow.", fontsize=10.5)
+    lines, _ = pdf_inplace._visual_lines(page, [])
+    assert len(pdf_inplace._segment(1, lines, (130, 330))) == 1
+
+
+def test_a_large_drawing_frame_still_limits_body_text():
+    page = fitz.open().new_page(width=612, height=792)
+    page.insert_text((151, 705), "Text inside a tall framed table", fontsize=11)
+    lines, _ = pdf_inplace._visual_lines(page, [])
+    paragraph = pdf_inplace._Paragraph(1, lines, False)
+    frame = fitz.Rect(67, 124, 569, 709)
+    region = pdf_inplace._region(page, paragraph, [], (151, 569), [frame])
+    assert region.y1 <= frame.y1
+
+
+def test_a_standard_identifier_is_not_split_across_pages():
+    identifier = "PETSAC-2014"
+    assert all(not pdf_inplace._can_break(identifier, index) for index in range(1, len(identifier)))
+    first, second = pdf_inplace._split_continued("遵守PETSAC-2014标准。", 0.62)
+    assert "PETSAC-2014" in first or "PETSAC-2014" in second

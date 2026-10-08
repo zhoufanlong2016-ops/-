@@ -639,7 +639,7 @@ def write_pdf_report(
         # visual review, but it is not an accepted deliverable until that
         # review is recorded.  Native-text class A output keeps the historical
         # accepted status after all automated gates pass.
-        "status": "PENDING_VISUAL_REVIEW" if preflight.visual_review_required else "ACCEPTED",
+        "status": "PENDING_VISUAL_REVIEW" if preflight.visual_review_required or (run and run.get("untranslated_image_pages")) else "ACCEPTED",
         "preflight": asdict(preflight),
         "validation": validation,
         "provider": provider,
