@@ -40,7 +40,8 @@ _ALLOWED_MODELS = frozenset({"claude-opus-5-5", "claude-sonnet-5-5", "claude-hai
 class AnthropicConfig:
     model: str
     api_key_env: str = "ANTHROPIC_API_KEY"
-    timeout: float = 120.0
+    # Opus 5.5 always thinks (it cannot be switched off): allow a batch time.
+    timeout: float = 300.0
     batch_input_characters: int = 0
 
     def __post_init__(self) -> None:
@@ -137,10 +138,13 @@ class AnthropicProvider:
         body = {
             "model": self.config.model,
             "max_tokens": _MAX_OUTPUT_TOKENS,
-            "temperature": 0,
             "system": system,
             "messages": [{"role": "user", "content": json.dumps({"items": items}, ensure_ascii=False)}],
         }
+        # The 5.5 models reject temperature (HTTP 400). Translation needs
+        # little reasoning: low effort keeps a batch fast on Opus and Sonnet.
+        if "haiku" not in self.config.model:
+            body["output_config"] = {"effort": "low"}
         try:
             response = self.client.post(
                 _ENDPOINT,
@@ -217,6 +221,8 @@ class AnthropicProvider:
             raise ValueError("response has no message content") from exc
         if body.get("stop_reason") == "max_tokens":
             raise ValueError("response was cut off at the output limit")
+        if body.get("stop_reason") == "refusal":
+            raise ValueError("the model declined the request")
         if not text.strip():
             raise ValueError("response content must be non-empty text")
         return text.strip().removeprefix("```json").removesuffix("```").strip()

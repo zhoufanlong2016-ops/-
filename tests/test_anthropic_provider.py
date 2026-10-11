@@ -51,6 +51,8 @@ def test_claude_sends_messages_request_and_parses_text_blocks(monkeypatch) -> No
     assert body["max_tokens"] > 0
     assert "JSON" in body["system"]
     assert "response_format" not in body
+    assert "temperature" not in body
+    assert body["output_config"] == {"effort": "low"}
     assert result.translation == "阀门长2.4m。"
     assert result.provider == "claude"
 
@@ -68,6 +70,14 @@ def test_claude_reports_output_truncation_as_a_batch_failure(monkeypatch) -> Non
 
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test-secret")
     provider = AnthropicProvider(AnthropicConfig(model="claude-haiku-5-5"), client=httpx.Client(transport=httpx.MockTransport(handler)))
+    with pytest.raises(AnthropicError) as raised:
+        provider.translate_batch([make_unit()])
+    assert raised.value.code == "BATCH_FAILED"
+
+
+def test_claude_refusal_is_a_batch_failure(monkeypatch) -> None:
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-secret")
+    provider = AnthropicProvider(AnthropicConfig(model="claude-opus-5-5"), client=httpx.Client(transport=httpx.MockTransport(lambda request: reply(request, "", stop_reason="refusal"))))
     with pytest.raises(AnthropicError) as raised:
         provider.translate_batch([make_unit()])
     assert raised.value.code == "BATCH_FAILED"
