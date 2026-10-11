@@ -20,6 +20,8 @@ def model_batch_characters(model: str, explicit: int = 0) -> int:
         if "max" in name:
             return 6000
         return 5000
+    if name.startswith("claude"):
+        return 6000
     if name.startswith("gpt-5.6-sol"):
         return 10000
     if name.startswith("gpt-5.6-terra"):

@@ -2,7 +2,7 @@
 
 ``keys\api_keys.env`` next to the program (the exe's folder when packaged,
 the project folder otherwise) holds DASHSCOPE_API_KEY (通义千问),
-DEEPSEEK_API_KEY and OPENAI_API_KEY. Keys already set in the environment
+DEEPSEEK_API_KEY, OPENAI_API_KEY and ANTHROPIC_API_KEY (Claude). Keys already set in the environment
 win; a project ``.env`` is still read as a fallback.
 """
 
@@ -11,7 +11,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-KEY_NAMES = ("DASHSCOPE_API_KEY", "DEEPSEEK_API_KEY", "OPENAI_API_KEY")
+KEY_NAMES = ("DASHSCOPE_API_KEY", "DEEPSEEK_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY")
 KEYS_FILE = Path("keys") / "api_keys.env"
 
 

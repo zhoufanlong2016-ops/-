@@ -19,7 +19,7 @@ from .api_keys import load_api_keys
 # to the program, then a project .env as a fallback.
 load_api_keys()
 
-from .providers import DeepSeekConfig, DeepSeekProvider, OpenAIConfig, OpenAIProvider, QwenChatConfig, QwenChatProvider, QwenMTConfig, QwenMTProvider
+from .providers import AnthropicConfig, AnthropicProvider, DeepSeekConfig, DeepSeekProvider, OpenAIConfig, OpenAIProvider, QwenChatConfig, QwenChatProvider, QwenMTConfig, QwenMTProvider
 from .services import (
     DocxTranslationService,
     DwgTranslationService,
@@ -53,7 +53,7 @@ def _parser() -> argparse.ArgumentParser:
     translate.add_argument("--target-language", required=True)
     translate.add_argument(
         "--provider",
-        choices=("qwen-mt", "qwen", "openai", "deepseek"),
+        choices=("qwen-mt", "qwen", "openai", "deepseek", "claude"),
         default="qwen",
         help="translation provider (default: qwen)",
     )
@@ -71,7 +71,7 @@ def _parser() -> argparse.ArgumentParser:
     docx.add_argument("destination", type=Path, metavar="DESTINATION")
     docx.add_argument("--source-language", required=True)
     docx.add_argument("--target-language", required=True)
-    docx.add_argument("--provider", choices=("qwen-mt", "qwen", "openai", "deepseek"), default="qwen")
+    docx.add_argument("--provider", choices=("qwen-mt", "qwen", "openai", "deepseek", "claude"), default="qwen")
     docx.add_argument("--cache", type=Path, metavar="PATH", help="SQLite translation cache shared by all formats")
     docx.add_argument("--model")
     docx.add_argument("--max-attempts", type=int, default=3, help="provider attempts per paragraph")
@@ -82,7 +82,7 @@ def _parser() -> argparse.ArgumentParser:
     pptx.add_argument("destination", type=Path)
     pptx.add_argument("--source-language", required=True)
     pptx.add_argument("--target-language", required=True)
-    pptx.add_argument("--provider", choices=("qwen-mt", "qwen", "openai", "deepseek"), default="qwen")
+    pptx.add_argument("--provider", choices=("qwen-mt", "qwen", "openai", "deepseek", "claude"), default="qwen")
     pptx.add_argument("--cache", type=Path, metavar="PATH", help="SQLite translation cache shared by all formats")
     pptx.add_argument("--model", default="qwen3.8-flash")
     pptx.add_argument("--glossary", type=Path)
@@ -94,7 +94,7 @@ def _parser() -> argparse.ArgumentParser:
     xlsx.add_argument("destination", type=Path, metavar="DESTINATION")
     xlsx.add_argument("--source-language", required=True)
     xlsx.add_argument("--target-language", required=True)
-    xlsx.add_argument("--provider", choices=("qwen-mt", "qwen", "openai", "deepseek"), default="qwen")
+    xlsx.add_argument("--provider", choices=("qwen-mt", "qwen", "openai", "deepseek", "claude"), default="qwen")
     xlsx.add_argument("--cache", type=Path, metavar="PATH", help="SQLite translation cache shared by all formats")
     xlsx.add_argument("--model")
     xlsx.add_argument("--glossary", type=Path, metavar="PATH", help="local CSV/XLSX terminology file")
@@ -103,7 +103,7 @@ def _parser() -> argparse.ArgumentParser:
     pdf = subparsers.add_parser("translate-pdf", help="translate PDF through MinerU 4 ORIGINAL layout rendering")
     pdf.add_argument("source", type=Path); pdf.add_argument("destination", type=Path)
     pdf.add_argument("--source-language", required=True); pdf.add_argument("--target-language", required=True)
-    pdf.add_argument("--provider", choices=("qwen", "gpt", "deepseek"), default="qwen")
+    pdf.add_argument("--provider", choices=("qwen", "gpt", "deepseek", "claude"), default="qwen")
     pdf.add_argument("--model", required=True, help="approved provider model for this PDF job")
     pdf.add_argument("--glossary", type=Path); pdf.add_argument("--style-profile", type=Path, metavar="PATH", help="JSON PDF structural/numbering style profile")
     pdf.add_argument("--minimum-font-size", type=float, default=6.0)
@@ -141,7 +141,7 @@ def _parser() -> argparse.ArgumentParser:
     dwg_translate.add_argument("destination", type=Path, metavar="DESTINATION_DWG")
     dwg_translate.add_argument("--source-language", default="auto", help="zh, en or auto (decided from the drawing's text)")
     dwg_translate.add_argument("--target-language", default="auto", help="zh, en or auto (the other language)")
-    dwg_translate.add_argument("--provider", choices=("qwen", "qwen-mt", "openai", "deepseek"), default="qwen")
+    dwg_translate.add_argument("--provider", choices=("qwen", "qwen-mt", "openai", "deepseek", "claude"), default="qwen")
     dwg_translate.add_argument("--model")
     dwg_translate.add_argument("--glossary", type=Path, metavar="PATH")
     validate = subparsers.add_parser("validate-output", help="validate a translated Markdown, Office, or XLSX output")
@@ -180,6 +180,8 @@ def _provider_for(args: argparse.Namespace, client: httpx.Client, glossary: Glos
         )
     if args.provider == "deepseek":
         return DeepSeekProvider(DeepSeekConfig(model=args.model or "deepseek-chat"), client=client, glossary=glossary)
+    if args.provider == "claude":
+        return AnthropicProvider(AnthropicConfig(model=args.model or "claude-sonnet-5-5"), client=client, glossary=glossary)
     raise ValueError(f"unsupported provider: {args.provider}")
 
 
@@ -378,6 +380,8 @@ def _translate_pdf(args: argparse.Namespace) -> int:
             provider = OpenAIProvider(OpenAIConfig(model=args.model), client=client, glossary=glossary_obj)
         elif args.provider == "deepseek":
             provider = DeepSeekProvider(DeepSeekConfig(model=args.model), client=client, glossary=glossary_obj)
+        elif args.provider == "claude":
+            provider = AnthropicProvider(AnthropicConfig(model=args.model), client=client, glossary=glossary_obj)
         else:
             provider = QwenChatProvider(QwenChatConfig(model=args.model), client=client, glossary=glossary_obj)
         engine = getattr(args, "engine", "inplace")
@@ -461,6 +465,8 @@ def _translate_dwg(args: argparse.Namespace) -> int:
             glossary = _glossary_for(resolved)
             if args.provider == "deepseek":
                 return DeepSeekProvider(DeepSeekConfig(model=args.model or "deepseek-chat"), client=client, glossary=glossary)
+            if args.provider == "claude":
+                return AnthropicProvider(AnthropicConfig(model=args.model or "claude-sonnet-5-5"), client=client, glossary=glossary)
             return _provider_for(resolved, client, glossary)
 
         try:

@@ -34,6 +34,7 @@ PROVIDER_MODELS = {
     "qwen": ("qwen3.7-plus", "qwen3.8-flash", "qwen3.8-max"),
     "openai": ("gpt-5.6-luna", "gpt-5.6-terra"),
     "deepseek": ("deepseek-chat", "deepseek-reasoner", "deepseek-flash", "deepseek-v4-pro"),
+    "claude": ("claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5"),
 }
 LANGUAGE_CODES = {"自动": "auto", "中文": "zh", "英文": "en"}
 LANGUAGE_NAMES = {"zh": "中文", "en": "英文"}
@@ -95,9 +96,9 @@ def build_cli_command(
     commands = {".md": "translate-markdown", ".markdown": "translate-markdown", ".docx": "translate-docx", ".pptx": "translate-pptx", ".xlsx": "translate-xlsx", ".pdf": "translate-pdf", ".dwg": "translate-dwg"}
     command = commands[suffix]
     if suffix == ".pdf" and provider == "qwen-mt":
-        raise ValueError("PDF 需要选择 qwen（Chat）、openai 或 deepseek，不能使用 qwen-mt 翻译端点")
+        raise ValueError("PDF 需要选择 qwen（Chat）、openai、deepseek 或 claude，不能使用 qwen-mt 翻译端点")
     if suffix == ".pdf":
-        actual_provider = {"openai": "gpt", "deepseek": "deepseek"}.get(provider, "qwen")
+        actual_provider = {"openai": "gpt", "deepseek": "deepseek", "claude": "claude"}.get(provider, "qwen")
     else:
         actual_provider = provider
     executable_args = [command] if getattr(sys, "frozen", False) else ["-m", "document_translator", command]
