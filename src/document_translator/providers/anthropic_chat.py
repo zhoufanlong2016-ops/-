@@ -27,7 +27,7 @@ from document_translator.translation_rules import (
 )
 
 from .usage import record_response
-from .translation_prompt import PROMPT_VERSION, compile_translation_policy, matched_glossary_entries
+from .translation_prompt import PROMPT_VERSION, compile_translation_policy, instruction_for, matched_glossary_entries
 from .batch_limits import split_semantic_batches
 
 
@@ -136,10 +136,20 @@ class AnthropicProvider:
             for unit in units
         ]
         system = policy.instruction + terminology + correction_text + "\nReturn JSON only: {\"items\":[{\"id\":string,\"translation\":string}]}"
+        # The translation rules are the same in every request of a document;
+        # cached, later requests pay a tenth for them. The rest (this batch's
+        # terms, corrections) follows the breakpoint. Same text as one string.
+        rules = instruction_for(first)
+        blocks = [{"type": "text", "text": system}]
+        if system.startswith(rules) and len(system) > len(rules):
+            blocks = [
+                {"type": "text", "text": rules, "cache_control": {"type": "ephemeral"}},
+                {"type": "text", "text": system[len(rules):]},
+            ]
         body = {
             "model": self.config.model,
             "max_tokens": _MAX_OUTPUT_TOKENS,
-            "system": system,
+            "system": blocks,
             "messages": [{"role": "user", "content": json.dumps({"items": items}, ensure_ascii=False)}],
         }
         # The 5.5 models reject temperature (HTTP 400). Translation needs

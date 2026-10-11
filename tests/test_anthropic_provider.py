@@ -49,7 +49,10 @@ def test_claude_sends_messages_request_and_parses_text_blocks(monkeypatch) -> No
     assert "authorization" not in request.headers
     assert body["model"] == "claude-sonnet-5-5"
     assert body["max_tokens"] > 0
-    assert "JSON" in body["system"]
+    rules, rest = body["system"]
+    assert rules["cache_control"] == {"type": "ephemeral"} and "cache_control" not in rest
+    assert rules["text"].startswith("Translate from en to")
+    assert "JSON" in rest["text"]
     assert "response_format" not in body
     assert "temperature" not in body
     assert body["output_config"] == {"effort": "low"}
