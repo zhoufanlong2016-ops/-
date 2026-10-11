@@ -494,6 +494,17 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = _parser()
     args = parser.parse_args(argv)
     try:
+        return _run(args)
+    finally:
+        # What the APIs reported as used, also when the command failed.
+        from .providers.usage import summary
+
+        if (text := summary()) is not None:
+            print(text, file=sys.stderr, flush=True)
+
+
+def _run(args: argparse.Namespace) -> int:
+    try:
         if args.command == "gui":
             from .gui import run_gui
 

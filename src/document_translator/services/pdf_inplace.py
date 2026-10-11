@@ -271,6 +271,7 @@ class InPlacePdfTranslationService:
                     run["cmap_repairs"] = repair_pdf_text_cmaps(candidate)
                 except Exception as exc:
                     run["cmap_repairs"] = {"error": f"{type(exc).__name__}: {exc}"}
+                run.update(_token_usage())
                 validation = validate_candidate(
                     source,
                     candidate,
@@ -289,6 +290,7 @@ class InPlacePdfTranslationService:
                 )
                 return publish_candidate(candidate, destination), preflight, report
             except Exception as error:
+                run.update(_token_usage())
                 _write_failed_report(
                     report_file,
                     preflight=preflight,
@@ -298,6 +300,14 @@ class InPlacePdfTranslationService:
                     error=error,
                 )
                 raise
+
+
+def _token_usage() -> dict[str, object]:
+    """The tokens the API reported for this run, for the report."""
+    from ..providers.usage import totals
+
+    counts = totals()
+    return {"token_usage": counts} if counts else {}
 
 
 def _translate_in_place(

@@ -18,6 +18,7 @@ from document_translator.translation_rules import (
     source_name_constraints,
 )
 
+from .usage import record_response
 from .translation_prompt import PROMPT_VERSION, compile_translation_policy, matched_glossary_entries
 from .batch_limits import split_semantic_batches
 
@@ -82,7 +83,7 @@ class OpenAIProvider:
         except httpx.HTTPError as exc:
             raise OpenAIProviderError("HTTP_ERROR", "OpenAI request failed") from exc
         try:
-            translation = self._output_text(response.json()).strip()
+            translation = self._output_text(record_response(response.json())).strip()
         except (TypeError, ValueError) as exc:
             raise OpenAIProviderError("MALFORMED_RESPONSE", "OpenAI response does not contain output text") from exc
         if not translation:
@@ -159,7 +160,7 @@ class OpenAIProvider:
         prompt = policy.instruction + terminology + correction + "\nReturn one translation for every item, preserving IDs.\n" + json.dumps({"items":items},ensure_ascii=False)
         try:
             response=self.client.post(_ENDPOINT,headers={"Authorization":f"Bearer {key}","Content-Type":"application/json"},json={"model":self.config.model,"input":prompt,"text":{"format":{"type":"json_schema","name":"translation_batch","strict":True,"schema":schema}}},timeout=self.config.timeout); response.raise_for_status()
-            rows=json.loads(self._output_text(response.json()))["items"]
+            rows=json.loads(self._output_text(record_response(response.json())))["items"]
         except (httpx.HTTPError, ValueError, KeyError, TypeError) as exc: raise OpenAIProviderError("BATCH_FAILED","OpenAI batch request failed") from exc
         mapped={row["id"]:row["translation"] for row in rows}
         if len(rows)!=len(units) or len(mapped)!=len(units) or set(mapped)!={u.id for u in units}: raise OpenAIProviderError("BATCH_MAPPING_INVALID","OpenAI batch IDs are incomplete or duplicated")

@@ -20,6 +20,7 @@ from document_translator.core import (
 from document_translator.services.glossary import Glossary
 from document_translator.translation_rules import normalize_chinese_spacing, protect_for_translation, restore_after_translation, restore_markers_best_effort
 
+from .usage import record_response
 from .translation_prompt import PROMPT_VERSION, compile_translation_policy, matched_glossary_entries
 from .batch_limits import split_semantic_batches
 from document_translator.translation_rules import source_name_constraints, validate_name_retention
@@ -250,7 +251,7 @@ class QwenMTProvider:
                     timeout=self.config.timeout,
                 )
                 response.raise_for_status()
-                translation = self._response_content(response.json()).strip()
+                translation = self._response_content(record_response(response.json())).strip()
                 request_count += 1
                 if not translation:
                     raise QwenMTError("EMPTY_TRANSLATION", "response translation must be non-empty text")

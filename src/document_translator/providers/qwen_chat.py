@@ -25,6 +25,7 @@ from document_translator.translation_rules import (
     normalize_chinese_spacing,
 )
 
+from .usage import record_response
 from .translation_prompt import PROMPT_VERSION, compile_translation_policy, matched_glossary_entries
 from document_translator.translation_rules import source_name_constraints
 from .batch_limits import split_semantic_batches
@@ -147,7 +148,7 @@ class QwenChatProvider:
         try:
             response = self.client.post(_ENDPOINT, headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"}, json=body, timeout=self.config.timeout)
             response.raise_for_status()
-            content = self._content(response.json())
+            content = self._content(record_response(response.json()))
             payload = json.loads(content)
             rows = payload["items"]
             if not isinstance(rows, list):
