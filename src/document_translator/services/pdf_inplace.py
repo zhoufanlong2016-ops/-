@@ -1562,6 +1562,23 @@ def _box_order(lines: list[_VisualLine]) -> list[_VisualLine]:
     return ordered
 
 
+def _left_first(lines: list[_VisualLine]) -> list[_VisualLine]:
+    """A symbol is read before the "= definition ..." on its baseline: an
+    italic "1stCSCF", whose box starts a hair lower, was read after it,
+    between the definition's first line and the rest."""
+    result = list(lines)
+    for index in range(1, len(result)):
+        j = index
+        while (
+            j > 0 and result[j].bbox[0] < result[j - 1].bbox[0]
+            and _DEFINITION_RE.match(result[j - 1].text) is not None
+            and abs(result[j].baseline - result[j - 1].baseline) <= 0.3 * min(result[j].size, result[j - 1].size)
+        ):
+            result[j - 1], result[j] = result[j], result[j - 1]
+            j -= 1
+    return result
+
+
 def _reading_order(lines: list[_VisualLine], bounds: tuple[float, float]) -> list[_VisualLine]:
     """Two columns read one after the other, not line by line across both.
 
@@ -1579,8 +1596,8 @@ def _reading_order(lines: list[_VisualLine], bounds: tuple[float, float]) -> lis
     band: list[_VisualLine] = []
 
     def flush() -> None:
-        ordered.extend(sorted((l for l in band if l.bbox[2] <= gutter), key=lambda l: (l.bbox[1], l.bbox[0])))
-        ordered.extend(sorted((l for l in band if l.bbox[2] > gutter), key=lambda l: (l.bbox[1], l.bbox[0])))
+        ordered.extend(_left_first(sorted((l for l in band if l.bbox[2] <= gutter), key=lambda l: (l.bbox[1], l.bbox[0]))))
+        ordered.extend(_left_first(sorted((l for l in band if l.bbox[2] > gutter), key=lambda l: (l.bbox[1], l.bbox[0]))))
         band.clear()
 
     for line in sorted(lines, key=lambda l: (l.bbox[1], l.bbox[0])):
@@ -1642,6 +1659,32 @@ def _stack_order(lines: list[_VisualLine]) -> list[_VisualLine]:
     return result
 
 
+def _label_column(lines: list[_VisualLine], gutter: float) -> int:
+    """Lines right of ``gutter`` that start at a second edge as the
+    definitions of labels at the column's edge, one per row ("CMR_N" |
+    "= cumulative mass ..."); 0 if the right side is no such list."""
+    from collections import Counter
+
+    right =[line for line in lines if line.bbox[0] >= gutter]
+    if not right:
+        return 0
+    edge = min(line.bbox[0] for line in right)
+    labels = [line for line in right if abs(line.bbox[0] - edge) <= 1.5]
+    others = [line for line in right if line.bbox[0] > edge + 1.5]
+    paired = [
+        label for label in labels
+        if any(
+            abs(other.baseline - label.baseline) <= 0.3 * label.size and other.bbox[0] > label.bbox[2]
+            and _DEFINITION_RE.match(other.text) is not None
+            for other in others
+        )
+    ]
+    if len(labels) < 4 or len(paired) < 0.8 * len(labels):
+        return 0
+    starts = Counter(round(line.bbox[0]) for line in others)
+    return sum(count for x, count in starts.most_common(2))
+
+
 def _gutter(lines: list[_VisualLine], bounds: tuple[float, float]) -> float | None:
     """x of a vertical band between two columns that few lines cross."""
     # A table's rows are no text columns: the short lines of an unruled
@@ -1662,7 +1705,12 @@ def _gutter(lines: list[_VisualLine], bounds: tuple[float, float]) -> float | No
         # box, centred "Form A" lines) beside a contents list are no column,
         # and taken for one they split its wrapped entries apart.
         right_starts = [line.bbox[0] for line in lines if line.bbox[0] >= gutter]
+        # ... at one edge, or two: a list of symbols has its symbols at one
+        # and their definitions at another (taken for no column, the gutter
+        # went between the right half's symbols and definitions instead).
         aligned = max((sum(1 for x in right_starts if abs(x - edge) <= 1.5) for edge in right_starts), default=0)
+        if aligned * 2 < len(right_starts):
+            aligned += _label_column(lines, gutter)
         if left_side >= 4 and right_side >= 4 and crossing <= 0.25 * len(lines) and aligned * 2 >= right_side:
             score = min(left_side, right_side) - crossing
             if best is None or score > best[0]:
@@ -2499,6 +2547,7 @@ def _render_paragraphs(
         paragraph.cjk_font = _font_file(paragraph.lines[0].font, "中", page=page) or r"C:\Windows\Fonts\simhei.ttf"
         frames = [fitz.Rect(item.rect) for item in drawing_frames or () if item.page_number == paragraph.page_number]
         plans.append((paragraph, translations[unit.id], _region(page, paragraph, others, paragraph.bounds, frames)))
+    _split_contested_gaps(plans)
     if flow:
         plans = _flow_over_pages(doc, plans, flow)
     fitted = [
@@ -2571,6 +2620,25 @@ def _render_paragraphs(
         "size_reduced": shrunk,
         **({"scanned_pages_covered": scanned_pages} if scanned_pages else {}),
     }
+
+
+def _split_contested_gaps(plans: list[tuple[_Paragraph, str, Any]]) -> None:
+    """Two paragraphs side by side that both grew into the gap between them
+    (a running header's left block growing right, its right-aligned block
+    growing left) share it at its middle: each wrote across the whole gap,
+    over the other ("...Gulshan-e-Ra第三部分")."""
+    for index, (left, _, left_region) in enumerate(plans):
+        for right, _, right_region in plans[index + 1:] + plans[:index]:
+            if right.page_number != left.page_number or right is left:
+                continue
+            a, b = left.bbox, right.bbox
+            if not (a[2] <= b[0] and min(a[3], b[3]) > max(a[1], b[1])):
+                continue  # not side by side
+            grew_both = left_region.x1 > a[2] + 1.0 and right_region.x0 < b[0] - 1.0
+            if grew_both and left_region.x1 > right_region.x0 and min(left_region.y1, right_region.y1) > max(left_region.y0, right_region.y0):
+                middle = (a[2] + b[0]) / 2
+                left_region.x1 = max(a[2], min(left_region.x1, middle))
+                right_region.x0 = min(b[0], max(right_region.x0, middle))
 
 
 def _shared_sizes(paragraphs: list[_Paragraph], fitted: list[float]) -> tuple[dict[int, float], dict[tuple[object, ...], float]]:

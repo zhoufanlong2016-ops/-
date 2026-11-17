@@ -413,6 +413,38 @@ def test_equation_number_is_its_own_paragraph():
     assert "(4)" in [p.text for p in paragraphs]
 
 
+def test_side_by_side_blocks_share_the_gap_they_both_grew_into():
+    left = pdf_inplace._Paragraph(1, [_line("Lahore Wastewater and Drainage Management Project", 73.1, 34.7, 365.7, 67.7)], False)
+    right = pdf_inplace._Paragraph(1, [_line("Part III- Conditions of Contract and", 381.0, 34.7, 524.2, 67.7)], False)
+    left_region, right_region = fitz.Rect(72.6, 33.7, 381.5, 75.8), fitz.Rect(365.2, 33.7, 524.7, 75.8)
+    pdf_inplace._split_contested_gaps([(left, "a", left_region), (right, "b", right_region)])
+    assert left_region.x1 <= right_region.x0
+    assert abs(left_region.x1 - (365.7 + 381.0) / 2) < 0.01
+    # a left column that grows to a right column it does not overlap keeps its space
+    column = fitz.Rect(44.4, 100, 314.0, 200)
+    other = pdf_inplace._Paragraph(1, [_line("right column text", 314.0, 100, 566.0, 112)], False)
+    pdf_inplace._split_contested_gaps([(pdf_inplace._Paragraph(1, [_line("left column text", 45, 100, 296, 112)], False), "a", column), (other, "b", fitz.Rect(313.5, 99, 566.5, 200))])
+    assert column.x1 == 314.0
+
+
+def test_symbol_list_columns_keep_their_gutter_and_read_symbol_first():
+    lines = []
+    for row in range(6):
+        y = 64 + 30 * row
+        lines += [
+            _line(f"SYM{row}", 48, y + 0.6, 80, y + 10),
+            _line(f"= definition number {row} of the left half", 137, y, 296, y + 10),
+            _line("continued on the next line", 149, y + 11, 296, y + 21),
+            _line(f"RS{row}", 317, y + 0.6, 360, y + 10),
+            _line(f"= definition {row} of the right half", 430, y, 565, y + 10),
+            _line("and its own next line", 441, y + 11, 565, y + 21),
+        ]
+    gutter = pdf_inplace._gutter(lines, (44.9, 565.8))
+    assert gutter is not None and 296 < gutter < 317
+    order = pdf_inplace._reading_order(lines, (44.9, 565.8))
+    assert order[0].text == "SYM0" and order[1].text.startswith("= definition number 0")
+
+
 def test_machine_timestamp_is_protected():
     assert "Thu Oct 21 10:53:16 EDT 2004" in rule_protected_tokens("Reproduction authorized (Bodycote Ltd); Thu Oct 21 10:53:16 EDT 2004")
 
