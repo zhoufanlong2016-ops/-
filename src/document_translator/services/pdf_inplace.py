@@ -76,6 +76,17 @@ _LABEL_RE = re.compile(
     r"|\d+(?:\.\d+)*[、．.](?!\d))"
 )
 _SYMBOL_FONT_RE = re.compile(r"ESRI|Marker|Symbol|Wingding|Webding|Dingbat", re.IGNORECASE)
+# Linotype Math Pi fonts have no Unicode for their glyphs: ASTM's
+# "110 ± 5°C" reads "110 6 5°C" and "≤ 200-mm" reads "# 200-mm", and the
+# translation printed those codes.  Their codes are mapped back to the symbols.
+_MATH_PI_CHARS = (
+    (re.compile(r"GreekwithMathP", re.IGNORECASE),
+     str.maketrans({"6": "±", "3": "×", "=": "√", "5": "=", "1": "+", "2": "−", "e": "ε", "D": "Δ"})),
+    (re.compile(r"MathematicalPi-One", re.IGNORECASE), str.maketrans({"#": "≤"})),
+)
+# Every word of the document being translated (casefolded), to tell a word
+# hyphenated at a line end from a hyphenated compound or code.
+_DOCUMENT_WORDS: set[str] = set()
 _FONT_STEP = 0.5
 # Only a runaway guard: sizes keep stepping down until the text fits.
 _ABSOLUTE_MIN_SIZE = 1.0
@@ -192,6 +203,13 @@ class _Paragraph:
             # "Drawing No. LW-" / "TD-401": a line broken after a hyphen
             # continues the same word or code, with no space.
             hyphen_break = bool(re.search(r"[A-Za-z0-9]-$", result)) and text[:1].isalnum()
+            # A word split at the line end ("re-" / "tained") is joined
+            # again when the document spells it whole elsewhere: read as
+            # "re-tained" it was translated "重新-存在".
+            split = re.search(r"([A-Za-z]+)-$", result) if hyphen_break else None
+            rest = re.match(r"[a-z]+", text)
+            if split and rest and (split.group(1) + rest.group(0)).casefold() in _DOCUMENT_WORDS:
+                result = result[:-1]
             if result and not hyphen_break and not (_CJK_END_RE.search(result) and _CJK_START_RE.search(text)):
                 result += " "
             result += text
@@ -382,6 +400,8 @@ def _translate_in_place(
             for t in tables for cell in t.cells if cell.rect is not None and cell.id not in row_cells
         ]
         bounds_by_size = _content_bounds(doc, tables)
+        _DOCUMENT_WORDS.clear()
+        _DOCUMENT_WORDS.update(word.casefold() for page in doc for word in re.findall(r"[A-Za-z]{3,}", page.get_text()))
         paragraphs: list[_Paragraph] = []
         skipped_rotated = 0
         for page_number, page in enumerate(doc, start=1):
@@ -1209,6 +1229,39 @@ def _content_bounds(doc: Any, tables: list[Any]) -> dict[tuple[int, int], tuple[
     return bounds
 
 
+def _math_pi_text(text: str, font: str) -> str:
+    """The symbols a Math Pi font's codes stand for ("6" -> "±")."""
+    for font_re, table in _MATH_PI_CHARS:
+        if font_re.search(font):
+            return text.translate(table)
+    return text
+
+
+_SUPERSCRIPT_DIGITS = str.maketrans("0123456789", "⁰¹²³⁴⁵⁶⁷⁸⁹")
+
+
+def _mark_superscript_digits(spans: list[dict[str, Any]]) -> None:
+    """A footnote mark or power set small after the text is written as one.
+
+    Read flat, "Test Method D 422" + small "2" became "D 4222" (another
+    standard's number) and "ft" + small "3" became "ft3". A digit-only span
+    set clearly smaller than the line's text, after it and not lowered (a
+    subscript), is turned into superscript digits; a font without them
+    falls back to plain digits when written (_with_font_glyphs).
+    """
+    main = max(spans, key=lambda span: sum(1 for char in str(span.get("text", "")) if char.isalpha()))
+    main_size = float(main.get("size") or 0.0)
+    main_baseline = float((main.get("origin") or (0.0, 0.0))[1])
+    for span in spans[1:]:
+        text = str(span.get("text", ""))
+        if (
+            text.strip().isdigit() and len(text.strip()) <= 3
+            and float(span.get("size") or 0.0) <= 0.8 * main_size
+            and float((span.get("origin") or (0.0, 0.0))[1]) <= main_baseline + 0.05 * main_size
+        ):
+            span["text"] = text.translate(_SUPERSCRIPT_DIGITS)
+
+
 def _visual_lines(page: Any, table_rects: list[Any]) -> tuple[list[_VisualLine], int]:
     """Horizontal text lines outside tables, with same-baseline fragments merged."""
     import fitz
@@ -1233,6 +1286,7 @@ def _visual_lines(page: Any, table_rects: list[Any]) -> tuple[list[_VisualLine],
                         continue
                     kept.append(char)
                 span["text"] = "".join(str(char.get("c", "")) for char in kept)
+                span["text"] = _math_pi_text(span["text"], str(span.get("font", "")))
                 if not str(span.get("text", "")).strip():
                     continue
                 # Map symbols ("!(" in ESRIDefaultMarker is a point marker)
@@ -1264,6 +1318,7 @@ def _visual_lines(page: Any, table_rects: list[Any]) -> tuple[list[_VisualLine],
             centre =fitz.Point((box.x0 + box.x1) / 2, (box.y0 + box.y1) / 2)
             if any(rect.contains(centre) for rect in table_rects):
                 continue
+            _mark_superscript_digits(spans)
             # Blank spans are dropped above, so a space that was its own span
             # ("before" + " " + bold "January 29") must come back from the gap.
             text = str(spans[0].get("text", ""))
@@ -1710,6 +1765,34 @@ def _underlined(line: _VisualLine, rules: list[tuple[float, float, float, float]
     )
 
 
+def _row_cell(line: _VisualLine, lines: list[_VisualLine], gutter: float | None, right: float) -> str | None:
+    """The short cell on a left-column line's baseline across the gutter (a
+    table row's value), or None: a two-column page's right column is full."""
+    if gutter is None or line.bbox[2] > gutter:
+        return None
+    cells = sorted(
+        (other for other in lines if other.bbox[0] >= gutter and abs(other.baseline - line.baseline) <= 0.3 * line.size),
+        key=lambda other: other.bbox[0],
+    )
+    # A long cell beside it (a form's "To be incorporated at the ...") is text.
+    if not cells or any(other.bbox[2] - other.bbox[0] >= 0.4 * (right - gutter) for other in cells):
+        return None
+    return cells[-1].text
+
+
+def _separate_rows(previous: _VisualLine, line: _VisualLine, lines: list[_VisualLine], gutter: float | None, right: float) -> bool:
+    """Two rows of an unruled table, each with its own cell across the gutter
+    ("cumulative percent retained on Nth sieve" | "CPR_N"). Cells that read
+    on ("Time for" / "Completion", "(Sub-Clause" / "1.1.76)") are one wrapped
+    row of a form."""
+    before, after = _row_cell(previous, lines, gutter, right), _row_cell(line, lines, gutter, right)
+    return (
+        before is not None and after is not None
+        and re.search(r"[a-z,]$", before.rstrip()) is None
+        and re.match(r"[a-z(\d]", after.lstrip()) is None
+    )
+
+
 def _segment(
     page_number: int,
     lines: list[_VisualLine],
@@ -1809,6 +1892,18 @@ def _segment(
                     and (line.baseline - previous.baseline) - (previous.baseline - current[-2].baseline) > 0.2 * size
                 )
                 or _underlined(previous, rules)
+                # Rows of an unruled table ("cumulative percent retained on
+                # Nth sieve" | "CPR_N"): each line has a short cell beside it
+                # across the gutter, and two rows were translated as one.
+                or _separate_rows(previous, line, lines, gutter, right)
+                # A line starting well left of the one above starts the next
+                # entry of a list of terms ("CMR_N = ..." under the hanging
+                # lines of the definition before it).
+                # (A right-aligned block's ragged left edge is no entry.)
+                or (
+                    len(current) >= 2 and previous.bbox[0] - line.bbox[0] > 3.0 * size
+                    and abs(line.bbox[2] - previous.bbox[2]) > 2.0
+                )
                 # lines of one paragraph sit under each other
                 or min(line.bbox[2], previous.bbox[2]) - max(line.bbox[0], previous.bbox[0]) <= 0
             )
@@ -2034,6 +2129,11 @@ def _lead_in_text_start(first: _VisualLine) -> float | None:
     return None
 
 
+_MEASUREMENTS_RE = re.compile(
+    r"(?:(?:No\.\s*)?[\d.,/½¼¾⅛⅜⅝⅞-]+\s*(?:mm|cm|m|µm|μm|um|in\.?|ft|kg|g|mL|L|%|°C)?\s*)+"
+)
+
+
 def _needs_translation(text: str, source_language: str) -> bool:
     if source_language.lower().startswith("zh"):
         return bool(_CJK_RE.search(text))
@@ -2045,6 +2145,11 @@ def _needs_translation(text: str, source_language: str) -> bool:
     # translated, it came back as "甲乙丙丁戊".
     lines = [line.strip() for line in text.splitlines() if line.strip()]
     if lines and all(re.fullmatch(r"\(?[A-Za-z][.)]?", line) for line in lines):
+        return False
+    # A column of measurements ("75 mm" / "50 mm" / ... / "850 µm") has
+    # nothing to translate: rewritten as one paragraph, a table's sieve sizes
+    # were run together in its second row.
+    if _MEASUREMENTS_RE.fullmatch(text.strip()):
         return False
     return any(char.isalpha() for char in _IMMUTABLE_IDENTIFIER_RE.sub("", text))
 
@@ -2782,6 +2887,7 @@ def _layout(
 _PUNCTUATION_FALLBACK = {
     "•": "·", "▪": "·", "◾": "·", "●": "·", "、": ", ", "。": ". ", "《": "“", "》": "”", "「": "“", "」": "”",
     "『": "‘", "』": "’", "【": "[", "】": "]", "〔": "[", "〕": "]", "…": "...", "—": "-",
+    "©": "(C)",  # SimHei has none: "Copyright □ ASTM"
 }
 
 

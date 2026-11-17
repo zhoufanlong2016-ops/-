@@ -313,6 +313,71 @@ def test_line_broken_after_hyphen_joins_without_space():
     assert paragraph.text == "Drawing No. LW-TD-401 through"
 
 
+def test_word_hyphenated_at_line_end_is_joined_when_the_document_spells_it_whole():
+    line = lambda text: pdf_inplace._VisualLine([pdf_inplace._Segment(text, (0, 0, 10, 10), [{"size": 10.0}])])
+    pdf_inplace._DOCUMENT_WORDS.clear()
+    pdf_inplace._DOCUMENT_WORDS.update({"retained", "mass"})
+    try:
+        assert pdf_inplace._Paragraph(1, [line("cumulative mass re-"), line("tained on the first")], False).text == "cumulative mass retained on the first"
+        # a compound the document never writes whole keeps its hyphen
+        assert pdf_inplace._Paragraph(1, [line("oven-dried or air-"), line("dried samples")], False).text == "oven-dried or air-dried samples"
+        assert pdf_inplace._Paragraph(1, [line("Drawing No. LW-"), line("TD-401 through")], False).text == "Drawing No. LW-TD-401 through"
+    finally:
+        pdf_inplace._DOCUMENT_WORDS.clear()
+
+
+def test_math_pi_codes_are_read_as_their_symbols():
+    assert pdf_inplace._math_pi_text(" 6", "FEFIOC+Universal-GreekwithMathPi") == " ±"
+    assert pdf_inplace._math_pi_text("3=", "Universal-GreekwithMathPi") == "×√"
+    assert pdf_inplace._math_pi_text("#", "FELGPL+MathematicalPi-One") == "≤"
+    assert pdf_inplace._math_pi_text("6", "Times-Roman") == "6"
+
+
+def test_superscript_digits_are_kept_apart_from_the_number_before_them():
+    spans = [
+        {"text": "Test Method D 422", "size": 10.0, "origin": (0.0, 506.6)},
+        {"text": "2", "size": 7.0, "origin": (90.0, 502.9)},
+        {"text": "may be used", "size": 10.0, "origin": (95.0, 506.6)},
+    ]
+    pdf_inplace._mark_superscript_digits(spans)
+    assert spans[1]["text"] == "²"
+    # a subscript (set lower) and a full-size digit stay as they are
+    low = [{"text": "D", "size": 10.0, "origin": (0.0, 100.0)}, {"text": "60", "size": 7.0, "origin": (8.0, 102.0)}]
+    pdf_inplace._mark_superscript_digits(low)
+    assert low[1]["text"] == "60"
+
+
+def test_copyright_sign_falls_back_in_a_font_without_it():
+    font = fitz.Font(fontfile=r"C:\Windows\Fonts\simhei.ttf")
+    assert pdf_inplace._with_font_glyphs("版权所有 © ASTM", font) == "版权所有 (C) ASTM"
+
+
+def test_a_column_of_measurements_is_not_rewritten():
+    assert not pdf_inplace._needs_translation("50 mm 37.5 mm 25 mm 19.0 mm 9.5 mm 4.75 mm", "en")
+    assert not pdf_inplace._needs_translation("2.00 mm 850 µm", "en")
+    assert not pdf_inplace._needs_translation("No. 4 No. 10", "en")
+    assert pdf_inplace._needs_translation("75 mm sieve", "en")
+
+
+def test_unruled_table_rows_are_separate_but_a_wrapped_form_row_is_one():
+    def line(text, x0, x1, y):
+        return pdf_inplace._VisualLine([pdf_inplace._Segment(text, (x0, y, x1, y + 8), [{"size": 7.0, "origin": (x0, y + 7), "text": text}])])
+
+    rows = [
+        line("cumulative material or mass retained on Nth sieve", 81, 238, 119), line("CMRN", 321, 343, 119),
+        line("cumulative percent retained on Nth sieve", 81, 209, 128), line("CPRN", 321, 341, 128),
+    ]
+    paragraphs = pdf_inplace._segment(1, rows, (80.0, 566.0))
+    assert "cumulative material or mass retained on Nth sieve" in [p.text for p in paragraphs]
+    assert "cumulative percent retained on Nth sieve" in [p.text for p in paragraphs]
+    form = [
+        line("Value:", 81, 120, 100), line("Time for", 321, 363, 100),
+        line("Percentage of", 81, 160, 109), line("Completion", 321, 379, 109),
+    ]
+    assert pdf_inplace._separate_rows(rows[0], rows[2], rows, 300.0, 566.0)
+    assert not pdf_inplace._separate_rows(form[0], form[2], form, 300.0, 566.0)
+
+
 def test_bare_codes_are_not_sent_for_translation():
     assert not pdf_inplace._needs_translation("J01-L3C", "en")
     assert not pdf_inplace._needs_translation("R05-A", "en")
