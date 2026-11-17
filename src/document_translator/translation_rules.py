@@ -19,6 +19,10 @@ _PROTECTED_PATTERNS = (
     # "3-D"/"2D" is one notation: protecting only its digit made "3-D model"
     # -> "3D模型" a placeholder mismatch ("3" no longer stood alone).
     r"(?<![A-Za-z0-9-])[234]-?D(?![A-Za-z0-9])",
+    # A machine timestamp ("Thu Oct 21 10:53:16 EDT 2004", a licence
+    # watermark on every page) came back as "21年10:53月16日星期四".
+    r"\b(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun) (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) +\d{1,2} "
+    r"\d{1,2}:\d{2}(?::\d{2})? (?:[A-Z]{2,5} )?\d{4}\b",
     # A table's own row-number cell (just "1.", "2)", nothing else) is a
     # bare numbering marker, not a sentence -- it has no full stop to
     # localise. Left unprotected, providers commonly "translate" its

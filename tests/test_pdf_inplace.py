@@ -378,6 +378,45 @@ def test_unruled_table_rows_are_separate_but_a_wrapped_form_row_is_one():
     assert not pdf_inplace._separate_rows(form[0], form[2], form, 300.0, 566.0)
 
 
+def _line(text, x0, y0, x1, y1, font="Times-Roman", size=10.0):
+    span = {"text": text, "size": size, "font": font, "flags": 16 if "Bold" in font else 4, "color": 0, "bbox": (x0, y0, x1, y1), "origin": (x0, y1 - 3)}
+    return pdf_inplace._VisualLine([pdf_inplace._Segment(text, (x0, y0, x1, y1), [span])])
+
+
+def test_region_stops_at_next_paragraph_starting_a_little_above_its_bottom():
+    doc = fitz.open()
+    page = doc.new_page(width=612, height=792)
+    current = pdf_inplace._Paragraph(1, [_line("1.3 In cases where", 45, 461.7, 296, 474), _line("(75 mm) sieve is required", 45, 473, 296, 486.5)], False)
+    # tight leading: the next paragraph's first line box starts 2pt above
+    nxt = fitz.Rect(45, 484.6, 296, 497.0)
+    region = pdf_inplace._region(page, current, [nxt], (45.0, 566.0))
+    assert region.y1 <= 487.6
+
+
+def test_bold_numbered_heading_is_not_joined_to_the_clause_below():
+    lines = [
+        _line("7. Reagents", 314.3, 400.9, 365.6, 414.7, font="Times-Bold"),
+        _line("7.1 Dispersant—Sodium hexametaphosphate (sometimes", 323.8, 415.2, 565.6, 428.6),
+        _line("referred to as sodium metaphosphate) may be required", 314.3, 426.7, 565.8, 440.0),
+    ]
+    paragraphs = pdf_inplace._segment(1, lines, (44.9, 297.0))
+    assert paragraphs[0].text == "7. Reagents"
+
+
+def test_equation_number_is_its_own_paragraph():
+    lines = [
+        _line("where:", 45, 100, 80, 112),
+        _line("(4)", 286, 112, 296, 124),
+        _line("CP,PP = specimen's percent passing", 45, 124, 296, 136),
+    ]
+    paragraphs = pdf_inplace._segment(1, lines, (44.9, 566.0))
+    assert "(4)" in [p.text for p in paragraphs]
+
+
+def test_machine_timestamp_is_protected():
+    assert "Thu Oct 21 10:53:16 EDT 2004" in rule_protected_tokens("Reproduction authorized (Bodycote Ltd); Thu Oct 21 10:53:16 EDT 2004")
+
+
 def test_bare_codes_are_not_sent_for_translation():
     assert not pdf_inplace._needs_translation("J01-L3C", "en")
     assert not pdf_inplace._needs_translation("R05-A", "en")

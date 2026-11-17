@@ -1366,6 +1366,7 @@ def _visual_lines(page: Any, table_rects: list[Any]) -> tuple[list[_VisualLine],
     from collections import Counter
 
     starts = Counter(round(segment.bbox[0]) for segment in segments)
+    text_starts = Counter(round(segment.bbox[0]) for segment in segments if not _EQUATION_NUMBER_RE.fullmatch(segment.text.strip()))
     lines: list[_VisualLine] = []
     for segment in sorted(segments, key=lambda s: (s.bbox[1], s.bbox[0])):
         for line in lines:
@@ -1388,14 +1389,22 @@ def _visual_lines(page: Any, table_rects: list[Any]) -> tuple[list[_VisualLine],
             # right-hand header set a point higher is read before the left).
             if segment.bbox[0] > lx1:
                 left_text, left_end, right_start = " ".join(other.text for other in line.segments).strip(), lx1, segment.bbox[0]
+                left_start = lx0
             else:
                 left_text, left_end, right_start = segment.text.strip(), segment.bbox[2], lx0
+                left_start = segment.bbox[0]
+            # An equation number at the end of the left column ("(3)") is
+            # no list label: none of the column's lines start where it does.
+            equation_number = (
+                _EQUATION_NUMBER_RE.fullmatch(left_text) is not None
+                and sum(count for x, count in text_starts.items() if abs(x - left_start) <= 1.5) <= 1
+            )
             column_start = (
                 right_start > left_end and gap > 0.5 * size
                 # a list label ("1.", "viii.") belongs with its text
                 # (only the label itself: "27. Tender Opening" is a side
                 # heading of its own beside clause "27.1")
-                and not _LIST_LABEL_RE.match(left_text) and not _LABEL_RE.fullmatch(left_text)
+                and (equation_number or (not _LIST_LABEL_RE.match(left_text) and not _LABEL_RE.fullmatch(left_text)))
                 and not re.fullmatch(r"\d+(?:\.\d+)*\.?", left_text)  # section number "4.1"
                 and (
                     sum(count for x, count in starts.items() if abs(x - right_start) <= 1.5) >= 4
@@ -1765,6 +1774,11 @@ def _underlined(line: _VisualLine, rules: list[tuple[float, float, float, float]
     )
 
 
+_NUMBERED_HEADING_RE = re.compile(r"^\d{1,2}(?:\.\d{1,2})*\.?\s+[A-Z]")
+_EQUATION_NUMBER_RE = re.compile(r"\(\d{1,3}[a-z]?\)")
+_DEFINITION_RE = re.compile(r"=\s+\S")
+
+
 def _row_cell(line: _VisualLine, lines: list[_VisualLine], gutter: float | None, right: float) -> str | None:
     """The short cell on a left-column line's baseline across the gutter (a
     table row's value), or None: a two-column page's right column is full."""
@@ -1899,6 +1913,21 @@ def _segment(
                 # A line starting well left of the one above starts the next
                 # entry of a list of terms ("CMR_N = ..." under the hanging
                 # lines of the definition before it).
+                # A short bold numbered heading ("7. Reagents") over plain
+                # text: the heading is its own paragraph ("7. 试剂7.1分散剂"
+                # was one). A bold run-in heading fills its first line.
+                or (
+                    len(current) == 1 and _NUMBERED_HEADING_RE.match(previous.text) is not None
+                    and _is_bold(_Paragraph(0, [previous], False)) and not _is_bold(_Paragraph(0, [line], False))
+                    and line.bbox[2] - previous.bbox[2] > 3.0 * size
+                )
+                # An equation number ("(4)") on its own is no part of the
+                # text beside or below it.
+                or _EQUATION_NUMBER_RE.fullmatch(line.text.strip()) is not None
+                or _EQUATION_NUMBER_RE.fullmatch(previous.text.strip()) is not None
+                # "= dry mass of the specimen, g or kg" opens the next entry
+                # of a list of symbols, whose lines hang under its text.
+                or _DEFINITION_RE.match(line.text) is not None
                 # (A right-aligned block's ragged left edge is no entry.)
                 or (
                     len(current) >= 2 and previous.bbox[0] - line.bbox[0] > 3.0 * size
@@ -1933,7 +1962,7 @@ def _segment(
                 # ... a bracketed or roman label too ("(i) "accuracy" means ..."
                 # / "the quality of a result ..."): each definition's first line
                 # was set apart from the rest of it.
-                if indented and (_LABEL_RE.match(first.text) or _label_text_start(first) is not None) and first.bbox[0] < line.bbox[0] <= first.bbox[0] + 4.0 * size:
+                if indented and (_LABEL_RE.match(first.text) or _label_text_start(first) is not None or _DEFINITION_RE.match(first.text)) and first.bbox[0] < line.bbox[0] <= first.bbox[0] + 4.0 * size:
                     hang = current[1].bbox[0] if len(current) > 1 else line.bbox[0]
                     indented = abs(line.bbox[0] - hang) > 1.5
                 # A right-aligned block (a running header) has ragged left
@@ -2003,6 +2032,14 @@ def _segment(
                     ended_early and re.search(r"[A-Za-z,&\-]$", previous.text.rstrip())
                     and re.match(r"[A-Za-z(][^\s:]*(?:\s|$)", line.text.lstrip()) is not None
                     and _first_word_width(line) > edge - previous.bbox[2] - 0.3 * size
+                ):
+                    ended_early = False
+                # A definition's lines hang under its text ("= cumulative
+                # mass retained ...; i.e.," / "the mass of material ..."):
+                # cut apart, each half was translated as the whole.
+                if (
+                    ended_early and not indented and _DEFINITION_RE.match(current[0].text)
+                    and line.bbox[0] > current[0].bbox[0] + 0.5 * size
                 ):
                     ended_early = False
                 new = indented or ended_early
@@ -2808,7 +2845,11 @@ def _region(page: Any, paragraph: _Paragraph, obstacles: list[Any], bounds: tupl
     if frame is not None:
         x0, x1 = max(x0, frame.x0 + 1.0), min(x1, frame.x1 - 1.0)
     column = fitz.Rect(x0, y1, x1, page.rect.height)
-    below = [r.y0 for r in obstacles if r.intersects(column) and r.y0 >= y1 - 0.5]
+    # The next paragraph's first line may start a little above this one's
+    # bottom (tight leading: line boxes overlap): it is below by its middle.
+    # Missed, the region ran down over it and the two were written on top
+    # of each other ("...D 5519。" over "1.4 ...").
+    below = [r.y0 for r in obstacles if r.intersects(column) and (r.y0 + r.y1) / 2 >= y1]
     bottom = min(below + [page.rect.height - 24.0] + ([frame.y1] if frame is not None else [])) - 1.0
     # Never reach up into a table (or text) directly above: the table pass
     # later clears its own area and would erase any glyph overlapping it.
