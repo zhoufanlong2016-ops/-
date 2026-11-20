@@ -1,9 +1,11 @@
 """API keys come from one local file that is never committed.
 
-``keys\api_keys.env`` next to the program (the exe's folder when packaged,
-the project folder otherwise) holds DASHSCOPE_API_KEY (通义千问),
-DEEPSEEK_API_KEY, OPENAI_API_KEY and ANTHROPIC_API_KEY (Claude). Keys already set in the environment
-win; a project ``.env`` is still read as a fallback.
+``keys\api_keys.env`` in the project folder holds DASHSCOPE_API_KEY (通义千问),
+DEEPSEEK_API_KEY, OPENAI_API_KEY and ANTHROPIC_API_KEY (Claude). The
+packaged exe (``dist\<app>\``) reads the same file two folders up, so the
+source and every build share one copy; a ``keys`` folder next to the exe
+is only a fallback (an exe copied to another computer). Keys already set
+in the environment win; a project ``.env`` is still read as a fallback.
 """
 
 from __future__ import annotations
@@ -18,7 +20,11 @@ KEYS_FILE = Path("keys") / "api_keys.env"
 def key_file_candidates() -> list[Path]:
     roots = []
     if getattr(sys, "frozen", False):
-        roots.append(Path(sys.executable).resolve().parent)
+        exe_folder = Path(sys.executable).resolve().parent
+        # dist\<app>\ -> the project folder first: kept beside the exe, the
+        # keys were copied into every build and its backups, and drifted apart
+        roots.extend(list(exe_folder.parents)[:2][::-1])
+        roots.append(exe_folder)
     roots.append(Path(__file__).resolve().parents[2])
     roots.append(Path.cwd())
     seen: list[Path] = []

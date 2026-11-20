@@ -214,3 +214,29 @@ def test_api_keys_load_from_keys_folder(tmp_path, monkeypatch):
     assert api_keys.load_api_keys() == keys / "api_keys.env"
     import os
     assert os.environ["DASHSCOPE_API_KEY"] == "test-from-file"
+
+
+def test_packaged_exe_reads_the_project_keys_before_its_own(tmp_path, monkeypatch):
+    import sys
+
+    from document_translator import api_keys
+
+    project = tmp_path / "project"
+    app = project / "dist" / "app"
+    app.mkdir(parents=True)
+    (project / "keys").mkdir()
+    (project / "keys" / "api_keys.env").write_text("ANTHROPIC_API_KEY=from-project\n", encoding="utf-8")
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+    monkeypatch.setattr(sys, "executable", str(app / "app.exe"))
+    candidates = api_keys.key_file_candidates()
+    assert candidates.index(project / "keys" / "api_keys.env") < candidates.index(app / "keys" / "api_keys.env")
+    # an exe copied elsewhere still finds keys beside it
+    (app / "keys").mkdir()
+    (app / "keys" / "api_keys.env").write_text("ANTHROPIC_API_KEY=beside-exe\n", encoding="utf-8")
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    assert api_keys.load_api_keys() == project / "keys" / "api_keys.env"
+    import os
+    assert os.environ["ANTHROPIC_API_KEY"] == "from-project"
+    (project / "keys" / "api_keys.env").unlink()
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    assert api_keys.load_api_keys() == app / "keys" / "api_keys.env"
