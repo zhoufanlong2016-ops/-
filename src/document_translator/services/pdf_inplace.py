@@ -1519,11 +1519,17 @@ def _body_edges(lines: list[_VisualLine], bounds: tuple[float, float]) -> tuple[
 
     left, right = bounds
     if len(lines) >= 8:
+        # An edge with many lines wholly beyond it is a column's, not the
+        # body's: the left column's right edge on a two-column page made the
+        # right column lie "outside the body", so no gutter was found and
+        # its paragraphs were cut wherever a line looked short.
         edge, count = Counter(round(line.bbox[0]) for line in lines).most_common(1)[0]
-        if count >= max(4, 0.3 * len(lines)) and edge - 1.0 > left:
+        if (count >= max(4, 0.3 * len(lines)) and edge - 1.0 > left
+                and sum(1 for line in lines if line.bbox[2] < edge - 1.0) <= count):
             left = edge - 1.0
         edge, count = Counter(round(line.bbox[2]) for line in lines).most_common(1)[0]
-        if count >= max(4, 0.3 * len(lines)) and edge + 1.0 < right:
+        if (count >= max(4, 0.3 * len(lines)) and edge + 1.0 < right
+                and sum(1 for line in lines if line.bbox[0] > edge + 1.0) <= count):
             right = edge + 1.0
     return left, right
 
@@ -1711,7 +1717,24 @@ def _gutter(lines: list[_VisualLine], bounds: tuple[float, float]) -> float | No
         aligned = max((sum(1 for x in right_starts if abs(x - edge) <= 1.5) for edge in right_starts), default=0)
         if aligned * 2 < len(right_starts):
             aligned += _label_column(lines, gutter)
-        if left_side >= 4 and right_side >= 4 and crossing <= 0.25 * len(lines) and aligned * 2 >= right_side:
+        # ... unless almost nothing crosses the band: a right column holding
+        # an unruled table has its lines start at the table's columns too,
+        # and taken for no column, its paragraphs were cut at every line
+        # that ended short of the page's right edge.
+        # (Running text fills a column from one edge, on either side: a
+        # table's own columns, "Shifting of Generator" rows, are no text
+        # column, and a page of them keeps no gutter; nor is the band beside
+        # a contents list's section numbers, off the page's middle.)
+        clear = False
+        if crossing <= 0.05 * len(lines) and 40 <= step <= 60:
+            full = [line.bbox[0] for line in lines if line.bbox[0] >= gutter and line.bbox[2] - line.bbox[0] >= 0.6 * (right - gutter)]
+            full_left = [line.bbox[0] for line in lines if line.bbox[2] <= gutter and line.bbox[2] - line.bbox[0] >= 0.6 * (gutter - left)]
+            clear = any(
+                max((sum(1 for x in side if abs(x - edge) <= 1.5) for edge in side), default=0) >= 8
+                for side in (full, full_left)
+            )
+        if (left_side >= 4 and right_side >= 4 and crossing <= 0.25 * len(lines)
+                and (aligned * 2 >= right_side or clear)):
             score = min(left_side, right_side) - crossing
             if best is None or score > best[0]:
                 best = (score, gutter)
@@ -1877,6 +1900,17 @@ def _segment(
         """A left-column line's column ends at the gutter; otherwise the margin."""
         return gutter if gutter is not None and line.bbox[2] <= gutter else right
 
+    # The edge most right-column lines start at (not the leftmost start: a
+    # running head or a stray label just past the gutter made every line
+    # of the column "indented").
+    right_starts = sorted(line.bbox[0] for line in lines if gutter is not None and line.bbox[0] >= gutter)
+    right_column_left = max(right_starts, key=lambda x: sum(1 for y in right_starts if abs(y - x) <= 1.5), default=left)
+
+    def column_left(line: _VisualLine) -> float:
+        """A right-column line's column starts at its own edge, not the page's:
+        measured from the page margin, every line there was "indented"."""
+        return right_column_left if gutter is not None and line.bbox[0] >= gutter else left
+
     current: list[_VisualLine] = []
     current_centred = False
     for line in lines:
@@ -1952,6 +1986,18 @@ def _segment(
                 or (
                     len(current) >= 2
                     and (line.baseline - previous.baseline) - (previous.baseline - current[-2].baseline) > 0.2 * size
+                    # ... not a sub- or superscript or an inline formula
+                    # pushing one line down mid-sentence ("... cm³, and" /
+                    # "the mark for ..." was set apart): space before a
+                    # paragraph that wide follows no word or comma ending a
+                    # full line (a table's rows, "designated separating
+                    # sieve" / "coarser portion", end short).
+                    and not (
+                        min(right, column_right(previous)) - previous.bbox[2] <= 1.5 * size
+                        and re.search(r"[A-Za-z0-9,\-)]$", previous.text.rstrip()) is not None
+                        and re.match(r"[a-z]", line.text.lstrip()) is not None
+                        and (line.baseline - previous.baseline) - (previous.baseline - current[-2].baseline) <= 0.6 * size
+                    )
                 )
                 or _underlined(previous, rules)
                 # Rows of an unruled table ("cumulative percent retained on
@@ -1995,13 +2041,13 @@ def _segment(
                 and min(line.bbox[0], previous.bbox[0]) - left > 0.8 * size
             )
             if not new and not centred and not own_axis:
-                indented = line.bbox[0] - left > 0.8 * size  # first-line indent
+                indented = line.bbox[0] - column_left(line) > 0.8 * size  # first-line indent
                 # Body text (in the left quarter of the text area) is
                 # indented only against the line above it: on a page whose
                 # lines start at 65, 72, 90 and 108pt there is no margin to
                 # measure from, and every line counted as indented. Text
                 # further right (a legend column) keeps the margin rule.
-                if line.bbox[0] - left <= 0.25 * (right - left):
+                if line.bbox[0] - column_left(line) <= 0.25 * (column_right(line) - column_left(line)):
                     indented = line.bbox[0] - previous.bbox[0] > 0.8 * size
                 # A numbered item's continuation lines hang under its text
                 # ("1. In partial..." / "   Section 2..."), they do not
@@ -2013,9 +2059,25 @@ def _segment(
                 if indented and (_LABEL_RE.match(first.text) or _label_text_start(first) is not None or _DEFINITION_RE.match(first.text)) and first.bbox[0] < line.bbox[0] <= first.bbox[0] + 4.0 * size:
                     hang = current[1].bbox[0] if len(current) > 1 else line.bbox[0]
                     indented = abs(line.bbox[0] - hang) > 1.5
+                # ... and an unlabelled hanging paragraph ("Sieve analysis of
+                # the material retained on the No. 10 sieve, performed in" /
+                # "   accordance with ..."): its first line runs to the
+                # column's edge mid-sentence, and the rest hang under it.
+                if (
+                    indented and len(current) == 1
+                    and first.bbox[0] < line.bbox[0] <= first.bbox[0] + 4.0 * size
+                    and min(right, column_right(previous)) - previous.bbox[2] <= 1.5 * size
+                    and _SENTENCE_END_RE.search(previous.text.rstrip()) is None
+                    and re.match(r"[a-z]", line.text.lstrip()) is not None
+                    and abs(line.size - size) <= 0.6 and line.color == previous.color
+                ):
+                    indented = False
                 # A right-aligned block (a running header) has ragged left
                 # edges; split, its first line came back as "从...的污水系统".
-                if indented and previous.bbox[0] - left > 0.8 * size and abs(line.bbox[2] - previous.bbox[2]) <= 2.0:
+                # (Measured from its own column: from the page margin every
+                # right-column line was "ragged", and its numbered clauses ran
+                # together.)
+                if indented and previous.bbox[0] - column_left(previous) > 0.8 * size and abs(line.bbox[2] - previous.bbox[2]) <= 2.0:
                     indented = False
                 # The short last line of an indented, justified block (a list
                 # item's text) starts under the lines above it; two justified
@@ -2090,7 +2152,15 @@ def _segment(
                     and line.bbox[0] > current[0].bbox[0] + 0.5 * size
                 ):
                     ended_early = False
-                new = indented or ended_early
+                # A finished sentence, then a line starting far left of it:
+                # the next clause after an indented list of symbols ("... g
+                # or kg." / "12.5.1.2 CP, Composite ..."), which the line
+                # running to its column's edge no longer set apart.
+                outdented = (
+                    previous.bbox[0] - line.bbox[0] > 3.0 * size
+                    and _SENTENCE_END_RE.search(previous.text.rstrip()) is not None
+                )
+                new = indented or ended_early or outdented
             # A line closing a bracket the paragraph left open continues it
             # ("... with 3 Standby" / "Pumps).", set indented).
             if new and _closes_open_bracket(current, line) and abs(line.size - size) <= 0.6 and line.color == previous.color:
@@ -2108,7 +2178,87 @@ def _segment(
         current.append(line)
     if current:
         paragraphs.append(_Paragraph(page_number, current, current_centred))
-    return paragraphs
+    return _join_continuations(paragraphs, lines, gutter, right)
+
+
+# A sentence's end; a paragraph that stops before one goes on below it.
+_SENTENCE_END_RE = re.compile(r"[.:;!?。；：！？]\W*$")
+
+
+def _join_continuations(
+    paragraphs: list[_Paragraph], lines: list[_VisualLine], gutter: float | None, right: float,
+) -> list[_Paragraph]:
+    """A paragraph cut mid-sentence is joined again with the line that goes on.
+
+    The checks above judge each line against page-wide edges: on a two-column
+    page whose gutter went unseen, under a table across both columns or beside
+    a contents list, every left-column line "ended early" and became its own
+    paragraph. Each piece was translated alone and set on its own line, the
+    Chinese stopping half way ("18.1.5分散通过" / "10号（2.00mm）筛的粒级..."). A
+    piece that stops before any sentence end, followed straight below in its
+    column, in the same type, by a line going on in lower case is the same
+    paragraph -- unless that line opens an item (a label, a bullet, a "= ..."
+    definition), sits in a table, or either piece is centred.
+    """
+    joined: list[_Paragraph] = []
+    for paragraph in paragraphs:
+        previous = joined[-1] if joined else None
+        if previous is not None and _continues(previous, paragraph, lines, gutter, right):
+            joined[-1] = _Paragraph(previous.page_number, previous.lines + paragraph.lines, previous.centred)
+            continue
+        joined.append(paragraph)
+    return joined
+
+
+def _continues(previous: _Paragraph, paragraph: _Paragraph, lines: list[_VisualLine], gutter: float | None, right: float) -> bool:
+    last, first = previous.lines[-1], paragraph.lines[0]
+    size = last.size
+    pitch = first.baseline - last.baseline
+    left_edge = min(line.bbox[0] for line in previous.lines)
+    # A sentence wraps where its line is full: the cut line runs as far as the
+    # lines starting where it does usually run (a short table row "sieve
+    # set", a symbol "D" over its "n" does not).
+    peers = sorted(
+        line.bbox[2] for line in lines
+        if abs(line.bbox[0] - left_edge) <= 1.5 * size and abs(line.size - size) <= 0.6
+    )
+    measure = peers[len(peers) // 2] if peers else last.bbox[2]
+    # ... in a column of running text: in a narrow table column ("designated
+    # separating sieve" / "coarser portion") every row is "full"
+    full = measure - left_edge >= 15.0 * size and last.bbox[2] >= left_edge + 0.8 * (measure - left_edge)
+    # ... or it runs to its column's edge (an indented "where:" list, whose
+    # peers are mostly short symbol lines).
+    edge = gutter if gutter is not None and last.bbox[2] <= gutter else right
+    full = full or (last.bbox[2] - left_edge >= 15.0 * size and edge - last.bbox[2] <= 1.5 * size)
+    # A justified block indented on both sides (a standard's preamble) looks
+    # centred, but its lines start at one edge (bar an indented first line);
+    # a centred title's do not.
+    block = len(previous.lines) >= 2 and all(abs(line.bbox[0] - first.bbox[0]) <= 1.5 for line in previous.lines[1:])
+    return (
+        full
+        and ((not previous.centred and not paragraph.centred) or block)
+        and _SENTENCE_END_RE.search(previous.text.rstrip()) is None
+        and re.match(r"[a-z]", first.text.lstrip()) is not None
+        and abs(first.size - size) <= 0.6 and first.color == last.color and first.box == last.box
+        and 0.6 * size <= pitch <= 2.0 * size
+        # in the same column, from its left edge (or a hanging indent)
+        and min(first.bbox[2], last.bbox[2]) - max(first.bbox[0], last.bbox[0]) > 0
+        and abs(first.bbox[0] - left_edge) <= 3.0 * size
+        # ... back out to the margin only after a paragraph's indented first
+        # line, which opens with a capital or a clause number (a table's
+        # sub-row "designated separating sieve" over "coarser portion" does not)
+        and (first.bbox[0] >= left_edge - 1.5 or len(previous.lines) > 1
+             or re.match(r"[A-Z0-9(]", previous.text.lstrip()) is not None)
+        and (gutter is None or (last.bbox[2] <= gutter) == (first.bbox[2] <= gutter))
+        and not first.bulleted and not first.in_cell and not last.in_cell
+        and _label_text_start(first) is None and _LABEL_RE.match(first.text) is None
+        and _LIST_LABEL_RE.match(first.text.split()[0] if first.text.split() else "") is None
+        and _DEFINITION_RE.match(first.text) is None
+        and _EQUATION_NUMBER_RE.fullmatch(first.text.strip()) is None
+        # rows of an unruled table, each with its own short cell beside it
+        # (on a page too small to show a gutter, just right of the row)
+        and not _separate_rows(last, first, lines, gutter if gutter is not None else max(last.bbox[2], first.bbox[2]) + 0.5, right)
+    )
 
 
 # "1.", "a)", "(iv)", "viii.", "[2]", or a bullet character.

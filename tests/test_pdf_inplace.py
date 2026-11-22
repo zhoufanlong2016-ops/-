@@ -1603,3 +1603,124 @@ def test_a_standard_identifier_is_not_split_across_pages():
     assert all(not pdf_inplace._can_break(identifier, index) for index in range(1, len(identifier)))
     first, second = pdf_inplace._split_continued("遵守PETSAC-2014标准。", 0.62)
     assert "PETSAC-2014" in first or "PETSAC-2014" in second
+
+
+def _texts(lines, bounds=(50.0, 300.0)):
+    return [p.text for p in pdf_inplace._segment(1, lines, bounds)]
+
+
+def test_a_sentence_cut_into_two_blocks_is_joined_again():
+    page = [
+        _line("This standard does not purport to address all of the", 50, 100, 300, 110),
+        _line("safety concerns, if any, associated with its use. It is the", 50, 112, 300, 122),
+        _line("responsibility of the user to establish safety practices.", 50, 124, 280, 134),
+        _line("Each sieve shall be checked at regular intervals and the", 50, 136, 300, 146),
+    ]
+    cut = [pdf_inplace._Paragraph(1, page[:2], False), pdf_inplace._Paragraph(1, page[2:3], False)]
+    joined = pdf_inplace._join_continuations(cut, page, None, 300.0)
+    assert [p.text for p in joined] == [" ".join(line.text for line in page[:3])]
+
+
+def test_blocks_that_are_not_one_sentence_stay_apart():
+    page = [
+        _line("This standard does not purport to address all of the", 50, 100, 300, 110),
+        _line("safety concerns, if any, associated with its use.", 50, 112, 280, 122),
+        _line("Each sieve shall be checked at regular intervals and the", 50, 136, 300, 146),
+        _line("the results of the check shall be recorded and kept", 50, 148, 300, 158),
+    ]
+    first = pdf_inplace._Paragraph(1, page[:2], False)
+    # the block before ends its sentence
+    assert len(pdf_inplace._join_continuations([first, pdf_inplace._Paragraph(1, [page[3]], False)], page, None, 300.0)) == 2
+    previous = pdf_inplace._Paragraph(1, [page[2]], False)
+    # the next block is a list item, a numbered clause, a capitalised heading
+    for text in ("(a) the mass of the specimen,", "a. the mass of the specimen,", "1.2 the mass of the specimen", "Apparatus"):
+        nxt = pdf_inplace._Paragraph(1, [_line(text, 50, 148, 200, 158)], False)
+        assert len(pdf_inplace._join_continuations([previous, nxt], page + nxt.lines, None, 300.0)) == 2, text
+    # a short table cell is no full line
+    cell = pdf_inplace._Paragraph(1, [_line("sieve set", 50, 136, 90, 146)], False)
+    nxt = pdf_inplace._Paragraph(1, [_line("cumulative mass retained", 50, 148, 160, 158)], False)
+    assert len(pdf_inplace._join_continuations([cell, nxt], [cell.lines[0], nxt.lines[0]], None, 300.0)) == 2
+    # a centred title is not joined to the text below it
+    title = pdf_inplace._Paragraph(1, [_line("Standard Test Method for Particle-Size Distribution of", 52, 100, 298, 110)], True)
+    nxt = pdf_inplace._Paragraph(1, [_line("soils using sieve analysis", 120, 112, 230, 122)], True)
+    assert len(pdf_inplace._join_continuations([title, nxt], title.lines + nxt.lines + page, None, 300.0)) == 2
+
+
+def test_a_superscript_line_pitch_does_not_start_a_paragraph():
+    lines = [
+        _line("The effective depth is measured along the stem from the", 50, 100, 300, 110),
+        _line("top of the bulb to the mark, and its volume in cm3, and", 50, 112, 300, 122),
+        _line("the overall length of the bulb is used in the calculation.", 50, 127.5, 260, 137.5),
+    ]
+    assert len(_texts(lines)) == 1
+    # space before a paragraph after a full stop still starts one
+    lines[1] = _line("top of the bulb to the mark, and its volume is recorded.", 50, 112, 300, 122)
+    lines[2] = _line("The overall length of the bulb is used in the calculation.", 50, 127.5, 260, 137.5)
+    assert len(_texts(lines)) == 2
+
+
+def test_a_hanging_paragraph_keeps_its_indented_lines():
+    lines = [
+        _line("Sieve analysis of the material retained on the sieve, performed in", 50, 100, 300, 110),
+        _line("accordance with the procedure given below, and the results", 65, 112, 300, 122),
+        _line("recorded on the data sheet.", 65, 124, 180, 134),
+    ]
+    assert len(_texts(lines)) == 1
+    # an indented line after a finished sentence is a new paragraph
+    lines[0] = _line("Sieve analysis of the material retained on the No. 10 sieve.", 50, 100, 300, 110)
+    assert len(_texts(lines)) == 2
+    # an indented capitalised line is no continuation
+    lines[0] = _line("Sieve analysis of the material retained on the sieve, performed in", 50, 100, 300, 110)
+    lines[1] = _line("Accordance with the procedure given below, and the results", 65, 112, 300, 122)
+    assert len(_texts(lines)) >= 2
+
+
+def test_a_right_column_line_is_indented_against_its_own_column():
+    left = [_line(f"left column text that runs to the gutter of the page {i}", 50, 100 + 12 * i, 290, 110 + 12 * i) for i in range(10)]
+    right = [
+        _line("3.1 The sample shall be taken from the material as", 330, 100, 540, 110),
+        _line("delivered and shall be representative of the lot", 320, 112, 540, 122),
+        _line("tested, as described below.", 320, 124, 440, 134),
+    ] + [_line(f"right column text that runs to the page margin {i}", 320, 136 + 12 * i, 540, 146 + 12 * i) for i in range(8)]
+    texts = _texts(left + right, (50.0, 540.0))
+    assert any(t.startswith("3.1 The sample") and t.endswith("as described below.") for t in texts)
+
+
+def test_the_left_column_edge_is_not_taken_for_the_body_edge():
+    left = [_line(f"left column line {i}", 50, 100 + 12 * i, 290, 110 + 12 * i) for i in range(10)]
+    right = [_line(f"right {i}", 310, 100 + 12 * i, 400 + 11 * i, 110 + 12 * i) for i in range(12)]
+    assert pdf_inplace._body_edges(left + right, (40.0, 560.0))[1] == 560.0
+    # a single column whose lines end at one edge still sets it
+    assert pdf_inplace._body_edges(left + right[:3], (40.0, 560.0))[1] == 291.0
+
+
+def test_a_right_column_holding_an_unruled_table_is_still_a_column():
+    left = [_line(f"left column line {i}", 50, 100 + 12 * i, 290, 110 + 12 * i) for i in range(20)]
+    text = [_line(f"right column text {i}", 310, 100 + 12 * i, 540, 110 + 12 * i) for i in range(9)]
+    table = [_line("0.5", x, 220 + 12 * i, x + 20, 230 + 12 * i) for x in (360, 420, 480) for i in range(4)]
+    gutter = pdf_inplace._gutter(left + text + table, (50.0, 540.0))
+    assert gutter is not None and 290 <= gutter <= 310
+    # scattered pieces with something crossing the band are still no column
+    scattered = [_line(f"piece {i}", 310 + 37 * i, 100 + 30 * i, 340 + 37 * i, 110 + 30 * i) for i in range(6)]
+    assert pdf_inplace._gutter(left[:6] + scattered, (50.0, 540.0)) is None
+
+
+def test_a_clause_after_an_indented_symbol_list_starts_a_paragraph():
+    lines = [
+        _line("= cumulative mass retained on the Nth sieve in", 110, 100, 296, 110),
+        _line("the coarser sieve set, g or kg, in the calculation.", 110, 112, 293, 122),
+        _line("12.5.1.2 Composite Sieving Correction Factor is equal to", 54, 124, 296, 134),
+        _line("the percent passing the designated separating sieve.", 45, 136, 250, 146),
+    ]
+    assert len(_texts(lines, (45.0, 297.0))) == 2
+
+
+def test_a_table_sub_row_is_not_joined_to_the_row_above():
+    rows = [_line(f"cumulative percent retained on the Nth sieve {i}", 81, 100 + 12 * i, 300, 110 + 12 * i, size=7.0) for i in range(5)]
+    row = pdf_inplace._Paragraph(1, [_line("designated separating sieve and the sieve set used", 81, 160, 298, 170, size=7.0)], False)
+    sub = pdf_inplace._Paragraph(1, [_line("coarser portion", 74, 169, 121, 179, size=7.0)], False)
+    assert len(pdf_inplace._join_continuations([row, sub], rows + row.lines + sub.lines, None, 300.0)) == 2
+    # a paragraph's indented first line does go back out to the margin
+    first = pdf_inplace._Paragraph(1, [_line("1.10.1 Soils containing fibrous peat that will change in", 81, 160, 298, 170, size=7.0)], False)
+    nxt = pdf_inplace._Paragraph(1, [_line("particle size during the drying, washing, or sieving.", 74, 169, 250, 179, size=7.0)], False)
+    assert len(pdf_inplace._join_continuations([first, nxt], rows + first.lines + nxt.lines, None, 300.0)) == 1
