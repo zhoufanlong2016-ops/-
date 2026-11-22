@@ -514,3 +514,28 @@ def test_a_unit_after_a_number_is_counted_with_its_number_not_alone():
 
     source = "the area in m² divided by 0.028 m², a volume of 67.0 cm³"
     assert not validate_placeholders(source, "以m²计的面积除以0.028m²，体积67.0cm³", ["m²", "0.028 m²", "67.0 cm³"])
+
+
+def test_a_number_sign_is_translated_by_context_not_left_in_english():
+    from document_translator.translation_rules import validate_number_sign
+
+    assert validate_number_sign("No. 10 (2.00-mm)", "No. 10（2.00-mm）", "en", "zh")
+    assert validate_number_sign("retained on No. 4 sieve", "留在No. 4筛上", "en", "zh")
+    assert validate_number_sign("No. 10 (2.00-mm)", "编号10（2.00 mm）", "en", "zh")
+    assert not validate_number_sign("No. 10 (2.00-mm)", "10号（2.00-mm）", "en", "zh")
+    assert not validate_number_sign("retained on No. 4 sieve", "留在4号筛上", "en", "zh")
+    assert not validate_number_sign("Item No. 4.5 of Schedule 4", "附表4第4.5项", "en", "zh")
+    # a label in a longer sentence may be 编号; standards and references are other tokens
+    assert not validate_number_sign("Drawing No. 12 and the drawing list", "图纸编号12及图纸目录", "en", "zh")
+    assert not validate_number_sign("Sr. No.", "序号", "en", "zh")
+    assert not validate_number_sign("as per ASTM D 422", "按ASTM D 422", "en", "zh")
+    # zh -> en writes "No." on purpose
+    assert not validate_number_sign("〔2024〕54号", "[2024] No. 54", "zh", "en")
+
+
+def test_a_sieve_named_in_a_sentence_is_no_label():
+    from document_translator.translation_rules import validate_number_sign
+
+    source = "retained on the No. 10 (2.00-mm) sieve and passing the No. 10 sieve."
+    assert validate_number_sign(source, "留在编号10（2.00-mm）筛上并通过编号10筛的颗粒。", "en", "zh")
+    assert not validate_number_sign(source, "留在10号（2.00-mm）筛上并通过10号筛的颗粒。", "en", "zh")

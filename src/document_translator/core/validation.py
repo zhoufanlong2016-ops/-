@@ -5,7 +5,7 @@ import re
 from typing import Iterable
 
 from .models import TranslationResult, TranslationUnit, sha256_text
-from document_translator.translation_rules import validate_name_retention, validate_translation_residue, validate_unit_symbols
+from document_translator.translation_rules import validate_name_retention, validate_translation_residue, validate_unit_symbols, validate_number_sign
 
 
 def validate_placeholders(source_text: str, translation: str, protected_tokens: list[str]) -> list[str]:
@@ -103,6 +103,7 @@ def validate_result_for_unit(unit: TranslationUnit, result: TranslationResult) -
     errors.extend(validate_name_retention(unit.source_text, result.translation, unit.source_language, unit.target_language))
     errors.extend(validate_translation_residue(unit.source_text, result.translation, unit.source_language, unit.target_language))
     errors.extend(validate_unit_symbols(unit.source_text, result.translation))
+    errors.extend(validate_number_sign(unit.source_text, result.translation, unit.source_language, unit.target_language))
     # Chinese returned as its own English translation: a whole batch came
     # back as its input ("（2）埋石：三等控制点…") and was accepted, and
     # cached, as valid.

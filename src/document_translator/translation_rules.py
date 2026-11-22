@@ -818,3 +818,40 @@ _BARE_SYMBOL_RE = re.compile(r"(?:" + _BARE_UNITS + r")|[A-Z][A-Za-z]?\d?/[A-Z][
 def is_bare_symbol(token: str) -> bool:
     """A unit symbol or a symbol ratio protected without a number ("mm", "VB/A")."""
     return _BARE_SYMBOL_RE.fullmatch(token) is not None
+
+
+# Not \b: "留在No. 4筛上" has no word boundary between 在 and N.
+_NUMBER_SIGN_RE = re.compile(r"(?<![A-Za-z])No\.\s*(\d+(?:\.\d+)*)")
+
+
+def validate_number_sign(source_text: str, translation: str, source_language: str, target_language: str) -> list[str]:
+    """"No. 10" is translated by what it numbers, never left in English.
+
+    "No. 10 (2.00-mm)" came back "No. 10（2.00-mm）" in one row of a sieve
+    list and "编号10" in the next: a sieve's number is "10号" (筛), an item's
+    "第10项", a drawing's or document's "…号". The message tells the model so
+    on its correction pass. A bare "No. 4" starting a short item (a list of
+    sieves, of pumps) is a designation, not the label 编号.
+    """
+    source, target = source_language.strip().casefold(), target_language.strip().casefold()
+    if not (source.startswith("en") or source == "auto") or not target.startswith(("zh", "chinese")):
+        return []
+    if not _NUMBER_SIGN_RE.search(source_text):
+        return []
+    hint = "translate it by what it numbers, as a sieve 'No. 10' -> '10号筛' (in a list of sieves '10号'), an item -> '第10项', a drawing or document -> '…号'"
+    left = _NUMBER_SIGN_RE.search(translation)
+    if left:
+        return [f"UNTRANSLATED_NUMBER_SIGN: {left.group(0)!r} was left in English, {hint}"]
+    # A designation, not the label 编号: a short item starting "No. 4" (a
+    # list of sieves), or a sieve named in a sentence ("No. 10 (2.00-mm)
+    # sieve" came back "编号10（2.00-mm）筛").
+    numbers = []
+    lead = re.match(r"\s*No\.\s*(\d+(?:\.\d+)*)", source_text)
+    if lead and len(source_text.split()) <= 6:
+        numbers.append(lead.group(1))
+    numbers += re.findall(r"(?<![A-Za-z])No\.\s*(\d+(?:\.\d+)*)(?:\s*\([^)]{1,20}\))?\s+sieves?\b", source_text)
+    for number in numbers:
+        label = re.search(r"编号\s*" + re.escape(number) + r"(?![\d.])", translation)
+        if label:
+            return [f"NUMBER_SIGN_AS_LABEL: {label.group(0)!r} reads as a column label, {hint}"]
+    return []
