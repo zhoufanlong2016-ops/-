@@ -84,6 +84,10 @@ class XlsxTranslationService:
         return tuple(self._translate_and_validate(unit) for unit in units)
 
     def _translate_and_validate(self, unit: TranslationUnit) -> TranslationResult:
+        from .batch_runner import kept_formula
+
+        if (kept := kept_formula(self._provider, unit)) is not None:
+            return kept
         last_error: Exception | None = None
         last_result: TranslationResult | None = None
         for _ in range(self._max_attempts):

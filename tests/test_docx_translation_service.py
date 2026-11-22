@@ -156,3 +156,23 @@ def test_a_unit_failing_a_quality_check_is_kept_with_a_warning() -> None:
     result = service._translate_and_validate(unit)
     assert result.translation == "translated:短文本"
     assert service.warnings and "PROVIDER_MISMATCH" in str(service.warnings[0])
+
+
+def test_a_formula_paragraph_is_kept_and_units_reach_the_model_protected(tmp_path) -> None:
+    source = tmp_path / "source.docx"
+    source_xml = f'''<w:document xmlns:w="{W}"><w:body>
+<w:p><w:r><w:t>D = K√(L/T)</w:t></w:r></w:p>
+<w:p><w:r><w:t>Dry the specimen at 110 °C to a mass of 500 g or kg.</w:t></w:r></w:p>
+</w:body></w:document>'''.encode()
+    with ZipFile(source, "w") as package:
+        package.writestr("word/document.xml", source_xml)
+    provider = RecordingFakeProvider()
+    outcome = DocxTranslationService(provider).translate_file(
+        source, tmp_path / "translated.docx", source_language="en", target_language="zh-CN",
+    )
+    # the formula never went to the model and stands as written
+    assert not any("√" in call for call in provider.calls)
+    with ZipFile(tmp_path / "translated.docx") as package:
+        assert "D = K√(L/T)" in package.read("word/document.xml").decode()
+    unit = next(unit for unit in outcome.units if "specimen" in unit.source_text)
+    assert {"110 °C", "500 g", "kg"} <= set(unit.protected_tokens)

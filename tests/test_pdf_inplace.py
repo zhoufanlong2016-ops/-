@@ -1724,3 +1724,8 @@ def test_a_table_sub_row_is_not_joined_to_the_row_above():
     first = pdf_inplace._Paragraph(1, [_line("1.10.1 Soils containing fibrous peat that will change in", 81, 160, 298, 170, size=7.0)], False)
     nxt = pdf_inplace._Paragraph(1, [_line("particle size during the drying, washing, or sieving.", 74, 169, 250, 179, size=7.0)], False)
     assert len(pdf_inplace._join_continuations([first, nxt], rows + first.lines + nxt.lines, None, 300.0)) == 1
+
+
+def test_a_formula_line_is_not_sent_for_translation():
+    assert not pdf_inplace._needs_translation("L = L1 + 1 / 2 @L2 − ~VB/A!#", "en")
+    assert pdf_inplace._needs_translation("= dry mass of the specimen, g or kg", "en")

@@ -2386,6 +2386,12 @@ def _needs_translation(text: str, source_language: str) -> bool:
     # were run together in its second row.
     if _MEASUREMENTS_RE.fullmatch(text.strip()):
         return False
+    # A formula line keeps its own glyphs: translated, "L = L1 + 1/2 [L2 -
+    # (VB/A)]" came back "~伏安/安培!#" (see translation_rules).
+    from document_translator.translation_rules import is_formula_text
+
+    if is_formula_text(text):
+        return False
     return any(char.isalpha() for char in _IMMUTABLE_IDENTIFIER_RE.sub("", text))
 
 

@@ -105,7 +105,9 @@ class PptxTranslationService:
 
             results, self.warnings = translate_and_settle(self.provider, units, cache=self.cache)
         else:
-            results = [self.provider.translate_unit(u) for u in units]
+            from .batch_runner import kept_formula
+
+            results = [kept_formula(self.provider, u) or self.provider.translate_unit(u) for u in units]
         if len(results) != len(pending):
             raise ValueError("batch translation count mismatch")
         if any(not isinstance(result, TranslationResult) for result in results):

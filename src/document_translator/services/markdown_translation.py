@@ -235,7 +235,9 @@ class MarkdownTranslationService:
         ) from last_error
 
     def _translate_one(self, unit: TranslationUnit) -> TranslationResult:
-        result = self._provider.translate_unit(unit)
+        from .batch_runner import kept_formula
+
+        result = kept_formula(self._provider, unit) or self._provider.translate_unit(unit)
         normalized = self._normalize_translation(result.translation)
         if normalized != result.translation:
             result = result.model_copy(

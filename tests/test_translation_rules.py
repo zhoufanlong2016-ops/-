@@ -455,3 +455,62 @@ def test_chinese_returned_unchanged_as_english_is_rejected():
                                  source_hash=sha256_text(unit.source_text), result_hash=sha256_text(text), request_count=1, validation_status="valid")
     assert any("UNTRANSLATED_SOURCE" in e for e in validate_result_for_unit(unit, result("平均边长")))
     assert not any("UNTRANSLATED_SOURCE" in e for e in validate_result_for_unit(unit, result("Average side length")))
+
+
+def test_unit_symbols_and_symbol_ratios_are_protected():
+    from document_translator.translation_rules import rule_protected_tokens
+
+    tokens = rule_protected_tokens("passing the 75 µm sieve at 110 °C, 500 g or kg, for 30 s; ratio VB/A")
+    assert {"75 µm", "110 °C", "500 g", "kg", "30 s", "VB/A"} <= set(tokens)
+    # not words: "e.g.", "N/A", "Yes/No", a decade, a plural after a number
+    tokens = rule_protected_tokens("e.g. in the 1950s, N/A, Yes/No, 5 sieves")
+    assert not {"g", "N/A", "Yes/No", "1950s", "5 s"} & set(tokens)
+    # Chinese source too (zh -> en)
+    assert {"°C", "µm"} <= set(rule_protected_tokens("温度为110 °C，筛孔75 µm"))
+
+
+def test_a_formula_is_recognised_and_prose_with_an_equals_sign_is_not():
+    from document_translator.translation_rules import is_formula_text
+
+    for text in ("L = L1 + 1 / 2 @L2 − ~VB/A!#", "D = K√(L/T)", "PRN = PPN-1 – PPN", "CSCF = 100 × (SubS,FPP)"):
+        assert is_formula_text(text), text
+    for text in ("= dry mass of the specimen, g", "where D = particle diameter", "AREA= 86 ACRE",
+                 "Total = Sum of items", "重量 = 5 kg", "Note 1", "AASHTO = American Association"):
+        assert not is_formula_text(text), text
+
+
+def test_a_unit_symbol_written_out_is_reported_but_a_spelled_unit_may_be_translated():
+    from document_translator.translation_rules import validate_unit_symbols
+
+    assert validate_unit_symbols("the 75 µm sieve, 500 g", "75微米筛，500克")
+    assert validate_unit_symbols("L = 1/2 (VB/A)", "伏安/安培")
+    assert validate_unit_symbols("直径为50 mm", "a diameter of 50 millimetres")
+    assert not validate_unit_symbols("the 75 µm sieve, 500 g", "75 µm筛，500 g")
+    # spelled out in the source: a word, translated as one
+    assert not validate_unit_symbols("measured in millimetres", "以毫米计")
+    # a list label "(g)" next to 克服 ("overcome") is no unit
+    assert not validate_unit_symbols("(g) overcome the load", "(g) 克服荷载")
+
+
+def test_a_bare_unit_symbol_is_counted_as_a_word():
+    from document_translator.core.validation import validate_placeholders
+
+    assert not validate_placeholders("≤3√L mm", "≤3√L mm, as recommended", ["mm"])
+    assert validate_placeholders("≤3√L mm", "≤3√L 毫米", ["mm"])
+
+
+def test_a_hyphenated_size_keeps_its_unit_symbol():
+    from document_translator.core.validation import validate_placeholders
+    from document_translator.translation_rules import rule_protected_tokens
+
+    tokens = rule_protected_tokens("No. 200 (75-µm) sieve, 3-in. (75-mm)")
+    assert {"75-µm", "3-in.", "75-mm"} <= set(tokens)
+    assert not validate_placeholders("(75-mm)", "（75 mm）", ["75-mm"])
+    assert validate_placeholders("(75-mm)", "（75毫米）", ["75-mm"])
+
+
+def test_a_unit_after_a_number_is_counted_with_its_number_not_alone():
+    from document_translator.core.validation import validate_placeholders
+
+    source = "the area in m² divided by 0.028 m², a volume of 67.0 cm³"
+    assert not validate_placeholders(source, "以m²计的面积除以0.028m²，体积67.0cm³", ["m²", "0.028 m²", "67.0 cm³"])

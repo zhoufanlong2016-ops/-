@@ -39,7 +39,10 @@ _CAD_CODE_RE = re.compile(r"%%(?:\d{3}|[A-Za-z%])|\\[Uu]\+[0-9A-Fa-f]{4}")
 
 
 def _needs_translation(text: str) -> bool:
-    return bool(_LETTER_RE.search(text))
+    from document_translator.translation_rules import is_formula_text
+
+    # A formula keeps its symbols ("Q = A·V"), as in every other format.
+    return bool(_LETTER_RE.search(text)) and not is_formula_text(text)
 
 
 def _workers() -> int:

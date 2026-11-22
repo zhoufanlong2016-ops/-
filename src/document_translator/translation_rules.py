@@ -11,6 +11,15 @@ from dataclasses import dataclass
 from typing import Iterable
 
 
+# Unit symbols a number may carry ("75 µm", "1000KVA", "110 °C").
+_NUMBER_UNITS = (
+    "kVA|KVA|°C|°F|%|‰|°|㎡|m²|m³|cm²|cm³|mm²|mm³|µm|μm|mm|cm|km|min|mg|mL|m|MPa|kPa|Pa|kN|N|kg|g|lbm|lb|"
+    "kW|MW|W|kV|V|Hz|L|psi|ft|in\\.|USD|PKR|RMB|CNY"
+)
+# Unit symbols that are no English word, protected wherever they stand.
+_BARE_UNITS = "µm|μm|mm|cm|km|mg|kg|mL|kPa|MPa|kN|°C|°F|psi|lbm|g|cm³|m³|m²|mm²"
+
+
 _PROTECTED_PATTERNS = (
     # URLs, email addresses, file paths and CAD/Office control sequences.
     r"https?://[^\s<>()]+|mailto:[^\s<>()]+|[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}",
@@ -98,7 +107,16 @@ _PROTECTED_PATTERNS = (
     # check (core/validation.py) counts the bare number in one spelling
     # but not the other, and a plain reformatting difference between the
     # two forms is misreported as a placeholder mismatch.
-    r"(?<![\w.])[+-]?(?>\d+)(?!(?:st|nd|rd|th)\b)(?:,\d{3})*(?:\.\d+)*(?:[eE][+-]?\d+)?(?:[ \t]*(?:kVA|KVA|%|‰|°|㎡|m²|m³|mm|cm|km|m|MPa|kPa|kN|N|kg|kW|MW|W|kV|V|Hz|L|mL|USD|PKR|RMB|CNY)(?![A-Za-z]))?",
+    # Unit symbols stay symbols in any language ("75 µm", "110 °C", "500 g"
+    # were written out as "微米", "摄氏度", "克"): longer symbols first, so
+    # "min" is not read as "m" and "°C" not as "°".
+    r"(?<![\w.])[+-]?(?>\d+)(?!(?:st|nd|rd|th)\b)(?:,\d{3})*(?:\.\d+)*(?:[eE][+-]?\d+)?(?:(?:[ \t]*|-)(?:" + _NUMBER_UNITS + r")(?![A-Za-z])|[ \t]+(?:s|h)(?![A-Za-z]))?",
+    # ... and without a number ("g or kg", "in mm", "(µm)"). Only symbols
+    # that are no English word or abbreviation; a single letter (m, s, N, A)
+    # is too often something else.
+    r"(?<![A-Za-z0-9.])(?:" + _BARE_UNITS + r")(?![A-Za-z0-9])",
+    # A ratio of symbols in a formula ("VB/A", "L/T"; came back "伏安/安培").
+    r"(?<![A-Za-z0-9/])(?!N/A\b)[A-Z][A-Za-z]?\d?/[A-Z][A-Za-z]?\d?(?![A-Za-z0-9/])",
     # Standards, document/model numbers and established engineering acronyms
     # are identifiers, not natural-language words.  Do not treat every word
     # written in title-block capitals (for example, "TOTAL TENDER PRICE") as
@@ -402,7 +420,9 @@ UNIT_WORDS = (
     "kVA|KVA|MPa|kPa|kN|kg|kW|MW|kV|KV|Hz|mL|mm|cm|km|m²|m³|㎡|m|N|W|V|L|HP|hp|hrs|hr|"
     "cusecs|cusec|Cusecs|Cusec|USD|PKR|RMB|CNY|%|‰|°|"
     # psi, apparent power, energy, flow and speed units ("6000 psi", "450 MGD")
-    "psi|PSI|MVA|kWh|MWh|MGD|cfs|rpm|sqm"
+    "psi|PSI|MVA|kWh|MWh|MGD|cfs|rpm|sqm|"
+    # symbols kept as symbols ("75 µm", "110 °C", "500 g", "30 s")
+    "cm²|cm³|mm²|mm³|°C|°F|µm|μm|mg|g|min|s|h|lbm|lb|ft|in\\.|Pa"
 )
 _NUMBER_UNIT_SPACE_RE = re.compile(rf"(?<=\d)[ \t ]+(?=(?:{UNIT_WORDS})(?![A-Za-z]))")
 
@@ -726,3 +746,75 @@ def _unwrap_bracketed_values(text: str, protected: ProtectedText) -> str:
         if marker not in text:
             text = text.replace(f"[[{value}]]", marker)
     return text
+
+
+# Words a formula may carry (functions, "avg"), not prose.
+_FORMULA_WORDS = frozenset("log ln exp sin cos tan avg max min sqrt abs mod lim sum".split())
+
+
+def is_formula_text(text: str) -> bool:
+    """A formula line ("L = L1 + 1/2 [L2 - (VB/A)]", "D = K√(L/T)") has
+    nothing to translate: sent to a model, its symbols came back as words
+    ("VB/A" -> "伏安/安培"). Any format checks this before translating.
+
+    A formula has an equals sign or a math operator and no word of prose:
+    "where D = particle diameter" or "= dry mass of the specimen" is text.
+    """
+    stripped = text.strip()
+    if not stripped or re.search(r"[㐀-鿿]", stripped):
+        return False
+    if "=" not in stripped and not re.search(r"[×÷√∑∫±≤≥]", stripped):
+        return False
+    words = re.findall(r"[A-Za-z]{3,}", stripped)
+    return not any(
+        (word.islower() and word not in _FORMULA_WORDS)
+        or (len(word) >= 4 and word[0].isupper() and word[1:].islower())
+        # a word in capitals ("AREA= 86 ACRE"); a variable ("CSCF") has no vowels to speak of
+        or (len(word) >= 4 and word.isupper() and sum(char in "AEIOU" for char in word) >= 2)
+        for word in words
+    )
+
+
+# A unit symbol and the names a translation wrote it out as.
+_UNIT_NAMES = {
+    "µm": ("微米", "micrometre", "micrometer", "micron"), "μm": ("微米", "micrometre", "micrometer", "micron"),
+    "mm": ("毫米", "millimetre", "millimeter"), "cm": ("厘米", "centimetre", "centimeter"),
+    "km": ("千米", "公里", "kilometre", "kilometer"), "mg": ("毫克", "milligram"),
+    "kg": ("千克", "公斤", "kilogram"), "g": (r"(?<=\d)\s*克", "gram"), "mL": ("毫升", "millilitre", "milliliter"),
+    "kPa": ("千帕", "kilopascal"), "MPa": ("兆帕", "megapascal"), "kN": ("千牛", "kilonewton"),
+    "°C": ("摄氏度", "degrees Celsius"), "°F": ("华氏度", "degrees Fahrenheit"),
+    "psi": ("磅/平方英寸", "磅每平方英寸"), "kVA": ("千伏安",), "KVA": ("千伏安",), "VB/A": ("伏安",),
+}
+_UNIT_NAMES.update({"in.": ("英寸",), "ft": ("英尺",)})
+_UNIT_SYMBOL_RE = {
+    symbol: re.compile(r"(?<![A-Za-z0-9.])" + re.escape(symbol) + r"(?![A-Za-z])") for symbol in _UNIT_NAMES
+}
+# "in." and "ft" are units only after a number ("8 in.", "3-in."): "results in." is a word.
+_UNIT_SYMBOL_RE["in."] = re.compile(r"(?<=[\d-])[ \t]?in\.")
+_UNIT_SYMBOL_RE["ft"] = re.compile(r"(?<=[\d-])[ \t]?ft(?![A-Za-z])")
+
+
+def validate_unit_symbols(source_text: str, translation: str) -> list[str]:
+    """A unit symbol in the source stays a symbol ("75 µm", not "75微米";
+    "mm", not "millimetres"). A unit spelled out in the source ("millimetres")
+    may be translated as a word."""
+    errors = []
+    for symbol, names in _UNIT_NAMES.items():
+        if not _UNIT_SYMBOL_RE[symbol].search(source_text) or _UNIT_SYMBOL_RE[symbol].search(translation):
+            continue
+        # (a lone 克 only after a number: 克服 is "overcome")
+        for name in names:
+            pattern = name if name.startswith("(?") else re.escape(name)
+            found = re.search(pattern, translation, re.I)
+            if found and not re.search(pattern, source_text, re.I):
+                errors.append(f"UNIT_TRANSLATED: the symbol {symbol!r} was written out as {found.group(0).strip()!r}")
+                break
+    return errors
+
+
+_BARE_SYMBOL_RE = re.compile(r"(?:" + _BARE_UNITS + r")|[A-Z][A-Za-z]?\d?/[A-Z][A-Za-z]?\d?")
+
+
+def is_bare_symbol(token: str) -> bool:
+    """A unit symbol or a symbol ratio protected without a number ("mm", "VB/A")."""
+    return _BARE_SYMBOL_RE.fullmatch(token) is not None

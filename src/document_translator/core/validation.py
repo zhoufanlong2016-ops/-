@@ -5,7 +5,7 @@ import re
 from typing import Iterable
 
 from .models import TranslationResult, TranslationUnit, sha256_text
-from document_translator.translation_rules import validate_name_retention, validate_translation_residue
+from document_translator.translation_rules import validate_name_retention, validate_translation_residue, validate_unit_symbols
 
 
 def validate_placeholders(source_text: str, translation: str, protected_tokens: list[str]) -> list[str]:
@@ -37,11 +37,19 @@ def _count_token(text: str, token: str) -> int:
     # of a changed value, for example ``2015`` inside ``202015``.
     # "3,500 mm" may be written "3,500mm" in Chinese output (no space
     # between a number and its unit there); both are the same value.
-    from document_translator.translation_rules import UNIT_WORDS
+    from document_translator.translation_rules import UNIT_WORDS, is_bare_symbol
 
-    unit = re.fullmatch(rf"(.*\d)[ \t]+((?:{UNIT_WORDS}))", token)
+    # A unit symbol or symbol ratio on its own ("mm", "VB/A") counts as a
+    # word: "mm" inside "recommended" is none.
+    # One after a number ("0.028 m²", "40 g") belongs to that number's own
+    # token, written "0.028m²" in Chinese: it is not counted here.
+    if is_bare_symbol(token):
+        return len(re.findall(rf"(?<![A-Za-z0-9.])(?<!\d[ \t-]){re.escape(token)}(?![A-Za-z0-9])", text))
+
+    # ... and "75-mm" (a compound adjective in English) is "75 mm" or "75mm".
+    unit = re.fullmatch(rf"(.*\d)(?:[ \t]+|-)((?:{UNIT_WORDS}))", token)
     if unit:
-        pattern = rf"(?<![A-Za-z0-9]){re.escape(unit.group(1))}[ \t]?{re.escape(unit.group(2))}(?![A-Za-z])"
+        pattern = rf"(?<![A-Za-z0-9]){re.escape(unit.group(1))}[ \t-]?{re.escape(unit.group(2))}(?![A-Za-z])"
         return len(re.findall(pattern, text))
     if token[0].isdigit() or token[-1].isdigit():
         # A list label such as "1. " already ends in a space; demanding a
@@ -94,6 +102,7 @@ def validate_result_for_unit(unit: TranslationUnit, result: TranslationResult) -
     errors.extend(validate_placeholders(unit.source_text, result.translation, unit.protected_tokens))
     errors.extend(validate_name_retention(unit.source_text, result.translation, unit.source_language, unit.target_language))
     errors.extend(validate_translation_residue(unit.source_text, result.translation, unit.source_language, unit.target_language))
+    errors.extend(validate_unit_symbols(unit.source_text, result.translation))
     # Chinese returned as its own English translation: a whole batch came
     # back as its input ("（2）埋石：三等控制点…") and was accepted, and
     # cached, as valid.

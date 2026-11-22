@@ -53,6 +53,20 @@ def _identity(provider: Any) -> dict[str, str]:
     }
 
 
+def kept_formula(provider: Any, unit: TranslationUnit) -> TranslationResult | None:
+    """A formula ("D = K√(L/T)") as its own translation, in every format:
+    sent to a model, its symbols came back as words ("VB/A" -> "伏安/安培")."""
+    from document_translator.translation_rules import is_formula_text
+
+    if not is_formula_text(unit.source_text):
+        return None
+    return TranslationResult(
+        unit_id=unit.id, translation=unit.source_text, source_hash=sha256_text(unit.source_text),
+        result_hash=sha256_text(unit.source_text), request_count=1, validation_status="valid",
+        **{key: value or "local" for key, value in _identity(provider).items()},
+    )
+
+
 def translate_units(
     provider: Any,
     units: Sequence[TranslationUnit],
@@ -74,6 +88,10 @@ def translate_units(
     results: dict[str, TranslationResult] = {}
     pending: list[TranslationUnit] = []
     for unit in representatives:
+        kept = kept_formula(provider, unit)
+        if kept is not None:
+            results[unit.id] = kept
+            continue
         cached = None
         if cache is not None:
             try:

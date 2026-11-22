@@ -110,6 +110,10 @@ class DocxTranslationService:
         return tuple(issues)
 
     def _translate_and_validate(self, unit: TranslationUnit) -> TranslationResult:
+        from .batch_runner import kept_formula
+
+        if (kept := kept_formula(self._provider, unit)) is not None:
+            return kept
         last_error: Exception | None = None
         last_result: TranslationResult | None = None
         segments = self._segment_unit(unit)
